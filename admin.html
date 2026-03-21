@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="favicon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin – M&T Servis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f1f5f9; font-family:'Inter',sans-serif; min-height:100vh; padding:20px; }
+  :root {
+    --blue:#2563eb; --blue-light:#eff6ff; --blue-mid:#bfdbfe;
+    --border:#e2e8f0; --text:#1e293b; --text-muted:#64748b; --white:#ffffff;
+    --red:#dc2626; --red-light:#fee2e2;
+  }
+  .login-wrap { max-width:360px; margin:80px auto; background:var(--white); border-radius:24px; padding:32px; box-shadow:0 4px 24px rgba(0,0,0,0.08); text-align:center; }
+  .login-wrap h2 { font-size:22px; color:var(--text); margin-bottom:6px; }
+  .login-wrap p { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
+  input[type=password] { width:100%; padding:14px 16px; border:2px solid var(--border); border-radius:12px; font-size:16px; font-family:'Inter',sans-serif; color:var(--text); margin-bottom:12px; }
+  .btn { width:100%; padding:15px; background:var(--blue); color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; }
+  .btn:hover { background:#1d4ed8; }
+  .error { color:var(--red); font-size:13px; margin-top:8px; }
+
+  /* ADMIN */
+  .admin-wrap { max-width:700px; margin:0 auto; }
+  .header { background:var(--white); border-radius:20px; padding:20px 24px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+  .header h1 { font-size:20px; color:var(--text); }
+  .header-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .logout-btn { background:var(--blue-light); border:none; color:var(--blue); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif; font-weight:600; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tab { padding:10px 18px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:2px solid transparent; background:var(--white); color:var(--text-muted); }
+  .tab.active { background:var(--blue); color:#fff; }
+  .stats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .stat { background:var(--white); border-radius:16px; padding:16px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+  .stat-num { font-size:28px; font-weight:700; color:var(--blue); }
+  .stat-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .card { background:var(--white); border-radius:20px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:12px; }
+  .rez-item { border:2px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px; position:relative; }
+  .rez-item:last-child { margin-bottom:0; }
+  .rez-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  .rez-name { font-weight:700; font-size:15px; color:var(--text); }
+  .rez-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; }
+  .badge-prezuti { background:#dbeafe; color:#1d4ed8; }
+  .badge-oleje { background:#dcfce7; color:#15803d; }
+  .rez-info { font-size:13px; color:var(--text-muted); line-height:1.8; }
+  .rez-datetime { font-size:14px; font-weight:600; color:var(--blue); margin-bottom:4px; }
+  .zrusit-btn { background:var(--red-light); color:var(--red); border:2px solid #fecaca; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; margin-top:10px; width:100%; }
+  .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
+  .loading { text-align:center; padding:40px; color:var(--text-muted); }
+  .day-block { margin-bottom:16px; border:2px solid var(--border); border-radius:16px; overflow:hidden; }
+  .day-header { padding:12px 16px; background:#f8fafc; display:flex; align-items:center; justify-content:space-between; }
+  .day-title { font-weight:700; font-size:14px; color:var(--text); }
+  .day-meta { font-size:12px; color:var(--text-muted); }
+  .day-select-btns { display:flex; gap:6px; }
+  .sel-btn { font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; border:none; cursor:pointer; font-family:'Inter',sans-serif; }
+  .sel-all { background:#dbeafe; color:#1d4ed8; }
+  .sel-none { background:#fee2e2; color:#dc2626; }
+  .hours-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:12px 16px; }
+  .hour-btn { padding:10px 4px; border-radius:10px; border:2px solid var(--border); background:var(--white); color:var(--text-muted); font-size:13px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; text-align:center; transition:all 0.15s; }
+  .hour-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .hour-btn.booked { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; cursor:default; }
+  .save-btn { width:100%; padding:14px; background:var(--blue); color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; margin-top:4px; }
+  .save-btn:active { background:#1d4ed8; }
+  .save-msg { text-align:center; font-size:13px; color:#15803d; font-weight:600; margin-top:8px; display:none; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-wrap">
+    <div style="font-size:48px;margin-bottom:12px">🔧</div>
+    <h2>M&T Servis Admin</h2>
+    <p>Přihlaste se pro správu rezervací</p>
+    <input type="password" id="pwd-input" placeholder="Heslo" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn" onclick="login()">Přihlásit se</button>
+    <div class="error" id="login-error" style="display:none">Špatné heslo</div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="screen-admin" style="display:none">
+  <div class="admin-wrap">
+
+    <div class="header">
+      <div>
+        <h1>🔧 M&T Servis Admin</h1>
+        <div class="header-sub">Správa rezervací</div>
+      </div>
+      <div>
+        <button class="refresh-btn" onclick="loadAll()">🔄 Obnovit</button>
+        <button class="logout-btn" onclick="logout()">Odhlásit</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-num" id="stat-prezuti">—</div>
+        <div class="stat-label">Rezervace přezutí</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num" id="stat-oleje">—</div>
+        <div class="stat-label">Rezervace oleje</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" id="tab-all" onclick="switchTab('all')">Vše</div>
+      <div class="tab" id="tab-prezuti" onclick="switchTab('prezuti')">Přezutí</div>
+      <div class="tab" id="tab-oleje" onclick="switchTab('oleje')">Oleje</div>
+      <div class="tab" id="tab-rozvrh" onclick="switchTab('rozvrh')">📅 Rozvrh</div>
+    </div>
+
+    <div class="card" id="section-rez">
+      <div id="rez-list"><div class="loading">Načítám rezervace...</div></div>
+    </div>
+
+    <div class="card" id="section-rozvrh" style="display:none">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Dostupné termíny</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Zaškrtni hodiny kdy přijímáš zákazníky. Šedé = již obsazeno rezervací.</div>
+      <div id="rozvrh-rows"><div class="loading">Načítám...</div></div>
+      <button class="save-btn" onclick="saveRozvrh()">Uložit dostupnost</button>
+      <div class="save-msg" id="save-msg">Uloženo!</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+  let db = null;
+  let allData = [];
+  let currentTab = 'all';
+
+  function getDb() {
+    if (db) return db;
+    if (typeof firebase === 'undefined') return null;
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: "AIzaSyASrYkpXkcis4k53lxj_ytNppArdcXwNAc",
+        authDomain: "mt-servis.firebaseapp.com",
+        projectId: "mt-servis",
+        storageBucket: "mt-servis.firebasestorage.app",
+        messagingSenderId: "479189365821",
+        appId: "1:479189365821:web:4f5402ada5687b6b826654"
+      });
+    }
+    db = firebase.firestore();
+    return db;
+  }
+
+  window.login = function() {
+    const pwd = document.getElementById('pwd-input').value;
+    if (pwd === '411990') {
+      document.getElementById('screen-login').style.display = 'none';
+      document.getElementById('screen-admin').style.display = 'block';
+      loadAll();
+    } else {
+      document.getElementById('login-error').style.display = 'block';
+    }
+  }
+
+  window.logout = function() {
+    document.getElementById('screen-admin').style.display = 'none';
+    document.getElementById('screen-login').style.display = 'block';
+    document.getElementById('pwd-input').value = '';
+  }
+
+  window.loadAll = async function() {
+    db = getDb();
+    if (!db) { document.getElementById('rez-list').innerHTML = '<div class="empty">Nelze se připojit k databázi.</div>'; return; }
+    document.getElementById('rez-list').innerHTML = '<div class="loading">Načítám rezervace...</div>';
+    allData = [];
+
+    try {
+      const prezutiSnap = await db.collection('rezervace_prezuti').get();
+      prezutiSnap.forEach(d => allData.push({ id: d.id, col: 'rezervace_prezuti', typ: 'prezuti', ...d.data() }));
+
+      const olejeSnap = await db.collection('rezervace_oleje').get();
+      olejeSnap.forEach(d => allData.push({ id: d.id, col: 'rezervace_oleje', typ: 'oleje', ...d.data() }));
+
+      // Seřadit podle data
+      allData.sort((a, b) => {
+        const da = (a.datum || '') + (a.cas || '');
+        const db2 = (b.datum || '') + (b.cas || '');
+        return da.localeCompare(db2);
+      });
+
+      document.getElementById('stat-prezuti').textContent = allData.filter(r => r.typ === 'prezuti').length;
+      document.getElementById('stat-oleje').textContent = allData.filter(r => r.typ === 'oleje').length;
+
+      renderList();
+    } catch(e) {
+      document.getElementById('rez-list').innerHTML = '<div class="empty">Chyba při načítání. Zkuste obnovit.</div>';
+    }
+  }
+
+  window.switchTab = function(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.add('active');
+    if (tab === 'rozvrh') {
+      document.getElementById('section-rez').style.display = 'none';
+      document.getElementById('section-rozvrh').style.display = 'block';
+      loadRozvrh();
+    } else {
+      document.getElementById('section-rez').style.display = 'block';
+      document.getElementById('section-rozvrh').style.display = 'none';
+      renderList();
+    }
+  }
+
+  const DAYS_CS = ['Ne','Po','Út','St','Čt','Pá','So'];
+  const MONTHS_CS = ['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
+  const HOURS = Array.from({length:12}, (_,i) => i + 8); // 8–19
+
+  let rozvrhData = {}; // { "2026-03-21": [8,10,14,...], ... }
+  let bookedData = {}; // { "2026-03-21": ["08:00","10:00",...], ... }
+
+  function getNext14Days() {
+    const days = [];
+    const today = new Date(); today.setHours(0,0,0,0);
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  function fmtDate(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function fmtHourSlot(h) {
+    return String(h).padStart(2,'0') + ':00';
+  }
+
+  window.loadRozvrh = async function() {
+    db = getDb(); if (!db) return;
+    const container = document.getElementById('rozvrh-rows');
+    container.innerHTML = '<div class="loading">Načítám...</div>';
+
+    try {
+      // Načti uložený rozvrh
+      const snap = await db.collection('nastaveni').doc('rozvrh_dny').get();
+      rozvrhData = snap.exists ? snap.data() : {};
+
+      // Načti obsazené sloty z obou kolekcí
+      bookedData = {};
+      const loadCol = async (col) => {
+        const s = await db.collection(col).get();
+        s.forEach(doc => {
+          const d = doc.data();
+          if (d.datum && d.cas) {
+            if (!bookedData[d.datum]) bookedData[d.datum] = [];
+            if (!bookedData[d.datum].includes(d.cas)) bookedData[d.datum].push(d.cas);
+          }
+        });
+      };
+      await Promise.all([loadCol('rezervace_prezuti'), loadCol('rezervace_oleje')]);
+
+      renderRozvrh();
+    } catch(e) {
+      container.innerHTML = '<div class="empty">Chyba při načítání.</div>';
+    }
+  }
+
+  function renderRozvrh() {
+    const days = getNext14Days();
+    const container = document.getElementById('rozvrh-rows');
+
+    container.innerHTML = days.map(date => {
+      const ds = fmtDate(date);
+      const activeHours = rozvrhData[ds] || [];
+      const booked = bookedData[ds] || [];
+      const dayName = DAYS_CS[date.getDay()];
+      const dayLabel = `${dayName} ${date.getDate()}. ${MONTHS_CS[date.getMonth()]}`;
+      const activeCount = activeHours.length;
+
+      const hoursHtml = HOURS.map(h => {
+        const slot = fmtHourSlot(h);
+        const isBooked = booked.includes(slot);
+        const isActive = activeHours.includes(h);
+        const cls = isBooked ? 'hour-btn booked' : (isActive ? 'hour-btn active' : 'hour-btn');
+        const onclick = isBooked ? '' : `onclick="toggleHour('${ds}', ${h})"`;
+        return `<button class="${cls}" ${onclick}>${h}:00</button>`;
+      }).join('');
+
+      return `
+        <div class="day-block">
+          <div class="day-header">
+            <div>
+              <div class="day-title">${dayLabel}</div>
+              <div class="day-meta">${activeCount} hodin dostupných</div>
+            </div>
+            <div class="day-select-btns">
+              <button class="sel-btn sel-all" onclick="selectAll('${ds}')">Vše</button>
+              <button class="sel-btn sel-none" onclick="selectNone('${ds}')">Nic</button>
+            </div>
+          </div>
+          <div class="hours-grid" id="grid-${ds}">${hoursHtml}</div>
+        </div>`;
+    }).join('');
+  }
+
+  window.toggleHour = function(ds, h) {
+    if (!rozvrhData[ds]) rozvrhData[ds] = [];
+    const idx = rozvrhData[ds].indexOf(h);
+    if (idx === -1) rozvrhData[ds].push(h);
+    else rozvrhData[ds].splice(idx, 1);
+    refreshGrid(ds);
+  }
+
+  window.selectAll = function(ds) {
+    const booked = bookedData[ds] || [];
+    rozvrhData[ds] = HOURS.filter(h => !booked.includes(fmtHourSlot(h)));
+    refreshGrid(ds);
+  }
+
+  window.selectNone = function(ds) {
+    rozvrhData[ds] = [];
+    refreshGrid(ds);
+  }
+
+  function refreshGrid(ds) {
+    const activeHours = rozvrhData[ds] || [];
+    const booked = bookedData[ds] || [];
+    const grid = document.getElementById('grid-' + ds);
+    if (!grid) return;
+    grid.innerHTML = HOURS.map(h => {
+      const slot = fmtHourSlot(h);
+      const isBooked = booked.includes(slot);
+      const isActive = activeHours.includes(h);
+      const cls = isBooked ? 'hour-btn booked' : (isActive ? 'hour-btn active' : 'hour-btn');
+      const onclick = isBooked ? '' : `onclick="toggleHour('${ds}', ${h})"`;
+      return `<button class="${cls}" ${onclick}>${h}:00</button>`;
+    }).join('');
+    // Aktualizuj počet
+    const block = grid.closest('.day-block');
+    if (block) block.querySelector('.day-meta').textContent = `${activeHours.length} hodin dostupných`;
+  }
+
+  window.saveRozvrh = async function() {
+    db = getDb(); if (!db) { alert('Nelze se připojit.'); return; }
+    try {
+      await db.collection('nastaveni').doc('rozvrh_dny').set(rozvrhData);
+      const msg = document.getElementById('save-msg');
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 2500);
+    } catch(e) {
+      alert('Chyba při ukládání.');
+    }
+  }
+
+  function renderList() {
+    const data = currentTab === 'all' ? allData : allData.filter(r => r.typ === currentTab);
+    const list = document.getElementById('rez-list');
+
+    if (data.length === 0) {
+      list.innerHTML = '<div class="empty">Žádné rezervace</div>';
+      return;
+    }
+
+    list.innerHTML = data.map(r => `
+      <div class="rez-item" id="rez-${r.id}">
+        <div class="rez-header">
+          <div class="rez-name">👤 ${r.jmeno || '—'}</div>
+          <div class="rez-badge ${r.typ === 'prezuti' ? 'badge-prezuti' : 'badge-oleje'}">
+            ${r.typ === 'prezuti' ? '🚗 Přezutí' : '🛢️ Olej'}
+          </div>
+        </div>
+        <div class="rez-datetime">📅 ${r.datum || '—'} · ${r.cas || '—'}</div>
+        <div class="rez-info">
+          📞 ${r.telefon || '—'}<br>
+          ${r.email ? '✉️ ' + r.email + '<br>' : ''}
+          🚙 ${r.auto || r.sluzba || '—'}<br>
+          ${r.sluzby ? '🔧 ' + r.sluzby + '<br>' : ''}
+          ${r.cena ? '💰 ' + r.cena : ''}
+        </div>
+        <button class="zrusit-btn" onclick="cancelRez('${r.id}', '${r.col}')">🗑️ Zrušit rezervaci</button>
+      </div>
+    `).join('');
+  }
+
+  window.cancelRez = async function(id, col) {
+    db = getDb(); if (!db) return;
+    if (!confirm('Opravdu zrušit tuto rezervaci?')) return;
+    try {
+      await db.collection(col).doc(id).delete();
+      allData = allData.filter(r => r.id !== id);
+      document.getElementById('stat-prezuti').textContent = allData.filter(r => r.typ === 'prezuti').length;
+      document.getElementById('stat-oleje').textContent = allData.filter(r => r.typ === 'oleje').length;
+      renderList();
+    } catch(e) {
+      alert('Nepodařilo se zrušit. Zkuste znovu.');
+    }
+  }
+</script>
+</body>
+</html>
