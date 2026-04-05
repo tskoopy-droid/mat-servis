@@ -51,6 +51,20 @@
   .vin-btn{padding:14px 18px;background:var(--blue);border:none;border-radius:14px;color:#fff;font-family:"Inter",sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:background 0.2s;white-space:nowrap;}
   .vin-btn:active{background:var(--blue-dark);}
   .vin-btn:disabled{background:#cbd5e1;cursor:not-allowed;}
+  .vin-cam-btn{padding:0 14px;background:var(--blue-light);border:2px solid var(--blue-mid);border-radius:14px;color:var(--blue);cursor:pointer;transition:background 0.2s,border-color 0.2s;display:flex;align-items:center;justify-content:center;height:50px;width:50px;flex-shrink:0;}
+  .vin-cam-btn:active{background:var(--blue-mid);}
+  .vin-cam-btn svg{width:22px;height:22px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .vin-cam-btn:active{background:#e2e8f0;}
+  /* Modal výběru zdroje fotky */
+  .cam-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end;justify-content:center;}
+  .cam-modal-overlay.open{display:flex;}
+  .cam-modal{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;}
+  .cam-modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center;}
+  .cam-option{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;border:2px solid var(--border);margin-bottom:10px;cursor:pointer;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;color:var(--text);background:#fff;width:100%;transition:border-color 0.2s;}
+  .cam-option:active{background:#f1f5f9;}
+  .cam-option span.icon{font-size:24px;}
+  .cam-cancel{margin-top:6px;width:100%;padding:14px;border:none;border-radius:14px;background:#f1f5f9;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;cursor:pointer;color:#64748b;}
+  .vin-scan-info{font-size:12px;color:#94a3b8;margin-top:6px;text-align:center;}
 
   /* Info tabulka */
   .info-table{width:100%;border-collapse:collapse;margin-top:4px;}
@@ -150,9 +164,29 @@
     <div class="section-sub">17místný identifikátor najdete na spodní části čelního skla nebo v technickém průkazu. <a href="kod-motoru.html" target="_blank" style="color:var(--blue);font-weight:600;">Kde najít VIN? →</a></div>
     <div class="vin-wrap">
       <input type="text" class="vin-input" id="vinInput" placeholder="např. VSSZZZ1MZ2R033594" maxlength="17" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button class="vin-cam-btn" id="camBtn" onclick="otevriVyberFotky()" title="Vyfotit VIN">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
       <button class="vin-btn" id="vinBtn" onclick="nactiVin()">Načíst</button>
     </div>
     <div class="error-box" id="vinError"></div>
+
+<!-- Modal výběru zdroje fotky -->
+<div class="cam-modal-overlay" id="camModal" onclick="zavriModal(event)">
+  <div class="cam-modal">
+    <div class="cam-modal-title">Naskenovat VIN</div>
+    <button class="cam-option" onclick="spustiFotoaparat()">
+      <span class="icon">📷</span> Fotoaparát
+    </button>
+    <button class="cam-option" onclick="vyberZGalerie()">
+      <span class="icon">🖼️</span> Galerie
+    </button>
+    <button class="cam-cancel" onclick="zavriCamModal()">Zrušit</button>
+  </div>
+</div>
+<!-- Skryté inputy pro výběr souboru -->
+<input type="file" id="inputFotoaparat" accept="image/*" capture="environment" style="display:none" onchange="zpracujFotku(this)">
+<input type="file" id="inputGalerie" accept="image/*" style="display:none" onchange="zpracujFotku(this)">
   </div>
 
   <!-- Krok 1b: Data vozidla -->
@@ -188,7 +222,7 @@
         <div class="sluzba-check" id="chkVzduch"></div>
         <div>
           <div class="sluzba-name">Vzduchový filtr</div>
-          <div class="sluzba-detail">výměna vzduchového filtru</div>
+          <div class="sluzba-detail">Bosch — výměna vzduchového filtru</div>
         </div>
       </div>
       <div class="sluzba-cena" id="cenaVzduch">—</div>
@@ -200,14 +234,14 @@
         <div class="sluzba-check" id="chkKabina"></div>
         <div>
           <div class="sluzba-name">Kabinový filtr</div>
-          <div class="sluzba-detail">výměna kabinového filtru (pylový)</div>
+          <div class="sluzba-detail">Bosch — výměna kabinového filtru (pylový)</div>
         </div>
       </div>
       <div class="sluzba-cena" id="cenaKabina">—</div>
     </div>
 
-    <!-- Palivový filtr -->
-    <div class="sluzba-item" id="slPalivo" onclick="toggleSluzba('palivo')">
+    <!-- Palivový filtr (jen diesel) -->
+    <div class="sluzba-item" id="slPalivo" onclick="toggleSluzba('palivo')" style="display:none">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkPalivo"></div>
         <div>
@@ -274,6 +308,78 @@
 <script>
 // ── Konfigurace ──────────────────────────────────────────────
 var VIN_PROXY   = 'https://script.google.com/macros/s/AKfycbxOXk2GiF3qvXEM0tltlcRjtBAnWOIC-Atc641HmX7Oli4KjUPQ8F5Pnd8fRte4zmgE/exec';
+var VISION_KEY  = 'AIzaSyDngFtfxDub3SR5zOrMYYbWw-z7B8lEsCw';
+
+// ── Kamera / Vision API ────────────────────────────────────────
+function otevriVyberFotky() {
+  document.getElementById('camModal').classList.add('open');
+}
+function zavriCamModal() {
+  document.getElementById('camModal').classList.remove('open');
+}
+function zavriModal(e) {
+  if (e.target === document.getElementById('camModal')) zavriCamModal();
+}
+function spustiFotoaparat() {
+  zavriCamModal();
+  document.getElementById('inputFotoaparat').click();
+}
+function vyberZGalerie() {
+  zavriCamModal();
+  document.getElementById('inputGalerie').click();
+}
+function zpracujFotku(input) {
+  if (!input.files || !input.files[0]) return;
+  var btn = document.getElementById('camBtn');
+  var svgCam = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var svgSpin = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
+  if (!document.getElementById('vinSpinStyle')) {
+    var st = document.createElement('style'); st.id = 'vinSpinStyle';
+    st.textContent = '@keyframes vinSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(st);
+  }
+  btn.innerHTML = svgSpin;
+  btn.disabled = true;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.split(',')[1];
+    fetch('https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        requests: [{
+          image: {content: base64},
+          features: [{type: 'TEXT_DETECTION', maxResults: 1}]
+        }]
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      btn.innerHTML = svgCam;
+      btn.disabled = false;
+      var text = '';
+      try { text = data.responses[0].fullTextAnnotation.text || ''; } catch(e){}
+      var match = text.replace(/\s/g,'').match(/[A-HJ-NPR-Z0-9]{17}/);
+      if (match) {
+        document.getElementById('vinInput').value = match[0];
+        document.getElementById('vinError').textContent = '';
+        document.getElementById('vinError').classList.remove('visible');
+      } else {
+        document.getElementById('vinError').textContent = 'VIN nebyl na fotografii nalezen. Zkuste znovu s ostřejším záběrem.';
+        document.getElementById('vinError').classList.add('visible');
+      }
+      input.value = '';
+    })
+    .catch(function() {
+      btn.innerHTML = svgCam;
+      btn.disabled = false;
+      document.getElementById('vinError').textContent = 'Chyba při rozpoznávání textu. Zkuste to znovu.';
+      document.getElementById('vinError').classList.add('visible');
+      input.value = '';
+    });
+  };
+  reader.readAsDataURL(input.files[0]);
+}
 var OLEJE_API   = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';  // <-- sem vlož URL OlejeBackend po nasazení
 
 // ── Stav ─────────────────────────────────────────────────────
@@ -369,7 +475,7 @@ function zobrazAuto() {
     ['Max. výkon', stav.vykon + ' kW'],
     ['Palivo', stav.palivo],
     ['Zdvihový objem', stav.objem + ' cm³'],
-    ['Rok výroby', stav.rok],
+    ['Modelový rok', stav.rok],
   ];
 
   var html = '';
@@ -430,25 +536,19 @@ function zobrazCenik(c) {
   document.getElementById('detailOlej').textContent = c.objem + ' l ' + olejLabel + ' + olejový filtr, práce';
   document.getElementById('cenaOlej').textContent = c.celkem + ' Kč';
 
-  if (c.cenaVzduch) {
-    document.getElementById('cenaVzduch').textContent = c.cenaVzduch + ' Kč';
-  } else {
-    document.getElementById('cenaVzduch').textContent = 'Na dotaz';
-    document.getElementById('cenaVzduch').classList.add('naceneni');
-  }
+  document.getElementById('cenaVzduch').textContent = c.cenaVzduch ? c.cenaVzduch + ' Kč' : 'Na dotaz';
+  document.getElementById('cenaKabina').textContent = c.cenaKabina ? c.cenaKabina + ' Kč' : 'Na dotaz';
 
-  if (c.cenaKabina) {
-    document.getElementById('cenaKabina').textContent = c.cenaKabina + ' Kč';
+  // Palivový filtr jen pro diesel
+  var slPalivo = document.getElementById('slPalivo');
+  if (stav.palivo === 'diesel') {
+    slPalivo.style.display = '';
+    document.getElementById('cenaPalivo').textContent = c.cenaPalivo ? c.cenaPalivo + ' Kč' : 'Na dotaz';
   } else {
-    document.getElementById('cenaKabina').textContent = 'Na dotaz';
-    document.getElementById('cenaKabina').classList.add('naceneni');
-  }
-
-  if (c.cenaPalivo) {
-    document.getElementById('cenaPalivo').textContent = c.cenaPalivo + ' Kč';
-  } else {
-    document.getElementById('cenaPalivo').textContent = 'Na dotaz';
-    document.getElementById('cenaPalivo').classList.add('naceneni');
+    slPalivo.style.display = 'none';
+    stav.sluzby.palivo = false;
+    document.getElementById('chkPalivo').textContent = '';
+    slPalivo.classList.remove('selected');
   }
 
   document.getElementById('sluzbyContinueWrap').style.display = 'block';
