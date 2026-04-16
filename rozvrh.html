@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rozvrh – M&T Servis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --blue: #2563eb; --blue-dark: #1d4ed8; --blue-light: #eff6ff; --blue-mid: #bfdbfe;
+    --border: #e2e8f0; --text: #1e293b; --text-muted: #64748b; --white: #ffffff; --bg: #f1f5f9;
+  }
+  body { background: var(--bg); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  .header { background: #fff; padding: 14px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-bottom: 2px solid var(--blue-mid); display: flex; align-items: center; justify-content: space-between; }
+  .header-title { font-size: 18px; font-weight: 700; color: var(--text); }
+  .header-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .nav { display: flex; align-items: center; gap: 12px; padding: 16px 16px 0; max-width: 900px; margin: 0 auto; }
+  .nav-btn { background: #fff; border: 2px solid var(--border); color: var(--blue); border-radius: 10px; width: 40px; height: 40px; font-size: 20px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+  .nav-btn:active { background: var(--blue-light); border-color: var(--blue-mid); }
+  .week-label { flex: 1; text-align: center; font-size: 15px; font-weight: 700; color: var(--text); }
+  .today-btn { background: var(--blue-light); border: 2px solid var(--blue-mid); color: var(--blue); border-radius: 10px; padding: 0 14px; height: 40px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; font-family: 'Inter', sans-serif; transition: all 0.15s; }
+  .today-btn:active { background: var(--blue-mid); }
+
+  .table-wrap { padding: 14px 16px 32px; max-width: 900px; margin: 0 auto; overflow-x: auto; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); overflow: hidden; }
+
+  thead th { background: var(--blue); color: #fff; padding: 10px 6px; font-size: 12px; font-weight: 700; text-align: center; border-right: 1px solid rgba(255,255,255,0.15); }
+  thead th:first-child { width: 52px; border-radius: 16px 0 0 0; }
+  thead th:last-child { border-right: none; border-radius: 0 16px 0 0; }
+  thead th .day-name { font-size: 13px; font-weight: 700; }
+  thead th .day-date { font-size: 10px; font-weight: 500; opacity: 0.85; margin-top: 2px; }
+  thead th.today-col { background: var(--blue-dark); }
+
+  tbody tr td { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); vertical-align: top; padding: 0; min-height: 48px; }
+  tbody tr td:last-child { border-right: none; }
+  tbody tr:last-child td { border-bottom: none; }
+
+  .time-cell { background: #f8fafc; text-align: center; font-size: 12px; font-weight: 600; color: var(--text-muted); padding: 14px 4px; min-width: 44px; }
+
+  .slot-cell { padding: 4px; min-height: 48px; }
+  .slot-cell.today-col { background: #f0f7ff; }
+  .slot-cell.past { background: #fafafa; }
+
+  .booking { background: var(--blue-light); border: 1.5px solid var(--blue-mid); border-radius: 8px; padding: 5px 7px; margin: 2px; }
+  .booking .b-name { font-size: 12px; font-weight: 700; color: var(--blue-dark); }
+  .booking .b-service { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+  .loading { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
+  .empty-week { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
+
+  .legend { display: flex; align-items: center; gap: 8px; padding: 0 16px 16px; max-width: 900px; margin: 0 auto; font-size: 11px; color: var(--text-muted); }
+  .legend-dot { width: 12px; height: 12px; background: var(--blue-light); border: 1.5px solid var(--blue-mid); border-radius: 3px; flex-shrink: 0; }
+
+  @media (max-width: 600px) {
+    thead th .day-name { font-size: 11px; }
+    thead th .day-date { font-size: 9px; }
+    .time-cell { font-size: 11px; min-width: 36px; padding: 12px 2px; }
+    .booking .b-name { font-size: 11px; }
+    .booking .b-service { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-title">📅 Rozvrh rezervací</div>
+    <div class="header-sub">M&T Servis · Dlouhá Loučka</div>
+  </div>
+</div>
+
+<div class="nav">
+  <button class="nav-btn" onclick="changeWeek(-1)">‹</button>
+  <div class="week-label" id="week-label">...</div>
+  <button class="nav-btn" onclick="changeWeek(1)">›</button>
+  <button class="today-btn" onclick="goToday()">Dnes</button>
+</div>
+
+<div class="table-wrap">
+  <div class="loading" id="loading">Načítám rezervace...</div>
+  <div id="table-container" style="display:none"></div>
+</div>
+
+<div class="legend">
+  <div class="legend-dot"></div>
+  <span>Rezervace přezutí</span>
+</div>
+
+<script>
+  const DAYS = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+  const MONTHS = ['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
+
+  let weekOffset = 0;
+  let allReservations = []; // { jmeno, cas, datum, sluzba }
+
+  // Firebase init
+  firebase.initializeApp({
+    apiKey: "AIzaSyASrYkpXkcis4k53lxj_ytNppArdcXwNAc",
+    authDomain: "mt-servis.firebaseapp.com",
+    projectId: "mt-servis",
+    storageBucket: "mt-servis.firebasestorage.app",
+    messagingSenderId: "479189365821",
+    appId: "1:479189365821:web:4f5402ada5687b6b826654"
+  });
+  const db = firebase.firestore();
+
+  function getMonday(offset) {
+    const d = new Date();
+    const day = d.getDay(); // 0=Ne, 1=Po...
+    const diff = (day === 0 ? -6 : 1 - day); // posun na pondělí
+    d.setDate(d.getDate() + diff + offset * 7);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+
+  function formatDate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+
+  function isToday(d) {
+    const t = new Date();
+    return d.getDate()===t.getDate() && d.getMonth()===t.getMonth() && d.getFullYear()===t.getFullYear();
+  }
+
+  function isPast(d) {
+    const t = new Date(); t.setHours(0,0,0,0);
+    return d < t;
+  }
+
+  function changeWeek(dir) {
+    weekOffset += dir;
+    renderTable();
+  }
+
+  function goToday() {
+    weekOffset = 0;
+    renderTable();
+  }
+
+  function renderTable() {
+    const monday = getMonday(weekOffset);
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      days.push(d);
+    }
+
+    // Týdenní label
+    const from = days[0];
+    const to = days[6];
+    document.getElementById('week-label').textContent =
+      `${from.getDate()}. ${MONTHS[from.getMonth()]} – ${to.getDate()}. ${MONTHS[to.getMonth()]} ${to.getFullYear()}`;
+
+    // Filtruj rezervace pro tento týden
+    const weekDates = days.map(d => formatDate(d));
+    const weekRes = allReservations.filter(r => weekDates.includes(r.datum));
+
+    // Sbírej všechny časy v týdnu
+    const timesSet = new Set(weekRes.map(r => r.cas));
+    let times = Array.from(timesSet).sort();
+
+    const container = document.getElementById('table-container');
+
+    if (times.length === 0) {
+      container.innerHTML = `<div class="empty-week">Žádné rezervace v tomto týdnu.</div>`;
+      container.style.display = 'block';
+      document.getElementById('loading').style.display = 'none';
+      return;
+    }
+
+    // Sestav tabulku
+    let html = '<table>';
+
+    // Hlavička
+    html += '<thead><tr>';
+    html += '<th><div class="day-name">Čas</div></th>';
+    days.forEach((d, i) => {
+      const todayCls = isToday(d) ? ' today-col' : '';
+      html += `<th class="${todayCls}">
+        <div class="day-name">${DAYS[i]}</div>
+        <div class="day-date">${d.getDate()}. ${d.getMonth()+1}.</div>
+      </th>`;
+    });
+    html += '</tr></thead>';
+
+    // Řádky podle časů
+    html += '<tbody>';
+    times.forEach(time => {
+      html += '<tr>';
+      html += `<td class="time-cell">${time}</td>`;
+      days.forEach(d => {
+        const ds = formatDate(d);
+        const todayCls = isToday(d) ? ' today-col' : '';
+        const pastCls = isPast(d) ? ' past' : '';
+        const bookings = weekRes.filter(r => r.datum === ds && r.cas === time);
+        html += `<td class="slot-cell${todayCls}${pastCls}">`;
+        bookings.forEach(b => {
+          const service = b.sluzba || 'Přezutí';
+          const shortService = service.replace('Přezutí pneumatik','Přezutí').replace('Výměna oleje a filtrů','Olej');
+          html += `<div class="booking">
+            <div class="b-name">${escHtml(b.jmeno)}</div>
+            <div class="b-service">${escHtml(shortService)}</div>
+          </div>`;
+        });
+        html += '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    container.innerHTML = html;
+    container.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Načti data z Firebase
+  db.collection('rezervace_prezuti').get().then(snap => {
+    allReservations = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if (d.datum && d.cas && d.jmeno) {
+        allReservations.push({
+          jmeno: d.jmeno,
+          cas: d.cas,
+          datum: d.datum,
+          sluzba: d.sluzba || 'Přezutí pneumatik'
+        });
+      }
+    });
+    renderTable();
+  }).catch(err => {
+    document.getElementById('loading').textContent = 'Chyba při načítání dat.';
+    console.error(err);
+  });
+</script>
+</body>
+</html>
