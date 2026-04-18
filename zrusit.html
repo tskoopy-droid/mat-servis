@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="favicon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zrušení rezervace – M&T Servis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f1f5f9; font-family:'Inter',sans-serif; min-height:100vh; padding:0; }
+  :root { --blue:#2563eb; --blue-light:#eff6ff; --blue-mid:#bfdbfe; --border:#e2e8f0; --text:#1e293b; --text-muted:#64748b; --white:#ffffff; --red:#dc2626; --red-light:#fee2e2; --amber:#d97706; --amber-light:#fef3c7; }
+  .wrap { background:var(--white); border-radius:24px; padding:36px 24px; max-width:400px; width:100%; box-shadow:0 4px 24px rgba(0,0,0,0.08); text-align:center; }
+  .icon { font-size:56px; margin-bottom:16px; }
+  .title { font-size:22px; font-weight:700; color:var(--text); margin-bottom:8px; }
+  .sub { font-size:14px; color:var(--text-muted); line-height:1.6; margin-bottom:24px; }
+  .card { background:var(--blue-light); border:2px solid var(--blue-mid); border-radius:14px; padding:16px; text-align:left; margin-bottom:24px; font-size:14px; line-height:2; }
+  .card-amber { background:var(--amber-light); border:2px solid var(--amber); color:#78350f; }
+  .btn-cancel { width:100%; padding:16px; background:var(--red); color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; margin-bottom:12px; }
+  .btn-cancel:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-back { width:100%; padding:14px; background:var(--blue-light); color:var(--blue); border:none; border-radius:14px; font-size:15px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; text-decoration:none; display:block; }
+  .btn-mail { width:100%; padding:14px; background:var(--blue); color:#fff; border:none; border-radius:14px; font-size:15px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; text-decoration:none; display:block; margin-bottom:12px; }
+  .footer { margin-top:24px; font-size:12px; color:var(--text-muted); }
+  .footer a { color:#1877f2; font-weight:600; text-decoration:none; }
+  .header { background:#fff; padding:12px 20px; display:table; width:100%; box-shadow:0 2px 8px rgba(0,0,0,0.06); border-bottom:2px solid #bfdbfe; margin-bottom:20px; }
+  .header-logo { height:70px; max-width:160px; width:auto; flex-shrink:0; border-radius:6px; display:inline-block; object-fit:contain; }
+  .header-text { display:table-cell; vertical-align:middle; }
+  .header-sub { font-size:14px; color:var(--text); font-weight:600; }
+  .header-sub-small { font-size:12px; color:var(--text-muted); margin-top:2px; }
+</style>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-Z3Z3QHH5T7"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-Z3Z3QHH5T7');
+</script>
+</head>
+<body>
+<div class="header">
+  <div class="header-text">
+    <div class="header-sub">Zrušení rezervace</div>
+    <div class="header-sub-small">Online objednávka · <a href="index.html" style="color:var(--blue);text-decoration:none">← Zpět</a><br>Dlouhá Loučka, Šumvaldská 59</div>
+  </div>
+</div>
+<div class="wrap" style="margin:20px auto">
+
+  <!-- Načítání -->
+  <div id="screen-loading">
+    <div class="icon">⏳</div>
+    <div class="title">Načítám rezervaci...</div>
+  </div>
+
+  <!-- Potvrzení zrušení -->
+  <div id="screen-confirm" style="display:none">
+    <div class="icon">❓</div>
+    <div class="title">Zrušit rezervaci?</div>
+    <div class="sub">Opravdu chcete zrušit tuto rezervaci?</div>
+    <div class="card" id="rez-detail"></div>
+    <button class="btn-cancel" id="btn-confirm" onclick="cancelNow()">Ano, zrušit rezervaci</button>
+    <a href="index.html" class="btn-back">Ne, zpět na rezervace</a>
+  </div>
+
+  <!-- Úspěch -->
+  <div id="screen-success" style="display:none">
+    <div class="icon">✅</div>
+    <div class="title">Rezervace zrušena</div>
+    <div class="sub">Vaše rezervace byla úspěšně zrušena.</div>
+    <a href="index.html" class="btn-back" style="margin-top:8px">Nová rezervace</a>
+  </div>
+
+  <!-- Stará rezervace / bez tokenu -->
+  <div id="screen-legacy" style="display:none">
+    <div class="icon">📧</div>
+    <div class="title">Automatické storno mimo provoz</div>
+    <div class="sub">Pro zrušení této rezervace napište na <strong>info@mat-servis.cz</strong> nebo zavolejte.</div>
+    <a href="mailto:info@mat-servis.cz?subject=Zrušení%20rezervace" class="btn-mail">✉️ Napsat e-mail</a>
+    <a href="tel:+420731885825" class="btn-mail" style="background:#10b981">📞 Zavolat 731 885 825</a>
+    <a href="index.html" class="btn-back">Zpět na rezervace</a>
+  </div>
+
+  <!-- Chyba obecná -->
+  <div id="screen-error" style="display:none">
+    <div class="icon">⚠️</div>
+    <div class="title">Rezervace nenalezena</div>
+    <div class="sub" id="error-message">Rezervace již byla zrušena nebo odkaz není platný.</div>
+    <a href="index.html" class="btn-back" style="margin-top:8px">Zpět na rezervace</a>
+  </div>
+
+  <!-- Rate limit -->
+  <div id="screen-ratelimit" style="display:none">
+    <div class="icon">🛑</div>
+    <div class="title">Příliš mnoho pokusů</div>
+    <div class="sub">Z bezpečnostních důvodů je zrušení dočasně zablokováno. Zkuste to prosím za 10 minut, nebo napište na info@mat-servis.cz.</div>
+    <a href="mailto:info@mat-servis.cz?subject=Zrušení%20rezervace" class="btn-mail">✉️ Napsat e-mail</a>
+    <a href="index.html" class="btn-back">Zpět</a>
+  </div>
+
+  <div class="footer">
+    <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank">M&T Servis na Facebooku</a>
+  </div>
+</div>
+
+<script>
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
+
+  const params = new URLSearchParams(window.location.search);
+  const id    = params.get('id');
+  const token = params.get('token');
+  // Zpětná kompatibilita: starý odkaz používal "col", nový "collection". Podporujeme obojí.
+  const col   = params.get('collection') || params.get('col');
+
+  function show(screen) {
+    ['loading','confirm','success','legacy','error','ratelimit'].forEach(s =>
+      document.getElementById('screen-' + s).style.display = s === screen ? 'block' : 'none'
+    );
+  }
+
+  function handleError(err) {
+    if (err === 'no_token')       { show('legacy'); return; }
+    if (err === 'rate_limit')     { show('ratelimit'); return; }
+    if (err === 'bad_token')      { show('legacy'); return; }
+    if (err === 'bad_collection') { show('legacy'); return; }
+    // not_found / system / ostatní
+    show('error');
+  }
+
+  async function loadReservation() {
+    if (!id) { show('error'); return; }
+    if (!token) { show('legacy'); return; }
+    if (!col)   { show('legacy'); return; }
+
+    try {
+      const url = GAS_URL
+        + '?action=zrusit_detail'
+        + '&id=' + encodeURIComponent(id)
+        + '&token=' + encodeURIComponent(token)
+        + '&collection=' + encodeURIComponent(col);
+      const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+      const data = await resp.json();
+
+      if (data.error) { handleError(data.error); return; }
+      if (!data.ok)   { show('error'); return; }
+
+      const typLabel = data.typ === 'olej' ? '🛢️ Výměna oleje' : '🚗 Přezutí pneumatik';
+      const [dy, dm, dd] = (data.datum || '').split('-').map(Number);
+      const datumCZ = dy ? `${dd}. ${dm}. ${dy}` : (data.datum || '—');
+
+      document.getElementById('rez-detail').innerHTML = `
+        <div>${typLabel}</div>
+        <div>🚙 <strong>${data.auto || '—'}</strong></div>
+        <div style="color:var(--blue)">📅 <strong>${datumCZ} · ${data.cas || '—'}</strong></div>
+        ${data.sluzby ? `<div style="color:#64748b">🔧 ${data.sluzby}</div>` : ''}
+      `;
+      show('confirm');
+    } catch(e) {
+      show('error');
+    }
+  }
+
+  async function cancelNow() {
+    const btn = document.getElementById('btn-confirm');
+    btn.disabled = true;
+    btn.textContent = 'Ruším...';
+
+    try {
+      // GAS webapp pattern: bez Content-Type hlavičky, redirect:'follow'.
+      // GAS parsuje JSON z e.postData.contents, takže pošleme JSON jako raw body.
+      const payload = JSON.stringify({
+        akce: 'zrusit_potvrdit',
+        id: id,
+        token: token,
+        collection: col
+      });
+      const resp = await fetch(GAS_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: payload
+      });
+      const data = await resp.json();
+
+      if (data.error) { handleError(data.error); return; }
+      if (data.ok)    { show('success'); return; }
+      show('error');
+    } catch(e) {
+      show('error');
+      document.getElementById('error-message').textContent = 'Nepodařilo se zrušit. Zavolejte prosím 731 885 825.';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Ano, zrušit rezervaci';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadReservation);
+</script>
+</body>
+</html>
