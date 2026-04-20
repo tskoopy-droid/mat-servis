@@ -625,8 +625,8 @@ function nactiCenik() {
   document.getElementById('katLL').style.display = 'none';
   document.getElementById('olejLoading').style.display = 'block';
 
-  fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=olej')
-    .then(function(r) { return r.json(); })
+  // Použij preload Promise z nactiVin (pokud existuje), jinak fetchni nově
+  (stav.castrolPreloadPromise || fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=olej'))
     .then(function(data) {
       if (data.error || !data.oleje || data.oleje.length === 0) {
         document.getElementById('olejLoading').style.display = 'none';
@@ -779,6 +779,11 @@ function nactiVin() {
       stav.rok          = dekodujRokVin(vin);
       stav.vykon        = data.vykon ? data.vykon.split('/')[0].trim() : '';
       stav.castrol      = null;
+
+      // Preload Castrol na pozadí — uživatel zatím kontroluje údaje vozidla
+      stav.castrolPreloadPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=olej')
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
 
       zobrazAuto();
     })
