@@ -791,8 +791,8 @@
       const[,mo,dy]=prvniDs.split('-');
       terminyText=`${parseInt(dy)}.${parseInt(mo)}.  ${prvniCas}`;
     }
-    const osloven=jmeno?`Dobrý den, ${},`:'Dobrý den,';
-    return`${osloven}\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}${autoR}\n\nTermín příjezdu:\n${terminyText}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nM&T Servis`;
+    const osloven='Dobrý den,';
+    return`${osloven}\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}${autoR}\n\nTermín příjezdu:\n${terminyText}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nTomáš Skopalík`;
   }
 
   function sRegenerateMail(force=false){
