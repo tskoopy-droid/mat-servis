@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Rozvrh — M&T Servis</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --white: #fff;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --blue: #2563eb;
+    --blue-light: #eff6ff;
+    --blue-dark: #1d4ed8;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --green-dark: #166534;
+    --orange: #ea580c;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; min-height: 100vh; }
+  .container { max-width: 500px; margin: 0 auto; padding: 16px 12px 40px; }
+  .header { background: var(--white); padding: 14px 18px; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 14px; text-align: center; }
+  .header-title { font-size: 18px; font-weight: 700; color: var(--text); }
+  .header-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .week-nav { display: flex; align-items: center; justify-content: space-between; background: var(--white); border-radius: 14px; padding: 10px 14px; margin-bottom: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .week-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--white); color: var(--blue); font-size: 18px; font-weight: 700; cursor: pointer; }
+  .week-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .week-title { font-size: 14px; font-weight: 700; color: var(--text); text-align: center; line-height: 1.3; }
+  .day-card { background: var(--white); border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-bottom: 12px; overflow: hidden; }
+  .day-header { padding: 10px 14px; background: #f8fafc; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .day-header.today { background: var(--blue-light); border-bottom-color: var(--blue); }
+  .day-name { font-size: 13px; font-weight: 700; color: var(--text); }
+  .day-name.today { color: var(--blue); }
+  .day-count { font-size: 11px; color: var(--text-muted); }
+  .day-body { padding: 0; }
+  .day-empty { padding: 14px; text-align: center; font-size: 12px; color: var(--text-muted); font-style: italic; }
+  .slot { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+  .slot:last-child { border-bottom: none; }
+  .slot:active { background: #f8fafc; }
+  .slot-time { font-size: 14px; font-weight: 700; color: var(--blue); width: 56px; flex-shrink: 0; }
+  .slot-info { flex: 1; min-width: 0; }
+  .slot-jmeno { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot-auto { font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot-typ { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
+  .slot-typ.prezuti { background: #dbeafe; color: var(--blue-dark); }
+  .slot-typ.oleje { background: #fed7aa; color: var(--orange); }
+  .slot-typ.servis { background: var(--green-light); color: var(--green-dark); }
+  .loader { text-align: center; padding: 40px 16px; color: var(--text-muted); font-size: 13px; }
+  .err { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 12px; padding: 16px; text-align: center; color: var(--red); font-size: 13px; font-weight: 600; }
+  /* Modal */
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 100; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--white); border-radius: 20px 20px 0 0; padding: 20px 18px 28px; width: 100%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+  .modal-grip { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 14px; }
+  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+  .modal-row { display: flex; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+  .modal-row:last-child { border-bottom: none; }
+  .modal-key { width: 90px; color: var(--text-muted); flex-shrink: 0; }
+  .modal-val { flex: 1; color: var(--text); font-weight: 500; word-break: break-word; }
+  .modal-val a { color: var(--blue); text-decoration: none; font-weight: 600; }
+  .modal-close { display: block; width: 100%; margin-top: 14px; padding: 12px; background: var(--blue); color: #fff; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div class="header-title">Rozvrh M&amp;T Servis</div>
+    <div class="header-sub" id="header-sub">Načítání…</div>
+  </div>
+
+  <div class="week-nav">
+    <button class="week-btn" id="prev-btn" onclick="prevWeek()">‹</button>
+    <div class="week-title" id="week-title">—</div>
+    <button class="week-btn" id="next-btn" onclick="nextWeek()">›</button>
+  </div>
+
+  <div id="content">
+    <div class="loader">Načítání…</div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-bg" onclick="zavritModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-grip"></div>
+    <div class="modal-title" id="modal-title">Detail rezervace</div>
+    <div id="modal-body"></div>
+    <button class="modal-close" onclick="zavritModal()">Zavřít</button>
+  </div>
+</div>
+
+<script>
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
+
+// Token z URL
+var urlParams = new URLSearchParams(window.location.search);
+var TOKEN = urlParams.get('t') || urlParams.get('token') || '';
+
+var DAYS_CZ = ['Po', 'Út', 'St', 'Čt', 'Pá', 'So', 'Ne'];
+var DAYS_FULL = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle'];
+var MONTHS = ['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
+
+var data = null;
+var weekOffset = 0;
+
+function pondeliDneska() {
+  var d = new Date();
+  d.setHours(0, 0, 0, 0);
+  var dow = d.getDay();
+  var diff = dow === 0 ? -6 : 1 - dow;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function fmtDS(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var dd = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + dd;
+}
+
+function fmtCas(c) {
+  if (!c) return '';
+  if (c.indexOf(':') < 0) return String(c).padStart(2, '0') + ':00';
+  var parts = c.split(':');
+  return parts[0].padStart(2, '0') + ':' + (parts[1] || '00').padStart(2, '0');
+}
+
+function nactiData() {
+  if (!TOKEN) {
+    document.getElementById('content').innerHTML = '<div class="err">Chybí přístupový token v URL.</div>';
+    document.getElementById('header-sub').textContent = 'Neautorizováno';
+    return;
+  }
+  fetch(GAS_URL + '?action=kolega_rozvrh&token=' + encodeURIComponent(TOKEN), { redirect: 'follow' })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d && d.error === 'bad_token') {
+        document.getElementById('content').innerHTML = '<div class="err">Neplatný přístupový token.</div>';
+        document.getElementById('header-sub').textContent = 'Neautorizováno';
+        return;
+      }
+      if (!d || !d.ok) {
+        document.getElementById('content').innerHTML = '<div class="err">Nepodařilo se načíst data.</div>';
+        document.getElementById('header-sub').textContent = 'Chyba';
+        return;
+      }
+      data = d;
+      document.getElementById('header-sub').textContent = 'Aktualizováno právě teď';
+      render();
+    })
+    .catch(function() {
+      document.getElementById('content').innerHTML = '<div class="err">Chyba připojení. Zkuste to znovu.</div>';
+      document.getElementById('header-sub').textContent = 'Chyba spojení';
+    });
+}
+
+function prevWeek() {
+  if (weekOffset > -1) { weekOffset--; render(); }
+}
+function nextWeek() {
+  if (weekOffset < 4) { weekOffset++; render(); }
+}
+
+function typLabel(typ) {
+  if (typ === 'oleje') return 'OLEJ';
+  if (typ === 'servis') return 'SERVIS';
+  return 'PŘEZUTÍ';
+}
+
+function render() {
+  if (!data) return;
+
+  var pondeli = pondeliDneska();
+  pondeli.setDate(pondeli.getDate() + weekOffset * 7);
+  var nedele = new Date(pondeli);
+  nedele.setDate(nedele.getDate() + 6);
+
+  var titulek;
+  if (pondeli.getMonth() === nedele.getMonth()) {
+    titulek = pondeli.getDate() + '.–' + nedele.getDate() + '. ' + MONTHS[pondeli.getMonth()] + ' ' + pondeli.getFullYear();
+  } else {
+    titulek = pondeli.getDate() + '. ' + MONTHS[pondeli.getMonth()] + ' – ' + nedele.getDate() + '. ' + MONTHS[nedele.getMonth()] + ' ' + nedele.getFullYear();
+  }
+  if (weekOffset === 0) titulek = 'Tento týden · ' + titulek;
+  else if (weekOffset === -1) titulek = 'Minulý týden · ' + titulek;
+  document.getElementById('week-title').textContent = titulek;
+
+  document.getElementById('prev-btn').disabled = weekOffset <= -1;
+  document.getElementById('next-btn').disabled = weekOffset >= 4;
+
+  var dnes = data.dnes;
+  var html = '';
+  for (var i = 0; i < 7; i++) {
+    var den = new Date(pondeli);
+    den.setDate(pondeli.getDate() + i);
+    var ds = fmtDS(den);
+    var jeDnes = ds === dnes;
+
+    var hodiny = data.rozvrh[ds] || [];
+
+    var rezDne = data.rezervace.filter(function(r) { return r.datum === ds; });
+    rezDne.sort(function(a, b) { return fmtCas(a.cas).localeCompare(fmtCas(b.cas)); });
+
+    var dayLabel = DAYS_FULL[i] + ' · ' + den.getDate() + '. ' + (den.getMonth() + 1) + '.';
+    if (jeDnes) dayLabel += ' (dnes)';
+
+    var hasRozvrh = hodiny.length > 0;
+    var hasRez = rezDne.length > 0;
+
+    html += '<div class="day-card">';
+    html += '<div class="day-header' + (jeDnes ? ' today' : '') + '">';
+    html += '<div class="day-name' + (jeDnes ? ' today' : '') + '">' + dayLabel + '</div>';
+    if (hasRez) html += '<div class="day-count">' + rezDne.length + ' rezervac' + (rezDne.length === 1 ? 'e' : (rezDne.length < 5 ? 'e' : 'í')) + '</div>';
+    else if (hasRozvrh) html += '<div class="day-count">volno</div>';
+    html += '</div>';
+
+    html += '<div class="day-body">';
+    if (!hasRozvrh) {
+      html += '<div class="day-empty">Pracovní volno</div>';
+    } else if (!hasRez) {
+      html += '<div class="day-empty">Žádné rezervace · sloty: ' + hodiny.map(function(h){return h+':00';}).join(', ') + '</div>';
+    } else {
+      rezDne.forEach(function(r, idx) {
+        // Servis: zobrazit úkon (r.sluzby) místo auta, pokud je vyplněn
+        var hlavni = r.jmeno || '—';
+        var podradek;
+        if (r.typ === 'servis') {
+          podradek = r.sluzby || r.auto || '—';
+        } else {
+          podradek = r.auto || '—';
+        }
+        html += '<div class="slot" onclick="zobrazDetail(' + zaznamIdx(r) + ')">';
+        html += '<div class="slot-time">' + fmtCas(r.cas) + '</div>';
+        html += '<div class="slot-info">';
+        html += '<div class="slot-jmeno">' + esc(hlavni) + '</div>';
+        html += '<div class="slot-auto">' + esc(podradek) + '</div>';
+        html += '</div>';
+        html += '<div class="slot-typ ' + r.typ + '">' + typLabel(r.typ) + '</div>';
+        html += '</div>';
+      });
+    }
+    html += '</div></div>';
+  }
+
+  document.getElementById('content').innerHTML = html;
+}
+
+function zaznamIdx(r) {
+  for (var i = 0; i < data.rezervace.length; i++) {
+    if (data.rezervace[i] === r) return i;
+  }
+  return -1;
+}
+
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function typNazev(typ) {
+  if (typ === 'oleje') return 'Výměna oleje';
+  if (typ === 'servis') return 'Servisní zakázka';
+  return 'Přezutí pneumatik';
+}
+
+function zobrazDetail(idx) {
+  if (idx < 0 || !data || !data.rezervace[idx]) return;
+  var r = data.rezervace[idx];
+  var html = '';
+
+  function radek(klic, hodnota, link) {
+    if (!hodnota) return;
+    var v = link ? '<a href="' + link + '">' + esc(hodnota) + '</a>' : esc(hodnota);
+    html += '<div class="modal-row"><div class="modal-key">' + klic + '</div><div class="modal-val">' + v + '</div></div>';
+  }
+
+  radek('Datum', r.datum + ' · ' + fmtCas(r.cas));
+  radek('Typ', typNazev(r.typ));
+  radek('Jméno', r.jmeno);
+  radek('Telefon', r.telefon, r.telefon ? 'tel:' + r.telefon.replace(/\s/g, '') : '');
+  radek('Vozidlo', r.auto);
+  if (r.typ === 'servis' && r.sluzby) radek('Úkon', r.sluzby);
+  if (r.typ === 'prezuti' && r.sluzby) radek('Služby', r.sluzby);
+  if (r.poznamka) radek('Poznámka', r.poznamka);
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function zavritModal(e) {
+  if (e && e.target && e.target.id !== 'modal-bg' && e.type !== undefined && e.target.tagName !== 'BUTTON') return;
+  document.getElementById('modal-bg').classList.remove('show');
+}
+
+nactiData();
+
+setInterval(nactiData, 60000);
+</script>
+
+</body>
+</html>
