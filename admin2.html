@@ -793,7 +793,7 @@
     }
     const osloven=jmeno?`Dobrý den, ${jmeno},`:'Dobrý den,';
     const autoR=auto?`\nVozidlo: ${auto}`:'';
-    return`${osloven}\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}${autoR}\n\nTermíny:\n${terminyText}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nM&T Servis`;
+    return`${osloven}\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}${autoR}\n\nTermín příjezdu:\n${terminyText}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nM&T Servis`;
   }
 
   function sRegenerateMail(force=false){
