@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="favicon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Výměna oleje rezervace M&T Servis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+// ── Rozvrh + obsazené sloty přes GAS ──────────────────────────
+window.GAS_ROZVRH = null;
+window.GAS_BOOKED = {};
+window.GAS_URL = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
+
+function loadRozvrhGAS() {
+  return fetch(window.GAS_URL + '?action=get_rozvrh', { method: 'GET', redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){ if (data && data.ok && data.rozvrh) window.GAS_ROZVRH = data.rozvrh; })
+    .catch(function(){});
+}
+function loadObsazeneGAS() {
+  return fetch(window.GAS_URL + '?action=get_obsazene_oleje', { method: 'GET', redirect: 'follow' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){ if (data && data.ok && data.obsazene) window.GAS_BOOKED = data.obsazene; })
+    .catch(function(){});
+}
+Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
+</script>
+<style>
+  @keyframes vinSpin{to{transform:rotate(360deg)}}
+  .hidden{display:none!important;}
+  :root {--blue:#2563eb;--blue-dark:#1d4ed8;--blue-light:#eff6ff;--blue-mid:#bfdbfe;
+    --text:#1e293b;--text-muted:#64748b;--border:#e2e8f0;
+    --bg:#f8fafc;--white:#ffffff;--green:#16a34a;--green-light:#f0fdf4;--green-border:#bbf7d0;
+    --red:#ef4444;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;min-height:100vh;}
+
+  .header{background:#fff;padding:12px 20px;display:table;width:100%;box-sizing:border-box;box-shadow:0 2px 8px rgba(0,0,0,0.06);border-bottom:2px solid var(--blue-mid);max-width:500px;margin:0 auto;}
+  .header-text{display:table-cell;vertical-align:middle;padding-right:16px;width:100%;}
+  .header-sub{font-size:19px;font-weight:700;color:var(--text);}
+  .header-sub-small{font-size:11px;font-weight:500;color:var(--text-muted);line-height:1.5;}
+  .header-logo{height:70px;max-width:160px;width:auto;border-radius:6px;object-fit:contain;}
+
+  .container{max-width:500px;margin:0 auto;padding:20px 16px 40px;}
+
+  /* Steps */
+  .steps{display:flex;align-items:center;margin-bottom:6px;background:var(--white);border-radius:16px;padding:12px 12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  .step-item{display:flex;align-items:center;flex-shrink:0;}
+  .step-circle{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:2px solid var(--border);background:var(--white);color:var(--text-muted);transition:all 0.3s;}
+  .step-circle.active{border-color:var(--blue);background:var(--blue);color:#fff;}
+  .step-circle.done{border-color:var(--green);background:var(--green);color:#fff;}
+  .step-label{display:none;}
+  .step-line{flex:1;min-width:6px;height:2px;margin:0 3px;background:var(--border);}
+  .step-line.done{background:var(--green);}
+  .step-popisek{text-align:center;font-size:12px;font-weight:600;color:var(--blue);margin-bottom:16px;letter-spacing:0.3px;}
+
+  .card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:20px;box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-bottom:16px;}
+  .card.hidden{display:none;}
+  .section-title{font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;}
+  .section-sub{font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5;}
+
+  /* VIN input */
+  .vin-wrap{display:flex;gap:10px;}
+  .vin-input{flex:1;min-width:0;padding:14px 16px;border:2px solid var(--border);border-radius:14px;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;color:var(--text);letter-spacing:0.06em;text-transform:uppercase;outline:none;transition:border-color 0.2s;}
+  .vin-input:focus{border-color:var(--blue);}
+  .vin-input::placeholder{color:#cbd5e1;font-weight:400;letter-spacing:0.02em;font-size:13px;}
+  .vin-btn{padding:0;background:var(--blue);border:none;border-radius:14px;color:#fff;cursor:pointer;transition:background 0.2s;flex-shrink:0;height:50px;width:50px;display:flex;align-items:center;justify-content:center;}
+  .vin-btn:active{background:var(--blue-dark);}
+  .vin-btn:disabled{background:#cbd5e1;cursor:not-allowed;}
+  .vin-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+  .vin-cam-btn{padding:14px 18px;background:var(--blue-light);border:2px solid var(--blue-mid);border-radius:14px;color:var(--blue);cursor:pointer;transition:background 0.2s,border-color 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:"Inter",sans-serif;font-weight:700;font-size:15px;}
+  .vin-cam-btn:active{background:var(--blue-mid);}
+  .vin-cam-btn svg{width:20px;height:20px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  /* Modal výběru zdroje fotky */
+  .cam-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:flex-end;justify-content:center;}
+  .cam-modal-overlay.open{display:flex;}
+  .cam-modal{background:#fff;border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:480px;}
+  .cam-modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px;text-align:center;}
+  .cam-option{display:flex;align-items:center;gap:14px;padding:16px;border-radius:14px;border:2px solid var(--border);margin-bottom:10px;cursor:pointer;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;color:var(--text);background:#fff;width:100%;transition:border-color 0.2s;}
+  .cam-option:active{background:#f1f5f9;}
+  .cam-option svg{width:24px;height:24px;stroke:var(--blue);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .cam-cancel{margin-top:6px;width:100%;padding:14px;border:none;border-radius:14px;background:#f1f5f9;font-family:"Inter",sans-serif;font-size:15px;font-weight:600;cursor:pointer;color:#64748b;}
+
+  /* Info tabulka */
+  .info-table{width:100%;border-collapse:collapse;margin-top:4px;}
+  .info-table td{padding:7px 0;font-size:13px;border-bottom:1px solid #f1f5f9;}
+  .info-table tr:last-child td{border-bottom:none;}
+  .info-table td:first-child{color:var(--text-muted);width:55%;}
+  .info-table td:last-child{font-weight:600;color:var(--text);}
+
+  /* Služby */
+  .sluzba-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--white);border:2px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;user-select:none;}
+  .sluzba-item:active,.sluzba-item.selected{border-color:var(--blue);background:var(--blue-light);}
+  .sluzba-item.disabled{opacity:0.4;cursor:not-allowed;}
+  .sluzba-left{display:flex;align-items:center;gap:12px;}
+  .sluzba-check{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.15s;}
+  .sluzba-item.selected .sluzba-check{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .sluzba-name{font-size:14px;font-weight:600;color:var(--text);}
+  .sluzba-detail{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .sluzba-cena{font-size:15px;font-weight:700;color:var(--blue);white-space:nowrap;}
+  .sluzba-cena.naceneni{color:var(--text-muted);font-size:13px;}
+
+  /* Souhrn */
+  .summary-bar{background:var(--blue-light);border:1.5px solid var(--blue-mid);border-radius:14px;padding:14px 16px;margin-bottom:16px;font-size:14px;color:var(--blue-dark);font-weight:500;}
+  .summary-total{display:flex;justify-content:space-between;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--blue-mid);}
+  .summary-total-label{font-size:13px;font-weight:600;}
+  .summary-total-price{font-size:20px;font-weight:700;}
+
+  /* Formulář */
+  .field{margin-bottom:14px;}
+  .field label{font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+  .field input,.field textarea{width:100%;padding:13px 14px;border:2px solid var(--border);border-radius:14px;font-family:"Inter",sans-serif;font-size:15px;color:var(--text);outline:none;transition:border-color 0.2s;}
+  .field input:focus,.field textarea:focus{border-color:var(--blue);}
+  .field textarea{resize:vertical;min-height:80px;}
+
+  .submit-btn{width:100%;padding:16px;background:var(--blue);border:none;border-radius:14px;color:#fff;font-family:"Inter",sans-serif;font-weight:700;font-size:16px;cursor:pointer;transition:background 0.2s;margin-top:4px;}
+  .submit-btn:active{background:var(--blue-dark);}
+  .submit-btn:disabled{background:#cbd5e1;cursor:not-allowed;}
+  .slot-error{background:#fef2f2;border:1px solid #fca5a5;color:#dc2626;border-radius:12px;padding:14px 16px;font-size:14px;font-weight:600;text-align:center;margin-bottom:14px;display:none;}
+
+  /* Výsledek */
+  .result-card{background:var(--green-light);border:1.5px solid var(--green-border);border-radius:20px;padding:20px;text-align:center;}
+  .result-icon{font-size:40px;margin-bottom:12px;}
+  .result-title{font-size:20px;font-weight:700;color:var(--green);margin-bottom:8px;}
+  .result-text{font-size:14px;color:var(--text-muted);line-height:1.6;}
+
+  /* Error / info boxy */
+  .error-box{display:none;margin-top:12px;padding:12px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;font-size:13px;color:#dc2626;line-height:1.5;}
+  .error-box.visible{display:block;}
+  .info-box{display:none;margin-top:12px;padding:12px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:12px;font-size:13px;color:#92400e;line-height:1.5;}
+  .info-box.visible{display:block;}
+
+  .krok-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .krok-header .section-title{margin:0;}
+
+  .sekce-nadpis{font-size:15px;font-weight:700;color:var(--text);margin:16px 0 6px;}
+  .sekce-popis{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px;}
+  .kategorie-item{border:2px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;background:var(--white);}
+  .kategorie-item:active,.kategorie-item.selected{border-color:var(--blue);background:var(--blue-light);}
+  .kategorie-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .kategorie-check{width:20px;height:20px;border:2px solid var(--border);border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all 0.15s;}
+  .kategorie-item.selected .kategorie-check{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .kategorie-nazev{font-size:15px;font-weight:700;color:var(--text);flex:1;}
+  .kategorie-interval{font-size:13px;font-weight:800;color:var(--blue);white-space:nowrap;background:var(--blue-light);padding:4px 10px;border-radius:20px;}
+  .kategorie-popis{font-size:13px;color:var(--text-muted);line-height:1.5;}
+  .doporucujeme-badge{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--green);border-radius:4px;padding:2px 7px;margin-left:6px;vertical-align:middle;}
+  /* Vybraný olej box */
+  .olej-vybran{background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:12px 16px;margin-top:10px;}
+  .olej-vybran-label{font-size:10px;font-weight:700;color:var(--green);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px;}
+  .olej-vybran-nazev{font-size:14px;font-weight:700;color:var(--text);}
+  .olej-vybran-visc{font-size:13px;color:var(--text-muted);margin-bottom:4px;}
+  .olej-vybran-cena{font-size:18px;font-weight:700;color:var(--blue);}
+
+  /* 1L dolití checkbox */
+  .doliti-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--white);border:2px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;user-select:none;}
+  .doliti-item:active,.doliti-item.selected{border-color:var(--blue);background:var(--blue-light);}
+  .doliti-item .doliti-check{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.15s;}
+  .doliti-item.selected .doliti-check{background:var(--blue);border-color:var(--blue);color:#fff;}
+
+  .naceneni-section{display:none;margin-top:16px;padding:16px;background:#f8fafc;border:1px solid var(--border);border-radius:14px;}
+  .naceneni-section.visible{display:block;}
+  .naceneni-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px;}
+  .naceneni-sub{font-size:13px;color:var(--text-muted);margin-bottom:12px;line-height:1.5;}
+
+  /* Calendar */
+  .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+  .cal-btn{background:var(--blue-light);border:none;color:var(--blue);border-radius:10px;width:40px;height:40px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;}
+  .cal-btn:active{background:var(--blue-mid);}
+  .cal-title{font-weight:700;color:var(--text);font-size:16px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;}
+  .cal-day-name{font-size:11px;color:var(--text-muted);padding:6px 0;font-weight:600;}
+  .cal-day{padding:10px 2px;border-radius:10px;font-size:14px;border:2px solid transparent;font-weight:500;}
+  .cal-day.empty{color:transparent;}
+  .cal-day.unavailable{color:#cbd5e1;}
+  .cal-day.available{background:var(--blue-light);border-color:var(--blue-mid);color:var(--blue-dark);cursor:pointer;font-weight:600;}
+  .cal-day.available:active{background:var(--blue-mid);}
+  .cal-day.selected{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important;font-weight:700;}
+  .cal-legend{margin-top:14px;font-size:11px;color:var(--text-muted);}
+  .time-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px;}
+  .time-slot{padding:22px 8px;border-radius:16px;text-align:center;font-weight:700;font-size:22px;border:2px solid var(--border);background:var(--white);color:var(--text);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+  .time-slot:active{border-color:var(--blue);background:var(--blue-light);}
+  .time-slot.booked{background:var(--bg);border-color:var(--border);color:#cbd5e1;cursor:not-allowed;box-shadow:none;}
+  .time-slot.booked .booked-label{font-size:10px;color:#cbd5e1;margin-top:4px;display:block;font-weight:500;}
+  .time-slot.selected{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(37,99,235,0.3);}
+  .back-btn-cal{background:var(--blue-light);border:none;color:var(--blue);cursor:pointer;font-size:20px;padding:8px 12px;border-radius:10px;line-height:1;}
+  .back-btn-cal:active{background:var(--blue-mid);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-text">
+    <div class="header-sub">Výměna oleje rezervace</div>
+    <div class="header-sub-small">Dlouhá Loučka, Šumvaldská 59</div>
+  </div>
+  <div style="display:table-cell;vertical-align:middle;width:1px;text-align:right;padding-left:12px">
+    <img src="data:image/jpeg;base64,/9j/4QBeRXhpZgAATU0AKgAAAAgABAEBAAMAAAABAWIAAIdpAAQAAAABAAAAPgESAAMAAAABAAEAAAEAAAMAAAABBAAAAAAAAAAAAZIIAAQAAAABAAAAAAAAAAAAAAAAAAD/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAEBAQEBAQEBAQEBAQEBAQICAQEBAQMCAgICAwMEBAMDAwMEBAYFBAQFBAMDBQcFBQYGBgYGBAUHBwcGBwYGBgb/2wBDAQEBAQEBAQMCAgMGBAMEBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgb/wAARCAFiBAADASIAAhEBAxEB/8QAHwABAAIBBAMBAAAAAAAAAAAAAAoLCQECBwgDBAYF/8QAdBAAAAUDAgMEAwgLBRALDAkFAAECAwQFBgcIEQkSIQoTMVFBYXEUFyIyUoGR0xUWGCNCobHB0dLUGWJyksQaJCUnM1d2goaWorKztMLDOENTZmd3g4eTl8UmKDRHSFRWWGNzo+E1NjlERlVkZXWIlJXV4//EABYBAQEBAAAAAAAAAAAAAAAAAAABAv/EAB0RAQEBAQEBAQEBAQAAAAAAAAABESExQQISUSL/2gAMAwEAAhEDEQA/AJ+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOr2rLWbpp0PYvn5f1O5XtvF1mROZMNyrPmubUJBJ3JiFEQRuyHT2+KhJ7eJmRdQHaEBAO1e9tVkQK5V7e0S6W6NUaNDkLbp2SM/Vl9Ry0kZl3iKTCW2bRH4lzyFHt4kQxEVLtePF+m19dWh3Zgyj0xT/Mm2IOFYa4aU7/ABCcdNb5l6Nzc39YC1oAVwWnLtrGqGgVmmw9Uel/DeSLX75CKjVMTzp1tVdLe5EpwifeksLMi3PlJCCM+m5CSzY3ahOFBfem/Ime2MtVy2LkxvZ66lU8BXhQDh3dPlbJSzCp6CUqPJcdeWhslId2SRmtwkIJRk0SA7ru61bEt6q3be1yUK0LVoURUit3Jc1WagwIbCfjOPPuqShCS38VGRDARqH7UHwhtP8AXKhbLGeqnmquUta0TGMG2dJr0PvEntyoqBEmK57UOqL1iuc4pvGa1d8U3J1VrGVLwqln4Qp9VcXjfTra1YcbtyjxSV96XIbIyKbN5fjyXyNRmZkgm0cqE4u7Qsu9ch1qNbdi2nc963BLUSYtCtShP1KY4Z+BJZZQpR/MQmizvtntkHC4rNZ+x1cs3U3Z9ONwkpr1VxxGksEnf4ym48xxzb09EGYzYaPeLhw8NdpxIGmzVBjm8brltEpOPKrUVUa5C6bn/QuYlqQoi9JpQovWKeC69CGtiyaOq4rv0jal7YoDbfO7W65g2sxoiEfKU6qNypL1mZDrVTapcFp1qHVqVOqtvXDQ5yXYFSgSXIk2HJbVulbbiTJba0mW5GRkZGQTwX6g2qUlCTWtSUJSW6lKPYiIVqfBq7VfmjA9dtjA/EUuWs5owQ40mJSM1zWDl3dbZJLZv3W6XwqhHIiIjNzd5PTZai6DrZxoO0vajdbt23hhTSfd90YF0lRJL8FD9rTl0649xLlOl+7JskjWb6l+s/SJb8e3U7Mb+5oONPwwNHtUn25nDWHiWk3hS3Vt1Kx7Tq6rkrUZ1Pi2/Bp6XnWVb+hxKRj3idrE4M8msopbubsiwoanOU69KwVXfchdfE+WKa9v7UVN6Pdk2STbKH5UqU70bZSanHFmfkRbqMz9o5Wc0/Z5aoirmdwrlxq3UtG4qvuY2qSYZI+V35scm3r3CdF0Lpa4q3Dy1oy4tJ036s8O5DuearaJYyboRTrhc2LczTSpXdyjLofUm9hkFI9y3LwPwFA/GmVOkVBibEkzKdVKbKS5GlMOqakR3kK3SpKi2UhSTIjIy2MjIS8+DD2pTUPpivCysC69ryuHPumOpTY9OZyhdDq6heVltK2QiQcw93ajCb6Gtp81vIR1aXsgml0WdoDrjkPWBpaxNiGi58yTn/FFmYcuWhtVK18g1y9IzVPq0N1tLjbkFXOZyuZC0KJLJLUZGWxCO3qI7X3wxsR1eXQsV0bM2oqVDdcQqtWhbjVIo7hpPYjbkTFpdUR+fckGwSsgEJKh9tn0uSqw1HuHRjmejUNT2ztVpeR4E6QlHmUdUdslH6u8L2jMRpB7SPwqNYFTpdsUbOEnC981daEQrRz3RyoKnXVHsSETScci779C5nUmfkJozygPWhTYdRiRp9PlRp0Gawl2HNhvpdadbUW6VoWkzSpSSMjIyPYx7IKAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOuurLU1jfR3p5ynqPyxUUU+ysW2rIqM9JuElyS6lJ9zGa38VuOcqC9u/oFNnxMeJPn/iX6irnzPmK5aiqglPfZxrjxmWoqZb1I5z7mOwzvy85p5TWvbmUrfc/ATbe2f6n6tZenTTppfoVSkQkZavOXXrxisumkpFPpyeSOhW3invlLPb09BCl4Rujima7+IPp1053E6tuzrqvFEu+1NnstVHhl30pCfWpKST7FGHtH7mhPg28QDiJbVTTxhKqyLFTIJuRk+9HTpNvoV5JkrSZueB/1NKi6eJDOcz2MHX8u3kVB/OGBGLgUzuq3idkrQS9vi+6fA/byiygxrjaxsQ2NbONsa2xR7Nsi0KQxBt23KFCTHjRozSCShKUpIi32SW5n1M+p7mPuQFNxrX7P9xNdC9GqF4ZKwbIvjHlM3VPv7EMw69Bjo9Cn0ISTqC8dz5DItj3MYWFEpJmlRGRkexkZdSMX8s2FDqUOTT6hEjToM1hTUyHMYJxp1tRbKQtCiMlJMjMjIyFWv2rbhf2Fok1V2JqEwbbEO0sO6qYlRfqtrUeMTUGk3dDUlc0mEF0bbktPoeSgtiJaHtiItiAYK+GzoXvziNax8P6UrEkOUlV+Vhb15XUTPOii27ET3tRnKLbbdDRGlBH0U6ttPpFwrol4bWkDQFi2hYy08YetO3U06AyitXjLpLcmuViUgvhSZkxaTcccUe57mfTwLoRCA32LClUGZxEdRdQmsMuV6l6Ppx0J5xJGptty4KUmTyeRmnuy38ty9Is1AHoy6ZTp8dUSdBiTIqk7KjyYyXEGXkaTLYYOuKFwCtE3Ecsmvz3LAt/D+oFqnTrTzNYdIbgyfeSJBNooWbeyUmSzyqiIs0pNAifuK0b6LqRmJqPZoNH19atKbijVXd16cQ1qhxMqMoxLcOHTcTLcgp6GMlKI8XcNuIJtHRXIaFGlwlFyzRsDFGEHVYXlcW63ltnV3JW6x+0sBYUw7h2xqbZ2LeN7SrNtSjQUQqTbNIpLMKFEaL8lploiShP9lJEJKXYxnVGVLyHJLp5N3HjUXPW7VRpLZnVRoLm5J2MiHm3MnS9O5JFqS1EZn8UkQ/QCyWnW1EloiuWnDFW4cj1cqvopvJRH2PIJxqPILSLTa9VrdmqNyLSIvMhEbqhpkpuFcZ0bBeSMg4Rn5PseRc64lrz1MqEVRHv3bfU4lt4vWaVEYuGYJuWf5Ou9aFSmSLvucvvVlHKn4n9v+UPSNdaP8AnFv6P+k9g/w7tYNPuVaQ/wDuG2L9/bQwS9Q3Prd41p7uyf32EEe/0R3mCVr79WGq9WLRLyOxC8dRQdZjrL0sLjLNz39T4bmNt/jHR3M7cGAa8KKOqiZp3+kN22wHGStpRnbEHDFh+kLb++MuImfGpYmhPQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABQFbX21yMotXekmTykRO4OrSErL08lQaPb5uf8AGLJQV1fbZqApnOmiW4jRsiXji64infM0SoiiL5tzEo5e7D/JSkuITD5Em6tOO3Ofl+ESUnVS238j5vxCfsK/7sQy0oqmv1HN1fptiKSnb5LlQI/8chYAigNFfFVt47dBqNFeB+wBTodo2x/TMccY3WZSKW3HaZrd8xq489Gbb5ileqcRqUvp57vGJMHYj7gqT1na2rXVIWdKi3Jb05uLufKT7jKkKUXrNLZCPP2ogkFxrdWiUb/Bj2fzEZ9Nzt6CZ7fOr6Rn/AOxEFvT9dOx/EmWnv1+UiR+qJPFifSAAKgAAAAAw0cWfjZaVOFPjic/e9Yh5J1B1imrVjvT5bFXQVUmOmWzb9QcIle4YZK8XVkalERk2hZl0Du1ra10aaeHxg+u595PZEptjWdS+Zmi001k9Vq9UjQamqfS4ZHzyZLnKeyUlslJKWs0ISpZVf3Fy7Rzq64kFbr+Pcc1WuactKhvOsU7F9q1c2qtXIu+yXa5ObMjcUstzOO0ZMpJXKrvTIlnjD4h/Eg1PcTPO1QznqUvJdVlME9HsKwqMa49vWtS1r5ih0yIajJtJ8qOd1RqdeUklOLUZFt1DxnjHIeZr8tfF+KbMuPIOQr1qzUG1bPtOlrmT50pw/goaaQRmfpMzPZKUkalGREZh6evh1KUtRqUZqNR7nv5jk2zcL5TyBQq/ddo2LcdYtK1GTXc93M01SKTTi5dyKTNURMtKUXxUqWRqPoRGYlAT+ERo14OmBrc1LcYWttZv1L3vSzl4M4dWMruOJHkvl8V644myfenFaXslw2eRnmSptByfhcuATWDrvzbrIrlMbvNds2BiWzVONYn06YhoLdv2FaEJR9GaZSGdmkr22JUhwlvu7buOKMWzB0sUk0qUk9t0nsex7kNAAQBvQ640pKm1qQpJ7pUlWxkfmXkY2AAz68NftF2v/h3SaNaabwXqEwNDebTLxFlqpuyVx4xH8JNNqR8z0VW3QiV3rZfIFkZwu+M7o54qdklMwvdn2qZgotPS7feBL2fbjXFTT2LneZb5tpcXmPo+waklukl8ij5RS/DkTFGWslYNyDa2VcRXtcmOsi2VVW5trXjaVWchT4UlB7ktp1BkZeRl4GRmRkZGJ4L6wBEc4EHaVbJ1ztWrpc1lTrexxqwRGah2nfiTRCoV+uJTykXKZkmJUl7bm0WzTyjPu+QzS2cuMUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB+VXa5SLZotWuKv1CLSaHQqc9Lq9TnPE2zHjNINTji1GexJSlJmZn5Cpu7QNxw7/4lOcK3h/EtyVWgaM8WV92NZluQZCmUXVOYUaF1mckjLvCUe/coV0Q312JS1GJdHazuIbVNKmiCj6a8eVx2k5O1eT5VJqUqDI5JES0IqUqqq0mXUu+7xiNv5PqMvAVafNu7ufQt/wAQn0drrB0Naqco6Z8sawrEw5ddx6d8JVeNCyRkeDFJUaC87y8xknfncQ0TrRurQRk0lxJq2Lcy4306Sq7FzbjP7XX6hHqcq8IUcl0pxSXzYdcJL6Umk99lNc5Ht6DMSBav2g+o4C4ZmPOGToow9bVp289huZRM+5mvOAiXKrlVrLTh11cGJtyklZynG0vu/DIm0GktiIeTsrvD3q2r7iDQMzXdaLtXwFpgt2oVK8p9Rhmqnza9PiOxKZTuYy2U5tIfk7F1SUZJntzELwRq7redk3PcDjjrkhblZkn3jizUpX3w9up+IzR3f2fjiJ21odxhrip2Lahdlq5BpR1Kp4xt6A69dNFpKzM4kyRC25lIdbJK+VJc6CURGXjtYJ6eOzGcLHT5ml3N0XGFw5KrcSte7rYtvJ9wHU6PTHyXzoUiMZbOGhW3Ka99tvAxIPYhQ40RmnxosdiDHjpaYhssklpDRFsSEpLoSSLpt4bB0UUWnrS3m/UtqBsPTRiyya5PyzflzNU6nUGZT3I64ijV99flEpJG000nmWtSiLYk+ZkR92eJlo2ztwtc+ydJOXL9t/KsYrQp1ajOR465HmqXnWkzSSZGbSbSrZS1KWzUPcdTfyKcD0P8Q/i7avJNZxfqJxXb9GpVCcYj3dR6FEaiVm4pCFbqbqNTZSbzDLp9SjO94lDZkZfGSLdPpMPg1AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6BcV8zTwtOJUpJmlSdAWYzSoj2Mj+1GogAD//Z" alt="M&T Servis" class="header-logo">
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Steps -->
+  <div class="steps">
+    <div class="step-item"><div class="step-circle active" id="sc1">1</div></div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item"><div class="step-circle" id="sc2">2</div></div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item"><div class="step-circle" id="sc3">3</div></div>
+    <div class="step-line" id="line3"></div>
+    <div class="step-item"><div class="step-circle" id="sc4">4</div></div>
+    <div class="step-line" id="line4"></div>
+    <div class="step-item"><div class="step-circle" id="sc5">5</div></div>
+  </div>
+  <div class="step-popisek" id="step-popisek">Vozidlo</div>
+
+  <!-- Krok 1: VIN -->
+  <div class="card" id="cardVin">
+    <div class="section-title" style="text-align:center;">Zadejte VIN kód vozidla</div>
+    <div class="section-sub">VIN najdete na zadní straně malého technického průkazu nebo za předním sklem u volantu.</div>
+    <div class="section-sub" style="margin-bottom:12px;">VIN můžete naskenovat pomocí fotoaparátu — stačí vyfotit nebo vybrat z galerie a pole se vyplní automaticky, nebo ho zadejte ručně níže.</div>
+    <button class="vin-cam-btn" id="camBtn" onclick="otevriVyberFotky()" style="width:100%;margin-bottom:16px;">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Skenovat VIN
+    </button>
+    <div class="vin-wrap" style="flex-direction:column;gap:12px;">
+      <input type="text" class="vin-input" id="vinInput" placeholder="např. VSSZZZ1MZ2R033594" maxlength="17" autocomplete="off" autocorrect="off" spellcheck="false" style="width:100%;">
+      <button id="vinBtn" onclick="nactiVin()" style="width:100%;padding:15px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:16px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+        Načíst
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </div>
+    <div class="error-box" id="vinError"></div>
+
+    <!-- Modal výběru zdroje fotky -->
+    <div class="cam-modal-overlay" id="camModal" onclick="zavriModal(event)">
+      <div class="cam-modal">
+        <div class="cam-modal-title">Naskenovat VIN</div>
+        <button class="cam-option" onclick="spustiFotoaparat()">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Fotoaparát
+        </button>
+        <button class="cam-option" onclick="vyberZGalerie()">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Galerie
+        </button>
+        <button class="cam-cancel" onclick="zavriCamModal()">Zrušit</button>
+      </div>
+    </div>
+    <input type="file" id="inputFotoaparat" accept="image/*" capture="environment" style="display:none" onchange="zpracujFotku(this)">
+    <input type="file" id="inputGalerie" accept="image/*" style="display:none" onchange="zpracujFotku(this)">
+  </div>
+
+  <!-- Krok 1b: Data vozidla -->
+  <div class="card hidden" id="cardAuto">
+    <div class="section-title" id="autoTitle">Vaše vozidlo</div>
+    <table class="info-table" id="autoTable"></table>
+    <div style="margin-top:14px;display:flex;gap:10px;">
+      <button onclick="resetVin()" style="flex:1;padding:12px;background:var(--white);border:1.5px solid var(--border);border-radius:12px;font-family:Inter,sans-serif;font-weight:600;font-size:13px;color:var(--text-muted);cursor:pointer;">← Jiné vozidlo</button>
+      <button onclick="pokracujNaSluzby()" style="flex:2;padding:12px;background:var(--blue);border:none;border-radius:12px;font-family:Inter,sans-serif;font-weight:700;font-size:14px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    </div>
+  </div>
+
+  <!-- Krok 2: Výběr oleje -->
+  <div class="card hidden" id="cardOlej">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetNa('cardAuto', 1)">←</button>
+      <div class="section-title">Výběr oleje</div>
+    </div>
+    <div id="olejLoading" style="text-align:center;padding:28px 0;display:none;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Načítám databázi Castrol…</div>
+      <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
+    </div>
+    <div class="kategorie-item" id="katStandard" onclick="vyberKategorii('standard')" style="display:none;">
+      <div class="kategorie-header">
+        <div class="kategorie-check" id="chkKatStandard"></div>
+        <div class="kategorie-nazev">Standard <span class="doporucujeme-badge">Doporučujeme</span></div>
+        <div class="kategorie-interval" id="intervalStandard">15 000 km / 1 rok</div>
+      </div>
+      <div class="kategorie-popis">Nejlepší péče pro maximální životnost motoru a turbodmychadla. Častější výměna brání usazování nečistot a udržuje motor v kondici jako u nového vozu.</div>
+    </div>
+    <div class="kategorie-item" id="katLL" onclick="vyberKategorii('ll')" style="display:none;">
+      <div class="kategorie-header">
+        <div class="kategorie-check" id="chkKatLL"></div>
+        <div class="kategorie-nazev">Long Life</div>
+        <div class="kategorie-interval" id="intervalLL">30 000 km / 2 roky</div>
+      </div>
+      <div class="kategorie-popis" id="katLLPopis">Varianta vhodná pro vozy s vysokým ročním nájezdem, které se pohybují převážně na dlouhých dálničních trasách. Umožňuje prodloužit interval návštěvy servisu při zachování předepsaných norem výrobce.</div>
+    </div>
+    <div class="olej-vybran hidden" id="olejVybranBox">
+      <div class="olej-vybran-label">Vybraný olej</div>
+      <div class="olej-vybran-nazev" id="olejVybranNazev"></div>
+      <div class="olej-vybran-visc" id="olejVybranVisc"></div>
+      <div class="olej-vybran-cena" id="olejVybranCena"></div>
+    </div>
+    <div class="info-box" id="infoNaceneni">Pro vaše vozidlo nemáme olej v ceníku. Odešlete poptávku a my vás kontaktujeme.</div>
+    <div class="naceneni-section" id="naceneniSection">
+      <div class="naceneni-title">Odeslat k nacenění</div>
+      <div class="naceneni-sub">Zadejte email a my vám pošleme cenovou nabídku přímo pro vaše vozidlo.</div>
+      <div class="field"><label>Váš email</label><input type="email" id="naceneniEmail" placeholder="vas@email.cz"></div>
+      <button onclick="odeslaPoptavku()" style="width:100%;padding:13px;background:var(--blue);border:none;border-radius:12px;font-family:Inter,sans-serif;font-weight:700;font-size:14px;color:#fff;cursor:pointer;">Odeslat poptávku</button>
+    </div>
+    <div id="olejContinueWrap" style="margin-top:16px;display:none;">
+      <button onclick="zpetNa('cardDoliti', 2)" style="width:100%;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    </div>
+  </div>
+
+  <!-- Krok 3: Dolití + Reset -->
+  <div class="card hidden" id="cardDoliti">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetNa('cardOlej', 2)">←</button>
+      <div class="section-title">Doplňkové služby k oleji</div>
+    </div>
+    <div class="sekce-nadpis">1 l oleje na dolití</div>
+    <div class="sekce-popis">I moderní motory občas spotřebují mezi servisy trochu oleje. Dostanete od nás litrovou láhev správného oleje pro váš vůz — když bude potřeba dolít, máte ho po ruce.</div>
+    <div class="doliti-item" id="slDoliti" onclick="toggleDoliti()">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="doliti-check" id="chkDoliti"></div>
+        <div style="font-size:14px;font-weight:600;color:var(--text);">Přidat 1 l oleje s sebou</div>
+      </div>
+      <div style="font-size:15px;font-weight:700;color:var(--blue);" id="cenaDoliti">—</div>
+    </div>
+    <div class="sekce-nadpis" style="margin-top:16px;">Reset servisního intervalu</div>
+    <div class="sekce-popis">Po každé výměně oleje je nutné resetovat servisní interval — jinak palubní počítač stále hlásí potřebu výměny. Provádíme automaticky v ceně výměny.</div>
+    <div class="sluzba-item selected" id="slReset" onclick="toggleSluzba('reset')">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkReset">✓</div>
+        <div><div class="sluzba-name">Reset servisního intervalu</div></div>
+      </div>
+      <div class="sluzba-cena" style="color:var(--green);font-weight:700;">Zdarma</div>
+    </div>
+    <button onclick="zpetNa('cardVzduch', 3)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+  </div>
+
+  <!-- Krok 4: Vzduchový filtr -->
+  <div class="card hidden" id="cardVzduch">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetNa('cardDoliti', 3)">←</button>
+      <div class="section-title">Vzduchový filtr</div>
+    </div>
+    <div class="sekce-popis">Průchodný filtr znamená nižší spotřebu a plný výkon motoru. Výměnou každých 30 000 km zajistíte, že motor nebude zbytečně namáhán kvůli nedostatku vzduchu.</div>
+    <div class="sluzba-item" id="slVzduch" onclick="toggleSluzba('vzduch')">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkVzduch"></div>
+        <div><div class="sluzba-name">Vzduchový filtr Bosch</div><div class="sluzba-detail">Výměna v ceně</div></div>
+      </div>
+      <div class="sluzba-cena" id="cenaVzduch">—</div>
+    </div>
+    <button onclick="zpetNa('cardKabina', 3)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+  </div>
+
+  <!-- Krok 5: Kabinový filtr -->
+  <div class="card hidden" id="cardKabina">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetNa('cardVzduch', 3)">←</button>
+      <div class="section-title">Kabinový filtr</div>
+    </div>
+    <div class="sekce-popis">Čistý filtr chrání posádku před alergeny a zamezuje pronikání nepříjemných pachů do interiéru. Zajišťuje svěží vzduch během jízdy, šetří klimatizaci a účinně zabraňuje zamlžování oken.</div>
+    <div class="sluzba-item" id="slKabina" onclick="toggleSluzba('kabina')">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkKabina"></div>
+        <div><div class="sluzba-name">Kabinový filtr Bosch</div><div class="sluzba-detail">Výměna v ceně</div></div>
+      </div>
+      <div class="sluzba-cena" id="cenaKabina">—</div>
+    </div>
+    <button onclick="pokracujZKabiny()" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+  </div>
+
+  <!-- Krok 6: Palivový filtr (jen diesel) -->
+  <div class="card hidden" id="cardPalivo">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetNa('cardKabina', 3)">←</button>
+      <div class="section-title">Palivový filtr</div>
+    </div>
+    <div class="sekce-popis">Klíčová ochrana pro citlivé a drahé vstřikovače před nečistotami v naftě. Výměna v rozmezí 30 000–60 000 km je nejlevnější pojistkou proti náhlým poruchám palivového systému a špatným startům.</div>
+    <div class="sluzba-item" id="slPalivo" onclick="toggleSluzba('palivo')">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkPalivo"></div>
+        <div><div class="sluzba-name">Palivový filtr Bosch</div><div class="sluzba-detail">Výměna v ceně</div></div>
+      </div>
+      <div class="sluzba-cena" id="cenaPalivo">—</div>
+    </div>
+    <button onclick="zpetNa('cardSouhrn', 3)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+  </div>
+
+  <!-- Krok 7: Souhrn -->
+  <div class="card hidden" id="cardSouhrn">
+    <div class="krok-header">
+      <button class="back-btn-cal" id="sohrnBackBtn" onclick="zpetZeSouhrnu()">←</button>
+      <div class="section-title">Souhrn objednávky</div>
+    </div>
+    <div class="summary-bar" id="summaryBar">
+      <div id="summaryItems"></div>
+      <div class="summary-total">
+        <span class="summary-total-label">Celkem</span>
+        <span class="summary-total-price" id="summaryTotal"></span>
+      </div>
+    </div>
+    <button onclick="zpetNa('cardTermin', 4)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Vybrat termín →</button>
+  </div>
+
+  <!-- Krok 8: Termín -->
+  <div class="card hidden" id="cardTermin">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetNa('cardSouhrn', 4)">←</button>
+      <div class="section-title">Vyberte termín</div>
+    </div>
+    <div id="slot-error-msg" class="slot-error">⚠️ Omlouváme se, tento termín byl právě obsazen. Vyberte prosím jiný čas.</div>
+    <div class="section-sub" id="terminSub">Nejbližší dostupný termín je za 3 pracovní dny.</div>
+    <div id="calendarContainer"></div>
+    <div id="timeSlotsContainer" style="display:none"></div>
+  </div>
+
+  <!-- Krok 9: Kontakt -->
+  <div class="card hidden" id="cardKontakt">
+    <div class="section-title">Kontaktní údaje</div>
+    <div class="section-sub">Vyplňte prosím své údaje pro potvrzení rezervace.</div>
+    <div class="field"><label>Jméno a příjmení *</label><input type="text" id="fJmeno" placeholder="Jan Novák"></div>
+    <div class="field"><label>Telefon *</label><input type="tel" id="fTelefon" placeholder="+420 777 123 456"></div>
+    <div class="field"><label>Email</label><input type="email" id="fEmail" placeholder="jan@email.cz"></div>
+    <div class="field"><label>Poznámka</label><textarea id="fPoznamka" placeholder="Dotazy, speciální požadavky..."></textarea></div>
+    <div class="error-box" id="kontaktError"></div>
+    <button class="submit-btn" onclick="odeslat()">Odeslat rezervaci</button>
+  </div>
+
+  <!-- Hotovo -->
+  <div class="card hidden" id="cardHotovo">
+    <div class="result-card">
+      <div class="result-icon">✅</div>
+      <div class="result-title">Rezervace odeslána!</div>
+      <div class="result-text">Brzy vás budeme kontaktovat pro potvrzení termínu.<br><br>Děkujeme za důvěru.</div>
+    </div>
+    <button onclick="location.reload()" style="width:100%;margin-top:16px;padding:14px;background:var(--white);border:1.5px solid var(--border);border-radius:14px;font-family:Inter,sans-serif;font-weight:600;font-size:14px;color:var(--text-muted);cursor:pointer;">Nová rezervace</button>
+  </div>
+
+</div>
+
+<script>
+// ── Konfigurace ──────────────────────────────────────────────
+var VIN_PROXY  = window.GAS_URL;
+var OLEJE_API  = window.GAS_URL;
+var VISION_KEY = 'AIzaSyDngFtfxDub3SR5zOrMYYbWw-z7B8lEsCw';
+
+// ── Kamera / Vision API ────────────────────────────────────────
+function otevriVyberFotky() {
+  if (!navigator.maxTouchPoints || navigator.maxTouchPoints === 0) {
+    document.getElementById('inputGalerie').click();
+  } else {
+    document.getElementById('camModal').classList.add('open');
+  }
+}
+function zavriCamModal() { document.getElementById('camModal').classList.remove('open'); }
+function zavriModal(e) { if (e.target === document.getElementById('camModal')) zavriCamModal(); }
+function spustiFotoaparat() { zavriCamModal(); document.getElementById('inputFotoaparat').click(); }
+function vyberZGalerie() { zavriCamModal(); document.getElementById('inputGalerie').click(); }
+
+function zpracujFotku(input) {
+  if (!input.files || !input.files[0]) return;
+  var btn = document.getElementById('camBtn');
+  var svgCam = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var svgSpin = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
+  btn.innerHTML = svgSpin + ' Rozpoznávám…';
+  btn.disabled = true;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.split(',')[1];
+    fetch('https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ requests: [{ image: {content: base64}, features: [{type:'TEXT_DETECTION',maxResults:1}] }] })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      btn.innerHTML = svgCam + ' Skenovat VIN';
+      btn.disabled = false;
+      var text = '';
+      try { text = data.responses[0].fullTextAnnotation.text || ''; } catch(e){}
+      var vinMatch = text.match(/VIN\)[^\w]*([A-HJ-NPR-Z0-9]{17})/i);
+      if (!vinMatch) vinMatch = text.match(/\bE[.:]\s*([A-HJ-NPR-Z0-9]{17})/i);
+      if (!vinMatch) {
+        var cleaned = text.replace(/\s/g,'').replace(/[IOQ]/g,'');
+        var kandidati = cleaned.match(/[A-HJ-NPR-Z0-9]{17}/g) || [];
+        var platne = kandidati.filter(function(k){ return (k.match(/[0-9]/g)||[]).length >= 4; });
+        if (platne.length > 0) {
+          platne.sort(function(a,b){ return (b.match(/[0-9]/g)||[]).length - (a.match(/[0-9]/g)||[]).length; });
+          vinMatch = [platne[0], platne[0]];
+        }
+      }
+      var vin = vinMatch ? (vinMatch[1] || vinMatch[0]) : null;
+      if (vin) {
+        document.getElementById('vinInput').value = vin;
+        document.getElementById('vinError').textContent = '';
+        document.getElementById('vinError').classList.remove('visible');
+      } else {
+        document.getElementById('vinError').textContent = 'VIN nebyl na fotografii nalezen. Zkuste znovu s ostřejším záběrem.';
+        document.getElementById('vinError').classList.add('visible');
+      }
+      input.value = '';
+    })
+    .catch(function() {
+      btn.innerHTML = svgCam + ' Skenovat VIN';
+      btn.disabled = false;
+      document.getElementById('vinError').textContent = 'Chyba při rozpoznávání textu. Zkuste to znovu.';
+      document.getElementById('vinError').classList.add('visible');
+      input.value = '';
+    });
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ── Stav ─────────────────────────────────────────────────────
+var stav = {
+  vin:'', znacka:'', model:'', typ:'', varianta:'', karoserie:'', emisniUroven:'', kodMotoru:'',
+  palivo:'', objem:0, rok:'', vykon:'',
+  castrolData: null,
+  castrolPreloadPromise: null,
+  olejVybrany: null,
+  doliti: false,
+  cenik: null,
+  sluzby: { vzduch:false, kabina:false, palivo:false, reset:true },
+  selDate: null, selTime: null,
+  cenaCelkem: 0,
+};
+
+// ── Steps ─────────────────────────────────────────────────────
+function updateSteps(active) {
+  var popisky = ['Vozidlo','Olej','Filtry','Termín','Kontakt'];
+  for (var i = 1; i <= 5; i++) {
+    var c = document.getElementById('sc' + i);
+    var ln = document.getElementById('line' + i);
+    if (!c) continue;
+    c.className = 'step-circle' + (i < active ? ' done' : i === active ? ' active' : '');
+    c.textContent = i < active ? '✓' : String(i);
+    if (ln) ln.className = 'step-line' + (i < active ? ' done' : '');
+  }
+  var p = document.getElementById('step-popisek');
+  if (p) p.textContent = popisky[active - 1] || '';
+}
+
+// ── Dekódování modelového roku z VIN (10. znak) ──────────────
+function dekodujRokVin(vin) {
+  var seq = ['A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T','V','W','X','Y','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T','V','W','X','Y','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T','V','W','X','Y'];
+  if (!vin || vin.length < 10) return '';
+  var znak = vin.charAt(9).toUpperCase();
+  var dnesniRok = new Date().getFullYear();
+  var mozne = [];
+  seq.forEach(function(z, i) { if (z === znak) mozne.push(1980 + i); });
+  var platne = mozne.filter(function(r) { return r <= dnesniRok + 1; });
+  var rok = platne.length > 0 ? platne[platne.length - 1] : (mozne.length > 0 ? mozne[mozne.length - 1] : null);
+  return rok ? String(rok) : '';
+}
+
+// ── Krok 1: VIN ───────────────────────────────────────────────
+function nactiVin() {
+  var vin = document.getElementById('vinInput').value.trim().toUpperCase();
+  var err = document.getElementById('vinError');
+  err.classList.remove('visible');
+
+  if (vin.length !== 17) { err.textContent = 'VIN musí mít přesně 17 znaků.'; err.classList.add('visible'); return; }
+  if (/[IOQ]/i.test(vin)) { err.textContent = 'VIN nesmí obsahovat písmena I, O nebo Q.'; err.classList.add('visible'); return; }
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) { err.textContent = 'VIN obsahuje nepovolené znaky.'; err.classList.add('visible'); return; }
+
+  var svgArrow = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+  var svgSpinW = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
+  var btn = document.getElementById('vinBtn');
+  btn.innerHTML = 'Načítám… ' + svgSpinW;
+  btn.disabled = true;
+
+  fetch(VIN_PROXY + '?vin=' + vin)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      btn.innerHTML = 'Načíst ' + svgArrow;
+      btn.disabled = false;
+      if (data.error) { err.textContent = data.error; err.classList.add('visible'); return; }
+
+      stav.vin          = vin;
+      stav.znacka       = data.znacka;
+      stav.model        = data.model;
+      stav.typ          = data.typ ? data.typ.replace(/^[^a-zA-Z0-9]+/, '').trim() : '';
+      stav.varianta     = data.varianta;
+      stav.karoserie    = data.karoserie ? data.karoserie.split(/[\s.]/)[0] : '';
+      stav.emisniUroven = data.emisniUroven;
+      stav.kodMotoru    = data.kodMotoru;
+      stav.palivo       = data.palivo;
+      stav.objem        = data.obsah;
+      stav.rok          = dekodujRokVin(vin);
+      stav.vykon        = data.vykon ? data.vykon.split('/')[0].trim() : '';
+
+      // ── Preload Castrol na pozadí — výsledek je již JSON (ne Response) ──
+      stav.castrolPreloadPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=olej', { redirect: 'follow' })
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+
+      zobrazAuto();
+    })
+    .catch(function() {
+      btn.innerHTML = 'Načíst ' + svgArrow;
+      btn.disabled = false;
+      err.textContent = 'Nepodařilo se připojit. Zkuste znovu.';
+      err.classList.add('visible');
+    });
+}
+
+function zobrazAuto() {
+  document.getElementById('autoTitle').textContent = stav.znacka + ' ' + stav.model;
+  var rows = [
+    ['Tovární značka', stav.znacka], ['Obchodní označení', stav.model],
+    ['Typ', stav.typ], ['Varianta', stav.varianta], ['Karoserie', stav.karoserie],
+    ['Emisní úroveň', stav.emisniUroven], ['Kód motoru', stav.kodMotoru],
+    ['Max. výkon', stav.vykon + ' kW'], ['Palivo', stav.palivo],
+    ['Zdvihový objem', stav.objem + ' cm³'], ['Modelový rok', stav.rok],
+  ];
+  var html = '';
+  rows.forEach(function(r) {
+    if (r[1] && r[1].trim() && r[1] !== ' kW' && r[1] !== ' cm³') {
+      html += '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+    }
+  });
+  document.getElementById('autoTable').innerHTML = html;
+  document.getElementById('cardAuto').classList.remove('hidden');
+  document.getElementById('cardVin').classList.add('hidden');
+  updateSteps(1);
+}
+
+function resetVin() {
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',castrolData:null,castrolPreloadPromise:null,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0 };
+  document.getElementById('vinInput').value = '';
+  document.getElementById('vinError').classList.remove('visible');
+  zobrazKartu('cardVin');
+  updateSteps(1);
+}
+
+function pokracujNaSluzby() {
+  zobrazKartu('cardOlej');
+  updateSteps(2);
+  // Reset UI stavu
+  document.getElementById('katStandard').style.display = 'none';
+  document.getElementById('katLL').style.display = 'none';
+  document.getElementById('katStandard').classList.remove('selected');
+  document.getElementById('katLL').classList.remove('selected');
+  document.getElementById('chkKatStandard').textContent = '';
+  document.getElementById('chkKatLL').textContent = '';
+  document.getElementById('olejVybranBox').classList.add('hidden');
+  document.getElementById('olejContinueWrap').style.display = 'none';
+  document.getElementById('infoNaceneni').classList.remove('visible');
+  document.getElementById('naceneniSection').classList.remove('visible');
+  document.getElementById('olejLoading').style.display = 'block';
+  nactiCenik();
+}
+
+// ── Krok 2: Načtení olejů z GAS ──────────────────────────────
+// OPRAVA: castrolPreloadPromise již vrací JSON přímo (ne Response).
+// Pokud preload není k dispozici, fetch + .json() provedeme zde.
+function nactiCenik() {
+  // Sestavíme Promise která vždy vrátí JSON data (nebo null)
+  var olejePromise;
+  if (stav.castrolPreloadPromise) {
+    // Preload proběhl v nactiVin — výsledek je již JSON objekt
+    olejePromise = stav.castrolPreloadPromise;
+  } else {
+    // Fallback: fetchni teď a parsuj JSON
+    olejePromise = fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=olej', { redirect: 'follow' })
+      .then(function(r) { return r.json(); })
+      .catch(function() { return null; });
+  }
+
+  olejePromise
+    .then(function(data) {
+      document.getElementById('olejLoading').style.display = 'none';
+
+      if (!data || data.error || !data.oleje || data.oleje.length === 0) {
+        zobrazNaceneni();
+        return;
+      }
+
+      stav.castrolData = data;
+      stav.objem       = data.objem || stav.objem;
+      stav.kodMotoru   = data.kodMotoru || stav.kodMotoru;
+      stav.cenik       = data;
+
+      // Nastav ceny filtrů
+      document.getElementById('cenaVzduch').textContent = (data.cenaVzduch || '—') + ' Kč';
+      document.getElementById('cenaKabina').textContent = (data.cenaKabina || '—') + ' Kč';
+      document.getElementById('cenaPalivo').textContent = (data.cenaPalivo || '—') + ' Kč';
+
+      // Zkontroluj dostupnost kategorií
+      var standardOleje = data.oleje.filter(function(o) { return (o.km || 0) <= 20000; });
+      var llOleje        = data.oleje.filter(function(o) { return (o.km || 0) > 20000; });
+      var maStandard = standardOleje.length > 0;
+      var maLL       = llOleje.length > 0;
+
+      if (!maStandard && !maLL) { zobrazNaceneni(); return; }
+
+      // Nastav interval tagy z dat Castrol
+      if (maStandard) {
+        var bestStd = standardOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
+        document.getElementById('intervalStandard').textContent = bestStd.interval || '15 000 km / 1 rok';
+        document.getElementById('katStandard').style.display = '';
+      }
+      if (maLL) {
+        var bestLL = llOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
+        document.getElementById('intervalLL').textContent = bestLL.interval || '30 000 km / 2 roky';
+        document.getElementById('katLL').style.display = '';
+      }
+
+      // Upravit popis LL pokud je to jediná kategorie
+      if (maLL && !maStandard) {
+        document.getElementById('katLLPopis').textContent = 'Váš vůz vyžaduje olej Long Life dle specifikace výrobce. Interval výměny je ' + (document.getElementById('intervalLL').textContent) + '.';
+      }
+
+      // Automatický předvýběr
+      if (maStandard) {
+        vyberKategorii('standard');
+      } else if (maLL) {
+        vyberKategorii('ll');
+      }
+    })
+    .catch(function() {
+      document.getElementById('olejLoading').style.display = 'none';
+      zobrazNaceneni();
+    });
+}
+
+function vyberKategorii(typ) {
+  if (!stav.castrolData) return;
+  var oleje = stav.castrolData.oleje;
+
+  // Odznač obě kategorie
+  document.getElementById('katStandard').classList.remove('selected');
+  document.getElementById('katLL').classList.remove('selected');
+  document.getElementById('chkKatStandard').textContent = '';
+  document.getElementById('chkKatLL').textContent = '';
+
+  // Vyber kategorii
+  var idKat = typ === 'standard' ? 'katStandard' : 'katLL';
+  var idChk = typ === 'standard' ? 'chkKatStandard' : 'chkKatLL';
+  document.getElementById(idKat).classList.add('selected');
+  document.getElementById(idChk).textContent = '✓';
+
+  // Filtruj oleje podle kategorie (km <= 20000 = Standard, > 20000 = LL)
+  var filtrovane = oleje.filter(function(o) {
+    return typ === 'standard' ? (o.km || 0) <= 20000 : (o.km || 0) > 20000;
+  });
+  if (filtrovane.length === 0) return;
+
+  // Vyber olej s nejlepší prioritou
+  filtrovane.sort(function(a, b) { return (a.priorita || 999) - (b.priorita || 999); });
+  var vybrany = filtrovane[0];
+  stav.olejVybrany = vybrany;
+  stav.doliti = false;
+
+  // Zobraz vybraný olej
+  var viscMatch = vybrany.nazev.match(/\b(\d+[wW]-\d+)\b/);
+  var visc = viscMatch ? viscMatch[1] : '';
+  var nazevBezVisc = visc ? vybrany.nazev.replace(visc, '').replace(/\s+/g, ' ').trim() : vybrany.nazev;
+  document.getElementById('olejVybranNazev').textContent = stav.objem + ' l ' + nazevBezVisc;
+  // Zobrazit viskozitu + interval
+  var intervalText = vybrany.interval || '10 000 km / 1 rok';
+  document.getElementById('olejVybranVisc').textContent = (visc ? visc + ' · ' : '') + intervalText;
+  document.getElementById('olejVybranCena').textContent = (vybrany.cenaOleje || '—') + ' Kč';
+  document.getElementById('olejVybranBox').classList.remove('hidden');
+
+  // Nastav cenu dolití + reset checkboxu
+  document.getElementById('cenaDoliti').textContent = vybrany.cena1lDoliti ? vybrany.cena1lDoliti + ' Kč' : '—';
+  document.getElementById('slDoliti').classList.remove('selected');
+  document.getElementById('chkDoliti').textContent = '';
+
+  document.getElementById('olejContinueWrap').style.display = 'block';
+  aktualizujSouhrn();
+}
+
+function toggleDoliti() {
+  if (!stav.olejVybrany) return;
+  stav.doliti = !stav.doliti;
+  var item = document.getElementById('slDoliti');
+  var chk  = document.getElementById('chkDoliti');
+  if (stav.doliti) { item.classList.add('selected'); chk.textContent = '✓'; }
+  else             { item.classList.remove('selected'); chk.textContent = ''; }
+  aktualizujSouhrn();
+}
+
+function zobrazNaceneni() {
+  document.getElementById('infoNaceneni').classList.add('visible');
+  document.getElementById('naceneniSection').classList.add('visible');
+}
+
+function toggleSluzba(klic) {
+  if (!stav.cenik) return;
+  stav.sluzby[klic] = !stav.sluzby[klic];
+  var k = klic.charAt(0).toUpperCase() + klic.slice(1);
+  var item = document.getElementById('sl' + k);
+  var chk  = document.getElementById('chk' + k);
+  if (stav.sluzby[klic]) { item.classList.add('selected'); chk.textContent = '✓'; }
+  else                   { item.classList.remove('selected'); chk.textContent = ''; }
+  aktualizujSouhrn();
+}
+
+function sestavPolozky() {
+  if (!stav.olejVybrany || !stav.cenik) return [];
+  var c = stav.cenik;
+  var o = stav.olejVybrany;
+  var polozky = [];
+  var intervalLabel = o.interval || '10 000 km / 1 rok';
+  polozky.push({ popis: stav.objem + ' l ' + o.nazev + ' (' + intervalLabel + ')', cena: Math.round(Number(o.cenaOleje) || 0) });
+  polozky.push({ popis: 'Olejový filtr BOSCH', cena: Math.round(Number(c.cenaFiltr) || 0) });
+  polozky.push({ popis: 'Práce', cena: Math.round(Number(c.cenaPrace) || 0) });
+  if (stav.doliti && o.cena1lDoliti) polozky.push({ popis: '1 l oleje na dolití', cena: Math.round(Number(o.cena1lDoliti) || 0) });
+  if (stav.sluzby.vzduch && c.cenaVzduch) polozky.push({ popis: 'Vzduchový filtr BOSCH', cena: Math.round(Number(c.cenaVzduch) || 0) });
+  if (stav.sluzby.kabina && c.cenaKabina) polozky.push({ popis: 'Kabinový filtr BOSCH', cena: Math.round(Number(c.cenaKabina) || 0) });
+  if (stav.sluzby.palivo && c.cenaPalivo) polozky.push({ popis: 'Palivový filtr BOSCH', cena: Math.round(Number(c.cenaPalivo) || 0) });
+  return polozky;
+}
+
+function aktualizujSouhrn() {
+  if (!stav.olejVybrany || !stav.cenik) return;
+  var polozky = sestavPolozky();
+  var total = 0;
+  var itemsHtml = [];
+
+  polozky.forEach(function(p) {
+    itemsHtml.push(
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
+      '<div style="font-size:13px;color:var(--text-muted);">' + p.popis + '</div>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;margin-left:12px;">' + p.cena + ' Kč</div>' +
+      '</div>'
+    );
+    total += p.cena;
+  });
+
+  if (stav.sluzby.reset) {
+    itemsHtml.push(
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
+      '<div style="font-size:13px;color:var(--text-muted);">Reset servisního intervalu</div>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--green);white-space:nowrap;margin-left:12px;">Zdarma</div>' +
+      '</div>'
+    );
+  }
+
+  document.getElementById('summaryItems').innerHTML = itemsHtml.join('');
+  document.getElementById('summaryTotal').textContent = total + ' Kč';
+  stav.cenaCelkem = total;
+}
+
+function odeslaPoptavku() {
+  var email = document.getElementById('naceneniEmail').value.trim();
+  if (!email) { alert('Zadejte prosím email.'); return; }
+  fetch(OLEJE_API, {
+    method: 'POST', redirect: 'follow',
+    body: JSON.stringify({ akce:'poptavka', vin:stav.vin, znacka:stav.znacka, model:stav.model, kodMotoru:stav.kodMotoru, palivo:stav.palivo, objem:stav.objem, email:email })
+  })
+  .then(function() {
+    document.getElementById('naceneniSection').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-weight:600;">✓ Poptávka odeslána! Brzy vás kontaktujeme.</div>';
+  })
+  .catch(function() { alert('Chyba při odesílání. Zkuste znovu.'); });
+}
+
+// ── Navigace ──────────────────────────────────────────────────
+var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardDoliti','cardVzduch','cardKabina','cardPalivo','cardSouhrn','cardTermin','cardKontakt','cardHotovo'];
+
+function zobrazKartu(id) {
+  VSECHNY_KARTY.forEach(function(k) { document.getElementById(k).classList.add('hidden'); });
+  document.getElementById(id).classList.remove('hidden');
+  window.scrollTo(0, 0);
+}
+
+function zpetNa(id, step) {
+  zobrazKartu(id);
+  updateSteps(step);
+  if (id === 'cardTermin') renderCalendar();
+  if (id === 'cardSouhrn') aktualizujSouhrn();
+}
+
+function pokracujZKabiny() {
+  if (stav.palivo === 'diesel') { zobrazKartu('cardPalivo'); updateSteps(3); }
+  else { aktualizujSouhrn(); zobrazKartu('cardSouhrn'); updateSteps(4); }
+}
+
+function zpetZeSouhrnu() {
+  if (stav.palivo === 'diesel') { zobrazKartu('cardPalivo'); updateSteps(3); }
+  else { zobrazKartu('cardKabina'); updateSteps(3); }
+}
+
+// ── Kalendář ─────────────────────────────────────────────────
+var MONTHS_CZ = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"];
+var DAYS_CZ = ["Po","Út","St","Čt","Pá","So","Ne"];
+var DAYS_FULL = ['Ne','Po','Út','St','Čt','Pá','So'];
+var MONTHS_FULL = ['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
+var calState = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null };
+
+function getMinDate() {
+  var minDni = (stav.cenik && stav.cenik.minDniRezervace) ? stav.cenik.minDniRezervace : 3;
+  var d = new Date(); d.setHours(0,0,0,0);
+  var added = 0;
+  while (added < minDni) { d.setDate(d.getDate()+1); var dow=d.getDay(); if(dow!==0&&dow!==6) added++; }
+  return d;
+}
+
+function getMaxDate() {
+  var d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+35); return d;
+}
+
+function maMesicVolnyDen(y, m) {
+  var total = new Date(y,m+1,0).getDate();
+  for (var d=1;d<=total;d++) { if (isAvailable(y,m,d)) return true; }
+  return false;
+}
+
+function getSlotsForDate(ds) {
+  var r = window.GAS_ROZVRH;
+  if (!r || !r[ds]) return [];
+  return r[ds].map(function(h){ return String(h).padStart(2,'0')+':00'; });
+}
+function getBooked(ds) { return (window.GAS_BOOKED && window.GAS_BOOKED[ds]) || []; }
+function fmtD(y,m,d) { return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+function fmtDateCZ(ds) {
+  var p=ds.split('-').map(Number); var dt=new Date(p[0],p[1]-1,p[2]);
+  return DAYS_FULL[dt.getDay()]+' '+p[2]+'. '+MONTHS_FULL[p[1]-1]+' '+p[0];
+}
+
+function isAvailable(y,m,d) {
+  var ds=fmtD(y,m,d); var slots=getSlotsForDate(ds);
+  if (!slots.length) return false;
+  var dt=new Date(y,m,d); dt.setHours(0,0,0,0);
+  if (dt<getMinDate()) return false;
+  var booked=getBooked(ds);
+  return slots.some(function(t){ return !booked.includes(t); });
+}
+
+function renderCalendar() {
+  var maxD = getMaxDate();
+  if (!maMesicVolnyDen(calState.year, calState.month)) {
+    var ny=calState.year, nm=calState.month+1;
+    if (nm===12){nm=0;ny++;}
+    var prvni=new Date(ny,nm,1); prvni.setHours(0,0,0,0);
+    if (prvni<=maxD && maMesicVolnyDen(ny,nm)) { calState.month=nm; calState.year=ny; }
+  }
+
+  var y=calState.year, m=calState.month;
+  var first=new Date(y,m,1).getDay(); var total=new Date(y,m+1,0).getDate();
+  var offset=first===0?6:first-1;
+  var html='<div class="cal-nav"><button class="cal-btn" onclick="calPrev()">‹</button><span class="cal-title">'+MONTHS_CZ[m]+' '+y+'</span><button class="cal-btn" onclick="calNext()">›</button></div>';
+  html+='<div class="cal-grid">';
+  DAYS_CZ.forEach(function(d){ html+='<div class="cal-day-name">'+d+'</div>'; });
+  for (var i=0;i<offset;i++) html+='<div class="cal-day empty">.</div>';
+  for (var d2=1;d2<=total;d2++) {
+    var ds=fmtD(y,m,d2); var avail=isAvailable(y,m,d2); var sel=ds===calState.selDate;
+    var cls='cal-day'+(avail?' available':' unavailable')+(sel?' selected':'');
+    var oc=avail?' onclick="selectCalDate(\''+ds+'\')"':'';
+    html+='<div class="'+cls+'"'+oc+'>'+d2+'</div>';
+  }
+  html+='</div><div class="cal-legend"><span style="color:var(--blue);font-weight:600">■ Dostupný den</span></div>';
+
+  if (!maMesicVolnyDen(y,m)) {
+    var ny2=y,nm2=m+1; if(nm2===12){nm2=0;ny2++;} var p2=new Date(ny2,nm2,1); p2.setHours(0,0,0,0);
+    if (p2>maxD || !maMesicVolnyDen(ny2,nm2)) {
+      html='<div style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;border-radius:12px;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">Aktuálně není žádný volný termín.<br>Zkuste to prosím později.</div>';
+    }
+  }
+
+  document.getElementById('calendarContainer').innerHTML = html;
+  document.getElementById('timeSlotsContainer').style.display = 'none';
+  if (window._slotError) { var el=document.getElementById('slot-error-msg'); if(el) el.style.display='block'; window._slotError=false; }
+}
+
+function calPrev() { if(calState.month===0){calState.month=11;calState.year--;}else calState.month--; renderCalendar(); }
+function calNext() { if(calState.month===11){calState.month=0;calState.year++;}else calState.month++; renderCalendar(); }
+
+function selectCalDate(ds) { calState.selDate=ds; renderCalendar(); renderTimeSlots(ds); }
+
+function renderTimeSlots(ds) {
+  var slots=getSlotsForDate(ds); var booked=getBooked(ds);
+  var html='<div style="font-weight:700;font-size:15px;margin-bottom:12px">'+fmtDateCZ(ds)+' — vyberte čas:</div><div class="time-grid">';
+  slots.forEach(function(t) {
+    var isB=booked.includes(t); var isSel=t===calState.selTime&&ds===calState.selDate;
+    var cls='time-slot'+(isB?' booked':'')+(isSel?' selected':'');
+    var oc=isB?'':' onclick="selectCalTime(\''+t+'\')"';
+    var label=isB?'<span class="booked-label">OBSAZENO</span>':'';
+    html+='<div class="'+cls+'"'+oc+'>'+t+label+'</div>';
+  });
+  html+='</div>';
+  document.getElementById('timeSlotsContainer').innerHTML=html;
+  document.getElementById('timeSlotsContainer').style.display='block';
+}
+
+function selectCalTime(t) {
+  calState.selTime=t; stav.selDate=calState.selDate; stav.selTime=calState.selTime;
+  zobrazKartu('cardKontakt'); updateSteps(5);
+}
+
+// ── Odeslání rezervace ────────────────────────────────────────
+function odeslat() {
+  var jmeno=document.getElementById('fJmeno').value.trim();
+  var telefon=document.getElementById('fTelefon').value.trim();
+  var email=document.getElementById('fEmail').value.trim();
+  var poznamka=document.getElementById('fPoznamka').value.trim();
+  var err=document.getElementById('kontaktError');
+  err.classList.remove('visible');
+
+  if (!jmeno||!telefon) { err.textContent='Vyplňte prosím jméno a telefon.'; err.classList.add('visible'); return; }
+  if (!stav.selDate||!stav.selTime) { err.textContent='Vyberte prosím termín.'; err.classList.add('visible'); return; }
+  if (!stav.olejVybrany||!stav.cenaCelkem||stav.cenaCelkem<=0) { err.textContent='Chybí výběr oleje nebo výpočet ceny.'; err.classList.add('visible'); return; }
+
+  var polozky=sestavPolozky();
+  if (!polozky.length) { err.textContent='Nepodařilo se sestavit položky. Zkuste to prosím znovu.'; err.classList.add('visible'); return; }
+
+  var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
+
+  fetch(window.GAS_URL, {
+    method:'POST', redirect:'follow',
+    body: JSON.stringify({
+      akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
+      vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
+      kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
+      olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
+      datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem
+    })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(resp) {
+    if (resp&&(resp.ok||resp.status==='ok')) {
+      if (!window.GAS_BOOKED[stav.selDate]) window.GAS_BOOKED[stav.selDate]=[];
+      if (window.GAS_BOOKED[stav.selDate].indexOf(stav.selTime)<0) window.GAS_BOOKED[stav.selDate].push(stav.selTime);
+      zobrazKartu('cardHotovo'); updateSteps(5);
+    } else if (resp&&resp.code==='slot_obsazen') {
+      calState.selDate=null; calState.selTime=null; window._slotError=true;
+      zobrazKartu('cardTermin'); updateSteps(4); renderCalendar();
+      btn.textContent='Odeslat rezervaci'; btn.disabled=false;
+    } else {
+      err.textContent=(resp&&resp.message)?resp.message:'Nepodařilo se odeslat. Zavolejte 731 885 825.';
+      err.classList.add('visible'); btn.textContent='Odeslat rezervaci'; btn.disabled=false;
+    }
+  })
+  .catch(function() {
+    err.textContent='Nepodařilo se spojit se serverem. Zavolejte 731 885 825.';
+    err.classList.add('visible'); btn.textContent='Odeslat rezervaci'; btn.disabled=false;
+  });
+}
+
+// ── VIN z URL parametru ───────────────────────────────────────
+window.addEventListener('load', function() {
+  var params=new URLSearchParams(window.location.search);
+  var vinParam=params.get('vin');
+  if (vinParam&&vinParam.length===17) { document.getElementById('vinInput').value=vinParam.toUpperCase(); nactiVin(); }
+});
+
+document.getElementById('vinInput').addEventListener('keydown', function(e) { if(e.key==='Enter') nactiVin(); });
+</script>
+</body>
+</html>
