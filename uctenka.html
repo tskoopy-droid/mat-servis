@@ -194,8 +194,7 @@
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
-
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqWoHAPxVAsB-qYeF40XmxM4hTy0cW7dqV4h8pQ-CdycTWGnNoo0Q2nIamqAYMY302-w/exec';
 async function gasPost(payload){
   const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
   return res.json();
