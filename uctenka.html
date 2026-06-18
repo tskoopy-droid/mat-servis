@@ -256,6 +256,7 @@ function vyberKategorii(h){
   kategorie = (kategorie === h) ? '' : h;
   document.getElementById('seg-vybaveni').classList.toggle('vybrano', kategorie === 'vybavení dílny');
   document.getElementById('seg-dily').classList.toggle('vybrano', kategorie === 'díly na prodej');
+  document.getElementById('seg-naklady').classList.toggle('vybrano', kategorie === 'náklady');
 }
 
 // --- foto ---
