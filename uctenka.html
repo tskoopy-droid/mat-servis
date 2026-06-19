@@ -248,8 +248,10 @@ window.odeslat = async function(){
 
   btn.disabled = true; btn.textContent = 'Ukládám...';
   try {
+  const klic = new URLSearchParams(window.location.search).get('t') || '';
     const payload = {
       akce: 'uctenka_save',
+      klic: klic,
       data: {
         dodavatel: dodavatel,
         popis: popis,
