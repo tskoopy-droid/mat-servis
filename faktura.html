@@ -262,7 +262,6 @@ async function gasPost(payload) {
   return res.json();
 }
 
-// ── Init: načtení čísla + ceníku z GAS ──
 async function nactiInit() {
   try {
     const r = await gasPost({ akce:'faktura_init', token:getToken() });
@@ -275,9 +274,56 @@ async function nactiInit() {
       }
       renderCenikSelect();
     }
-  } catch (e) {
-    // offline / chyba — formulář funguje ručně, číslo si zadáš sám
+  } catch (e) {}
+
+  // ── Předvyplnění z rezervace (pokud přišli přes ?id=&col=) ──
+  const params = new URLSearchParams(window.location.search);
+  const rezId  = params.get('id');
+  const rezCol = params.get('col');
+  if (rezId && rezCol) {
+    await nactiZRezervace(rezId, rezCol);
   }
+}
+
+async function nactiZRezervace(id, col) {
+  try {
+    const r = await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id, col });
+    if (!r.ok) { console.warn('faktura_z_rezervace:', r.error); return; }
+
+    // Odběratel
+    if (r.jmeno)   document.getElementById('odberatel_nazev').value = r.jmeno;
+    if (r.vozidlo) document.getElementById('odberatel_adresa').value = r.vozidlo;
+
+    // Ceník — přepis (GAS vrátil rozšířený ceník s kategoriemi)
+    if (r.cenik && r.cenik.length) {
+      cenik = r.cenik;
+      renderCenikSelect();
+    }
+
+    // Položky
+    if (r.polozky && r.polozky.length) {
+      polozky = r.polozky;
+      renderPolozky();
+    }
+
+    // Banner — info o vazbě na rezervaci
+    rezervaceId  = id;
+    rezervaceCol = col;
+    zobrazRezBanner(r.jmeno, r.vozidlo, r.typ);
+
+  } catch(e) {
+    console.warn('nactiZRezervace chyba:', e);
+  }
+}
+
+function zobrazRezBanner(jmeno, vozidlo, typ) {
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:var(--blue-light);border:1px solid var(--blue-mid);border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--blue-dark);';
+  const typLabel = { prezuti:'Přezutí', oleje:'Výměna oleje', servis:'Servis' }[typ] || typ;
+  banner.innerHTML = '📋 Faktura z rezervace — <strong>' + (jmeno||'—') + '</strong>' +
+    (vozidlo ? ' &nbsp;·&nbsp; ' + vozidlo : '') +
+    (typLabel ? ' &nbsp;·&nbsp; ' + typLabel : '');
+  document.querySelector('.wrap').insertBefore(banner, document.querySelector('.grid-2'));
 }
 
 function renderCenikSelect() {
