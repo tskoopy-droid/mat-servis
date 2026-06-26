@@ -576,6 +576,7 @@
           <input type="number" class="trzba-input" id="trzba-${r.id}" placeholder="Tržba" inputmode="numeric" min="0" max="99999" step="1" value="${r.trzba||''}">
           <span class="trzba-suffix">Kč</span>
           <button class="archiv-btn" onclick="archivovat('${r.id}','${r.col}','${r.typ}')">✓ Archivovat</button>
+          <button class="archiv-btn" style="background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="fakturovat('${r.id}','${r.col}')">🧾 Fakturovat</button>
           <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
         </div>`:`
         <div class="archiv-row" style="justify-content:space-between">
@@ -643,6 +644,10 @@
         renderList();
       }else alert('Chyba: '+(r.message||r.error||'neznámá'));
     }catch(e){alert('Chyba připojení.');}
+  }
+
+  window.fakturovat=function(id,col){
+    window.location.href='faktura.html?id='+id+'&col='+col;
   }
 
   // ══════════════════════════════════════════════════════════
