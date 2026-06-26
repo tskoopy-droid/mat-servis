@@ -449,10 +449,16 @@ async function ulozAVytiskni() {
           await gasPost({ akce:'admin_archive', token:getToken(), id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0 });
         } catch(e) { console.warn('Archivace selhala:', e); }
       }
-      try { const init2 = await gasPost({ akce:'faktura_init', token:getToken() }); if (init2.ok) dalsiCislo = init2.dalsiCislo; } catch(e) {}
-      // uloženo → rovnou tisk
+      // uloženo → tisk pro zákazníka, po zavření tisku návrat do adminu
       generujPrint();
-      setTimeout(() => window.print(), 200);
+      setTimeout(function() {
+        window.print();
+        // po zavření tiskového dialogu → potvrzení a návrat
+        setTimeout(function() {
+          alert('✓ Faktura ' + r.cislo + ' byla uložena.');
+          window.location.href = 'admin.html';
+        }, 300);
+      }, 200);
     } else if (r.error === 'duplicate') {
       setStatus('Faktura ' + cislo + ' už v evidenci je. Změň číslo (nebo použij Náhled bez uložení pro přetisk).', 'err');
       btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
