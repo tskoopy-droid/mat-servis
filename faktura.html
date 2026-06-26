@@ -230,7 +230,7 @@ const DODAVATEL = {
   ico: '08134235',
   adresa: 'Šumvaldská 59\n783 86 Dlouhá Loučka',
   ucet: '363170017/0300',
-  iban: 'CZ0603000000000363170017',
+  iban: 'CZ5503000000003631700170',
 };
 const ODBERATEL_UNIVERZAL = 'Maloobchodní prodej';
 
@@ -527,6 +527,7 @@ function generujPrint() {
         <td style="text-align:right;">${fmtKc(total)}</td>
       </tr></tfoot>
     </table>
+    ${forma === 'Převodem' ? `
     <div class="print-footer">
       <div>
         <div class="print-platba-title">Platební údaje</div>
@@ -539,12 +540,20 @@ function generujPrint() {
         <div class="print-platba-title">QR platba</div>
         <div id="print-qr"></div>
       </div>
-    </div>
+    </div>` : `
+    <div class="print-footer" style="grid-template-columns:1fr;">
+      <div>
+        <div class="print-platba-title">Úhrada</div>
+        <div class="print-platba-row"><strong>${forma === 'Kartou' ? 'Uhrazeno platební kartou' : 'Uhrazeno v hotovosti'}</strong></div>
+        <div class="print-platba-row"><span class="lb">Částka:</span> <strong>${fmtKc(total)}</strong></div>
+      </div>
+    </div>`}
     ${poznamka ? `<div class="print-poznamka">${esc(poznamka)}</div>` : ''}
     <div class="print-dph-note">Nejsem plátce DPH.</div>
   `;
 
   setTimeout(() => {
+    if (forma !== 'Převodem') return;
     const qrEl = document.getElementById('print-qr');
     if (qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:qrString, width:90, height:90, correctLevel:QRCode.CorrectLevel.M }); }
   }, 50);
