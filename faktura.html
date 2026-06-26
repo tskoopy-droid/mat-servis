@@ -90,12 +90,10 @@
   @keyframes spin { to { transform:rotate(360deg); } }
 
   /* ===== PRINT ===== */
-  @page { size:A4; margin:10mm; }
   @media print {
-    html, body { background:#fff; padding:0; margin:0; height:auto; }
+    body { background:#fff; padding:0; }
     #app, #gate { display:none !important; }
     #faktura-print { display:block !important; }
-    .print-page { width:auto !important; min-height:0 !important; padding:0 !important; }
   }
   #faktura-print { display:none; }
   .print-page { width:210mm; min-height:0; padding:14mm; font-family:'Inter',Arial,sans-serif; font-size:9pt; color:#1e293b; }
@@ -145,14 +143,15 @@
   <div class="wrap">
 
     <div class="header">
-      <div style="width:100%">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <a href="admin.html" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--bg);color:var(--text-muted);text-decoration:none;font-size:18px;flex-shrink:0;" title="Zpět do adminu">←</a>
-          <div>
-            <div class="header-title">📄 Vystavení faktury</div>
-            <div class="header-sub">M&amp;T Servis</div>
-          </div>
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+        <a href="admin.html" style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--bg);color:var(--text-muted);text-decoration:none;font-size:18px;flex-shrink:0;" title="Zpět do adminu">←</a>
+        <div>
+          <div class="header-title">📄 Vystavení faktury</div>
+          <div class="header-sub">M&amp;T Servis</div>
         </div>
+      </div>
+      <div class="header-btns">
+        <a href="admin.html" class="btn btn-light" style="text-decoration:none;display:inline-flex;align-items:center;">Admin</a>
       </div>
     </div>
 
@@ -167,8 +166,8 @@
         <input type="date" id="splatnost">
         <label>Forma úhrady</label>
         <select id="forma">
+          <option value="Hotově" selected>Hotově</option>
           <option value="Převodem">Převodem</option>
-          <option value="Hotově">Hotově</option>
           <option value="Kartou">Kartou</option>
         </select>
       </div>
@@ -441,24 +440,19 @@ async function ulozAVytiskni() {
     if (r.error === 'bad_token') { handleBadToken(); return; }
     if (r.ok) {
       ulozeno = true;
-      setStatus('✓ Uloženo (faktura ' + r.cislo + ') — otevírám tisk…', 'ok');
-      btn.innerHTML = '✓ Uloženo';
+      setStatus('✓ Faktura ' + r.cislo + ' uložena. Pro návrat použij tlačítko Admin nahoře.', 'ok');
+      btn.innerHTML = '✓ Uloženo — tisknout znovu';
+      btn.disabled = false;
+      btn.onclick = function() { generujPrint(); setTimeout(function(){ window.print(); }, 150); };
       // automatická archivace rezervace pokud faktura vznikla z rezervace
       if (rezervaceId && rezervaceCol) {
         try {
           await gasPost({ akce:'admin_archive', token:getToken(), id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0 });
         } catch(e) { console.warn('Archivace selhala:', e); }
       }
-      // uloženo → tisk pro zákazníka, po zavření tisku návrat do adminu
+      // tisk pro zákazníka
       generujPrint();
-      setTimeout(function() {
-        window.print();
-        // po zavření tiskového dialogu → potvrzení a návrat
-        setTimeout(function() {
-          alert('✓ Faktura ' + r.cislo + ' byla uložena.');
-          window.location.href = 'admin.html';
-        }, 300);
-      }, 200);
+      setTimeout(function(){ window.print(); }, 150);
     } else if (r.error === 'duplicate') {
       setStatus('Faktura ' + cislo + ' už v evidenci je. Změň číslo (nebo použij Náhled bez uložení pro přetisk).', 'err');
       btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
