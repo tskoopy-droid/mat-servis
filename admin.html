@@ -2,156 +2,388 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="apple-touch-icon" href="favicon-192.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin – M&T Servis</title>
+<title>Vystavení faktury — M&T Servis</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#f1f5f9; font-family:'Inter',sans-serif; min-height:100vh; padding:20px; }
   :root {
-    --blue:#2563eb; --blue-light:#eff6ff; --blue-mid:#bfdbfe;
+    --blue:#2563eb; --blue-light:#eff6ff; --blue-dark:#1d4ed8; --blue-mid:#bfdbfe;
     --border:#e2e8f0; --text:#1e293b; --text-muted:#64748b; --white:#ffffff;
-    --red:#dc2626; --red-light:#fee2e2;
+    --bg:#f1f5f9; --red:#dc2626; --red-light:#fee2e2;
     --green:#15803d; --green-light:#dcfce7; --green-mid:#86efac;
-    --servis:#166534; --servis-badge-bg:#dcfce7;
   }
-  .login-wrap { max-width:360px; margin:80px auto; background:var(--white); border-radius:24px; padding:32px; box-shadow:0 4px 24px rgba(0,0,0,0.08); text-align:center; }
-  .login-wrap h2 { font-size:22px; color:var(--text); margin-bottom:6px; }
-  .login-wrap p { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
-  input[type=password] { width:100%; padding:14px 16px; border:2px solid var(--border); border-radius:12px; font-size:16px; font-family:'Inter',sans-serif; color:var(--text); margin-bottom:12px; }
-  .btn { width:100%; padding:15px; background:var(--blue); color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; }
-  .btn:hover { background:#1d4ed8; }
-  .btn:disabled { opacity:0.6; cursor:not-allowed; }
-  .error { color:var(--red); font-size:13px; margin-top:8px; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif; color:var(--text); min-height:100vh; padding:20px; }
 
-  .admin-wrap { max-width:700px; margin:0 auto; }
-  .header { background:var(--white); border-radius:20px; padding:20px 24px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-  .logout-btn { background:var(--blue-light); border:none; color:var(--blue); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif; font-weight:600; }
-  .refresh-btn { background:#f1f5f9; border:none; color:var(--text-muted); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif; font-weight:600; }
-  .refresh-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  /* ===== BRÁNA ===== */
+  #gate { display:none; max-width:380px; margin:80px auto; background:var(--white); border-radius:24px; padding:36px 32px; text-align:center; box-shadow:0 4px 24px rgba(0,0,0,0.08); }
+  #gate .lock { font-size:46px; margin-bottom:14px; }
+  #gate h2 { font-size:20px; color:var(--text); margin-bottom:6px; }
+  #gate p { font-size:13px; color:var(--text-muted); margin-bottom:22px; line-height:1.5; }
+  #gate a { display:inline-block; padding:13px 24px; background:var(--blue); color:#fff; text-decoration:none; border-radius:12px; font-weight:700; font-size:14px; }
+  #gate a:hover { background:var(--blue-dark); }
 
-  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
-  .tab { padding:12px 14px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:2px solid transparent; background:var(--white); color:var(--text-muted); text-align:center; }
-  .tab.active { background:var(--blue); color:#fff; }
-  .tab-wide { grid-column:1/-1; }
+  /* ===== APP ===== */
+  #app { display:none; }
+  .wrap { max-width:760px; margin:0 auto; }
 
-  .stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
-  .stat { background:var(--white); border-radius:16px; padding:16px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-  .stat-num { font-size:28px; font-weight:700; color:var(--blue); }
-  .stat-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
+  .header { background:var(--white); border-radius:20px; padding:18px 22px; margin-bottom:18px; display:flex; align-items:flex-start; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.06); gap:12px; flex-wrap:wrap; }
+  .header-title { font-size:17px; font-weight:700; color:var(--text); line-height:1.3; }
+  .header-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
+  .header-btns { display:flex; gap:8px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end; }
 
-  .card { background:var(--white); border-radius:20px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:12px; }
-  .rez-item { border:2px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px; position:relative; }
-  .rez-item:last-child { margin-bottom:0; }
-  .rez-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
-  .rez-name { font-weight:700; font-size:15px; color:var(--text); }
-  .rez-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; flex-shrink:0; }
-  .badge-prezuti { background:#dbeafe; color:#1d4ed8; }
-  .badge-oleje { background:#fef9c3; color:#854d0e; }
-  .badge-servis { background:var(--servis-badge-bg); color:var(--servis); }
-  .rez-info { font-size:13px; color:var(--text-muted); line-height:1.8; }
-  .rez-datetime { font-size:14px; font-weight:600; color:var(--blue); margin-bottom:4px; }
-  /* vícedenní bloky */
-  .rez-bloky { font-size:13px; font-weight:600; color:var(--blue); margin-bottom:4px; }
-  .rez-bloky-row { display:flex; gap:8px; line-height:1.7; }
-  .rez-bloky-date { min-width:48px; font-family:'Courier New',monospace; }
-  .rez-bloky-times { font-family:'Courier New',monospace; }
-  .zrusit-btn { background:var(--red-light); color:var(--red); border:1.5px solid #fecaca; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
-  .archiv-row { display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); align-items:center; }
-  .trzba-input { flex:1; padding:10px 12px; border:2px solid var(--border); border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; color:var(--text); outline:none; -moz-appearance:textfield; }
-  .trzba-input:focus { border-color:var(--blue); }
-  .trzba-input::-webkit-outer-spin-button,.trzba-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  #s-trzba { -moz-appearance:textfield; }
-  #s-trzba::-webkit-outer-spin-button,#s-trzba::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  .trzba-suffix { color:var(--text-muted); font-size:14px; font-weight:600; padding:0 4px; }
-  .archiv-btn { background:var(--green-light); color:var(--green); border:2px solid var(--green-mid); border-radius:10px; padding:10px 14px; font-size:13px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; white-space:nowrap; }
-  .archiv-btn:active { background:#bbf7d0; }
-  .archiv-btn:disabled { opacity:0.5; cursor:not-allowed; }
-  .archived-msg { background:var(--green-light); border:2px solid var(--green-mid); color:var(--green); text-align:center; padding:12px; border-radius:10px; font-weight:700; font-size:14px; }
-  .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
-  .loading { text-align:center; padding:40px; color:var(--text-muted); }
+  .btn { border:none; border-radius:10px; padding:10px 16px; font-size:13px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; transition:all 0.15s; }
+  .btn:hover { opacity:0.9; }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-primary { background:var(--blue); color:#fff; }
+  .btn-primary:hover { background:var(--blue-dark); opacity:1; }
+  .btn-save { background:var(--green); color:#fff; }
+  .btn-light { background:var(--blue-light); color:var(--blue); }
+  .btn-ghost { background:var(--bg); color:var(--text-muted); }
+  .btn-sm { padding:8px 12px; font-size:12px; }
 
-  /* Rozvrh */
-  .day-block { margin-bottom:16px; border:2px solid var(--border); border-radius:16px; overflow:hidden; }
-  .day-header { padding:12px 16px; background:#f8fafc; display:flex; align-items:center; justify-content:space-between; }
-  .day-title { font-weight:700; font-size:14px; color:var(--text); }
-  .day-meta { font-size:12px; color:var(--text-muted); }
-  .day-select-btns { display:flex; gap:6px; }
-  .sel-btn { font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; border:none; cursor:pointer; font-family:'Inter',sans-serif; }
-  .sel-all { background:#dbeafe; color:#1d4ed8; }
-  .sel-none { background:#fee2e2; color:#dc2626; }
-  .hours-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:12px 16px; }
-  .hour-btn { padding:10px 4px; border-radius:10px; border:2px solid var(--border); background:var(--white); color:var(--text-muted); font-size:13px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; text-align:center; transition:all 0.15s; }
-  .hour-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-  .hour-btn.booked { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; cursor:default; }
-  .save-btn { width:100%; padding:14px; background:var(--blue); color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; margin-top:4px; }
-  .save-btn:active { background:#1d4ed8; }
-  .save-btn:disabled { opacity:0.6; cursor:not-allowed; }
-  .save-msg { text-align:center; font-size:13px; color:var(--green); font-weight:600; margin-top:8px; display:none; }
-  .week-tabs { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
-  .week-tab { padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:2px solid var(--border); background:var(--white); color:var(--text-muted); text-align:left; font-family:'Inter',sans-serif; }
-  .week-tab.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-  .day-block.past { opacity:0.45; }
-  .day-block.past .hour-btn { cursor:not-allowed; background:#f8fafc; color:#cbd5e1; border-color:#e2e8f0; }
-  .day-block.past .sel-btn { opacity:0.6; cursor:not-allowed; }
+  .card { background:var(--white); border-radius:20px; padding:22px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
+  .card-title { font-size:13px; font-weight:700; color:var(--text); margin-bottom:14px; display:flex; align-items:center; gap:7px; }
 
-  /* Tržba */
-  .trzba-form { display:flex; flex-direction:column; gap:4px; }
-  .trzba-label { font-size:12px; font-weight:600; color:var(--text-muted); margin-top:10px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px; }
-  .trzba-label .req { color:var(--red); margin-left:2px; }
-  .trzba-label .opt { color:#94a3b8; font-weight:500; text-transform:none; letter-spacing:0; }
-  .trzba-field { padding:12px 14px; border:2px solid var(--border); border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; color:var(--text); outline:none; }
-  .trzba-field:focus { border-color:var(--blue); }
-  .trzba-field.err { border-color:var(--red); }
-  .trzba-err { color:var(--red); font-size:13px; margin-top:8px; text-align:center; display:none; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media (max-width:640px) { .grid-2 { grid-template-columns:1fr; } }
 
-  /* ── Servis ─────────────────────────────────────────────── */
-  .servis-section-title { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin:18px 0 10px; border-bottom:1px solid var(--border); padding-bottom:6px; }
-  .servis-section-title:first-child { margin-top:0; }
-  .s-field { margin-bottom:12px; }
-  .s-field label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em; }
-  .s-field label .req { color:var(--red); }
-  .s-field input[type=text],.s-field input[type=tel],.s-field input[type=email],
-  .s-field input[type=number],.s-field textarea {
-    width:100%; padding:11px 13px; border:2px solid var(--border); border-radius:10px;
-    font-size:15px; font-family:'Inter',sans-serif; color:var(--text); background:#fafafa;
-    outline:none; resize:vertical; transition:border-color 0.15s;
+  label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.03em; }
+  label .opt { color:#94a3b8; font-weight:500; text-transform:none; letter-spacing:0; }
+  input, select, textarea { width:100%; border:2px solid var(--border); border-radius:10px; padding:11px 13px; font-size:15px; font-family:'Inter',sans-serif; color:var(--text); background:#fafafa; margin-bottom:14px; outline:none; transition:border-color 0.15s; }
+  input:focus, select:focus, textarea:focus { border-color:var(--blue); background:#fff; }
+  input:last-child, select:last-child, textarea:last-child { margin-bottom:0; }
+  textarea { resize:vertical; min-height:62px; }
+
+  .polozky-head { display:grid; grid-template-columns:1fr 70px 64px 92px 92px 30px; gap:8px; padding:0 4px 8px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); margin-bottom:10px; }
+  .polozky-head span:nth-child(2),.polozky-head span:nth-child(3),.polozky-head span:nth-child(4),.polozky-head span:nth-child(5) { text-align:right; }
+  @media (max-width:640px) { .polozky-head { display:none; } }
+
+  .polozka-row { display:grid; grid-template-columns:1fr 70px 64px 92px 92px 30px; gap:8px; align-items:center; margin-bottom:8px; }
+  .polozka-row input { margin-bottom:0; padding:9px 11px; font-size:14px; }
+  .polozka-row .p-celkem { font-size:14px; font-weight:700; text-align:right; color:var(--text); padding-right:4px; }
+  .polozka-row .btn-remove { background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:20px; line-height:1; padding:4px; border-radius:6px; justify-self:center; }
+  .polozka-row .btn-remove:hover { color:var(--red); background:var(--red-light); }
+  @media (max-width:640px) {
+    .polozka-row { grid-template-columns:1fr 30px; gap:6px; padding:12px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; }
+    .polozka-row .p-popis { grid-column:1; }
+    .polozka-row .btn-remove { grid-column:2; grid-row:1/4; align-self:start; }
+    .polozka-row .p-mnozstvi,.polozka-row .p-jednotka,.polozka-row .p-cena { grid-column:1; }
+    .polozka-row .p-celkem { grid-column:1; text-align:left; padding-top:4px; }
   }
-  .s-field input:focus,.s-field textarea:focus { border-color:var(--blue); background:#fff; }
-  .s-field input.s-err { border-color:var(--red); }
 
-  /* Kalendář servis */
-  .s-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-  .s-cal-header button { background:none; border:2px solid var(--border); border-radius:8px; padding:5px 12px; cursor:pointer; font-size:15px; color:var(--text); font-family:'Inter',sans-serif; font-weight:700; }
-  .s-cal-header button:hover { background:#f1f5f9; }
-  .s-cal-header span { font-weight:700; font-size:15px; color:var(--text); }
-  .s-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:10px; }
-  .s-cal-dayname { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); padding:4px 0; text-transform:uppercase; }
-  .s-cal-day { text-align:center; padding:9px 4px; border-radius:8px; cursor:pointer; font-size:14px; border:2px solid transparent; transition:background 0.1s; }
-  .s-cal-day:hover:not(.s-disabled):not(.s-empty) { background:#f1f5f9; border-color:var(--border); }
-  .s-cal-day.s-empty { cursor:default; }
-  .s-cal-day.s-disabled { color:#cbd5e1; cursor:default; }
-  .s-cal-day.s-today { border-color:var(--blue); }
-  /* otevřený den — sloty viditelné */
-  .s-cal-day.s-open { background:#eff6ff; border-color:var(--blue); font-weight:700; color:var(--blue); }
-  /* den s vybranými sloty */
-  .s-cal-day.s-has-slots { background:#1e293b; color:#fff; font-weight:700; border-color:#1e293b; }
+  .cenik-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .cenik-row select { margin-bottom:0; flex:1; min-width:200px; }
 
-  /* Panel slotů pod kalendářem */
-  .s-slots-panel { border:2px solid var(--blue-mid); border-radius:12px; overflow:hidden; margin-bottom:12px; background:var(--blue-light); }
-  .s-slots-panel-bar { padding:8px 12px; background:#dbeafe; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--blue-mid); }
-  .s-slots-panel-label { font-size:13px; font-weight:700; color:#1d4ed8; }
-  .s-slots-panel-clear { font-size:12px; color:var(--red); cursor:pointer; font-weight:600; border:none; background:none; font-family:'Inter',sans-serif; padding:0; }
-  .s-slots-grid { display:flex; flex-wrap:wrap; gap:6px; padding:10px 12px; }
-  .s-slot { padding:8px 13px; border-radius:8px; border:2px solid var(--border); background:var(--white); font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; color:var(--text-muted); transition:all 0.12s; }
-  .s-slot:hover:not(.s-slot-obs) { border-color:var(--green); color:var(--green); }
-  .s-slot.s-slot-sel { background:var(--green); color:#fff; border-color:var(--green); }
-  .s-slot.s-slot-obs { background:#f1f5f9; color:#cbd5e1; cursor:not-allowed; text-decoration:line-through; }
+  .celkem-box { display:flex; justify-content:flex-end; align-items:center; gap:16px; padding:16px 4px 4px; border-top:2px solid var(--border); margin-top:12px; }
+  .celkem-label { font-size:13px; color:var(--text-muted); font-weight:600; }
+  .celkem-value { font-size:26px; font-weight:700; color:var(--blue); min-width:130px; text-align:right; }
 
-  /* Přehled vybraných */
+  .bottom-actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; align-items:center; }
+  .save-status { font-size:13px; font-weight:600; }
+  .save-status.ok { color:var(--green); }
+  .save-status.err { color:var(--red); }
+
+  .spinner { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ===== PRINT ===== */
+  @media print {
+    body { background:#fff; padding:0; }
+    #app, #gate { display:none !important; }
+    #faktura-print { display:block !important; }
+  }
+  #faktura-print { display:none; }
+  .print-page { width:210mm; min-height:297mm; padding:14mm; font-family:'Inter',Arial,sans-serif; font-size:9pt; color:#1e293b; }
+  .print-header { padding:0 0 14px; display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; border-bottom:2px solid #1e293b; }
+  .print-header .firma { font-size:13pt; font-weight:700; color:#1e293b; }
+  .print-header .firma-sub { font-size:8pt; color:#64748b; margin-top:3px; }
+  .print-header .faktura-cislo { text-align:right; }
+  .print-header .faktura-cislo .label { font-size:7pt; color:#64748b; letter-spacing:0.1em; }
+  .print-header .faktura-cislo .cislo { font-size:18pt; font-weight:700; color:#1e293b; }
+  .print-strany { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  .print-strana-title { font-size:7pt; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#1e293b; margin-bottom:5px; border-bottom:1px solid #94a3b8; padding-bottom:3px; }
+  .print-strana-content { font-size:9pt; line-height:1.6; }
+  .print-strana-content strong { display:block; font-size:10pt; }
+  .print-meta { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:10px 0; border-top:1px solid #94a3b8; border-bottom:1px solid #94a3b8; margin-bottom:16px; }
+  .print-meta-item .label { font-size:7pt; color:#475569; font-weight:700; text-transform:uppercase; }
+  .print-meta-item .value { font-size:9pt; font-weight:600; }
+  .print-polozky { width:100%; border-collapse:collapse; margin-bottom:12px; }
+  .print-polozky thead tr { border-bottom:2px solid #1e293b; }
+  .print-polozky thead th { padding:6px 8px; font-size:7.5pt; text-align:left; font-weight:700; color:#1e293b; text-transform:uppercase; letter-spacing:0.04em; }
+  .print-polozky thead th:last-child { text-align:right; }
+  .print-polozky tbody tr { border-bottom:1px solid #e8ecf0; }
+  .print-polozky tbody td { padding:6px 8px; font-size:9pt; }
+  .print-polozky tbody td:last-child { text-align:right; font-weight:600; }
+  .print-polozky tfoot .celkem-row td { font-size:11pt; border-top:2px solid #1e293b; font-weight:700; padding:8px; }
+  .print-polozky tfoot .celkem-row td:last-child { text-align:right; color:#1e293b; }
+  .print-footer { margin-top:16px; display:grid; grid-template-columns:1fr auto; gap:20px; align-items:flex-start; }
+  .print-platba-title { font-size:7pt; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:#1e293b; margin-bottom:6px; border-bottom:1px solid #94a3b8; padding-bottom:3px; }
+  .print-platba-row { font-size:9pt; line-height:1.8; }
+  .print-platba-row .lb { color:#475569; display:inline-block; width:90px; font-size:8pt; }
+  .print-poznamka { margin-top:14px; padding:8px 10px; border:1px solid #94a3b8; border-left:3px solid #1e293b; font-size:8pt; color:#475569; }
+  .print-dph-note { margin-top:10px; font-size:8pt; font-style:italic; color:#475569; }
+  #print-qr img, #print-qr canvas { width:90px !important; height:90px !important; }
+</style>
+</head>
+<body>
+
+<!-- ===== BRÁNA ===== -->
+<div id="gate">
+  <div class="lock">🔒</div>
+  <h2>Přístup jen z admin rozhraní</h2>
+  <p>Tuto stránku otevři přihlášený přes admin panel M&amp;T Servis.</p>
+  <a href="admin.html">Přejít do adminu</a>
+</div>
+
+<!-- ===== APLIKACE ===== -->
+<div id="app">
+  <div class="wrap">
+
+    <div class="header">
+      <div>
+        <div class="header-title">📄 Vystavení faktury</div>
+        <div class="header-sub">M&amp;T Servis</div>
+      </div>
+      <div class="header-btns">
+        <button class="btn btn-ghost" onclick="zpetDoAdminu()">← Admin</button>
+        <button class="btn btn-light" onclick="resetForm()">Vymazat</button>
+        <button class="btn btn-save" onclick="ulozAVytiskni()">💾 Uložit a vytisknout</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🧾 Faktura</div>
+        <label>Číslo faktury</label>
+        <input type="text" id="cislo" placeholder="2026001">
+        <label>Datum vystavení</label>
+        <input type="date" id="datum">
+        <label>Datum splatnosti</label>
+        <input type="date" id="splatnost">
+        <label>Forma úhrady</label>
+        <select id="forma">
+          <option value="Převodem">Převodem</option>
+          <option value="Hotově">Hotově</option>
+          <option value="Kartou">Kartou</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="card-title">👤 Odběratel <span style="font-weight:500;color:var(--text-muted);font-size:11px">(nepovinné)</span></div>
+        <label>Název / Jméno</label>
+        <input type="text" id="odberatel_nazev" placeholder="Maloobchodní prodej">
+        <label>IČO <span class="opt">(nepovinné)</span></label>
+        <input type="text" id="odberatel_ico" placeholder="12345678">
+        <label>Adresa <span class="opt">(nepovinné)</span></label>
+        <textarea id="odberatel_adresa" placeholder="Ulice 1&#10;123 45 Město"></textarea>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:10px;line-height:1.5">
+          Když necháš prázdné, na fakturu se napíše <strong>„Maloobchodní prodej"</strong>.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📋 Položky</div>
+      <div class="cenik-row">
+        <select id="cenik-select" onchange="pridatZCeniku(this.value)">
+          <option value="">+ Přidat z ceníku…</option>
+        </select>
+        <button class="btn btn-light btn-sm" onclick="pridatPolozku()">+ Prázdná položka</button>
+      </div>
+      <div class="polozky-head">
+        <span>Popis</span><span>Množství</span><span>Jedn.</span><span>Cena/j</span><span>Celkem</span><span></span>
+      </div>
+      <div id="polozky-body"></div>
+      <div class="celkem-box">
+        <span class="celkem-label">Celkem k úhradě:</span>
+        <span class="celkem-value" id="celkem-display">0 Kč</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📝 Poznámka <span style="font-weight:500;color:var(--text-muted);font-size:11px">(nepovinné)</span></div>
+      <textarea id="poznamka" placeholder="Volitelná poznámka na faktuře..."></textarea>
+    </div>
+
+    <div class="bottom-actions">
+      <span class="save-status" id="save-status"></span>
+      <button class="btn btn-light" onclick="resetForm()">Vymazat formulář</button>
+      <button class="btn btn-light" onclick="zobrazNahled()">Náhled (bez uložení)</button>
+      <button class="btn btn-save" id="save-btn" onclick="ulozAVytiskni()">💾 Uložit a vytisknout</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== TISK ===== -->
+<div id="faktura-print"><div class="print-page" id="print-content"></div></div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
+
+const DODAVATEL = {
+  nazev: 'Tomáš Skopalík',
+  ico: '08134235',
+  adresa: 'Šumvaldská 59\n783 86 Dlouhá Loučka',
+  ucet: '363170017/0300',
+  iban: 'CZ5503000000003631700170',
+};
+const ODBERATEL_UNIVERZAL = 'Maloobchodní prodej';
+
+let polozky = [];
+let cenik = [];
+let dalsiCislo = '';
+let ulozeno = false;
+let rezervaceId  = '';
+let rezervaceCol = '';
+
+// ── Token / brána ──
+function getToken() { return sessionStorage.getItem('admin_token') || ''; }
+function checkAccess() {
+  if (!getToken()) {
+    document.getElementById('gate').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+    return false;
+  }
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  return true;
+}
+function handleBadToken() {
+  sessionStorage.removeItem('admin_token');
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('gate').style.display = 'block';
+}
+function zpetDoAdminu() { window.location.href = 'admin.html'; }
+
+async function gasPost(payload) {
+  const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
+  return res.json();
+}
+
+// ── Init: načtení čísla + ceníku z GAS ──
+async function nactiInit() {
+  try {
+    const r = await gasPost({ akce:'faktura_init', token:getToken() });
+    if (r.error === 'bad_token') { handleBadToken(); return; }
+    if (r.ok) {
+      cenik = r.cenik || [];
+      dalsiCislo = r.dalsiCislo || '';
+      if (dalsiCislo && !document.getElementById('cislo').value) {
+        document.getElementById('cislo').value = dalsiCislo;
+      }
+      renderCenikSelect();
+    }
+  } catch (e) {
+    // offline / chyba — formulář funguje ručně, číslo si zadáš sám
+  }
+
+  // ── Předvyplnění z rezervace (pokud přišli přes ?id=&col=) ──
+  const params = new URLSearchParams(window.location.search);
+  const rezId  = params.get('id');
+  const rezCol = params.get('col');
+  if (rezId && rezCol) {
+    await nactiZRezervace(rezId, rezCol);
+  }
+}
+
+async function nactiZRezervace(id, col) {
+  try {
+    const r = await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id, col });
+    if (!r.ok) { console.warn('faktura_z_rezervace:', r.error); return; }
+
+    // Odběratel
+    if (r.jmeno)   document.getElementById('odberatel_nazev').value = r.jmeno;
+    if (r.vozidlo) document.getElementById('odberatel_adresa').value = r.vozidlo;
+
+    // Ceník — přepis rozšířeným ceníkem s kategoriemi
+    if (r.cenik && r.cenik.length) {
+      cenik = r.cenik;
+      renderCenikSelect();
+    }
+
+    // Položky
+    if (r.polozky && r.polozky.length) {
+      polozky = r.polozky;
+      renderPolozky();
+    }
+
+    // Banner — info o vazbě na rezervaci
+    rezervaceId  = id;
+    rezervaceCol = col;
+    zobrazRezBanner(r.jmeno, r.vozidlo, r.typ);
+
+  } catch(e) {
+    console.warn('nactiZRezervace chyba:', e);
+  }
+}
+
+function zobrazRezBanner(jmeno, vozidlo, typ) {
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:var(--blue-light);border:1px solid var(--blue-mid);border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--blue-dark);';
+  const typLabel = { prezuti:'Přezutí', oleje:'Výměna oleje', servis:'Servis' }[typ] || typ;
+  banner.innerHTML = '📋 Faktura z rezervace — <strong>' + (jmeno||'—') + '</strong>' +
+    (vozidlo ? ' &nbsp;·&nbsp; ' + vozidlo : '') +
+    (typLabel ? ' &nbsp;·&nbsp; ' + typLabel : '');
+  document.querySelector('.wrap').insertBefore(banner, document.querySelector('.grid-2'));
+}
+
+function renderCenikSelect() {
+  const sel = document.getElementById('cenik-select');
+  sel.innerHTML = '<option value="">+ Přidat z ceníku…</option>' +
+    cenik.map((c, i) => `<option value="${i}">${esc(c.nazev)} — ${c.cena} Kč/${esc(c.jednotka||'ks')}</option>`).join('');
+}
+
+function pridatZCeniku(idx) {
+  if (idx === '') return;
+  const c = cenik[parseInt(idx, 10)];
+  if (!c) return;
+  polozky.push({ popis:c.nazev, mnozstvi:1, jednotka:c.jednotka || 'ks', cena:c.cena || 0 });
+  renderPolozky();
+  document.getElementById('cenik-select').value = '';
+}
+
+// ── Datumy + první řádek ──
+function init() {
+  const dnes = new Date();
+  document.getElementById('datum').value = fmtIn(dnes);
+  const spl = new Date(dnes); spl.setDate(spl.getDate() + 14);
+  document.getElementById('splatnost').value = fmtIn(spl);
+  if (!polozky.length) pridatPolozku();
+  else renderPolozky();
+}
+function fmtIn(d) { return d.toISOString().split('T')[0]; }
+function fmtCZ(s) { if (!s) return ''; const [y,m,d]=s.split('-'); return `${d}. ${m}. ${y}`; }
+
+// ── Položky ──
+function pridatPolozku() { polozky.push({ popis:'', mnozstvi:1, jednotka:'ks', cena:0 }); renderPolozky(); }
+function odebratiPolozku(i) { polozky.splice(i,1); if (!polozky.length) pridatPolozku(); else renderPolozky(); }
+function updatePolozka(i,f,v) { polozky[i][f] = (f==='mnozstvi'||f==='cena') ? (parseFloat(v)||0) : v; renderCelkem(); }
+
+function renderPolozky() {
+  document.getElementById('polozky-body').innerHTML = polozky.map((p,i) => `
+    <div class="polozka-row">
+      <input class="p-popis" type="text" value="${esc(p.popis)}" placeholder="Popis služby nebo zboží" oninput="updatePolozka(${i},'popis',this.value)">
+      <input class="p-mnozstvi" type="number" value="${p.mnozstvi}" min="0" step="0.01" style="text-align:right" oninput="updatePolozka(${i},'mnozstvi',this.value)">
+      <input class="p-jednotka" type="text" value="${esc(p.jednotka)}" placeholder="ks" oninput="updatePolozka(${i},'jednotka',this.value)">
+      <input class="p-cena" type="number" value="${p.cena}" min="0" step="0.01" style="text-align:right" oninput="updatePolozka(${i},'cena',this.value)">
+      <div class="p-celkem">${fmtKc(p.mnozstvi*p.cena)}</div>
+      <button class="btn-remove" onclick="odebratiPolozku(${i})" title="Odebrat">×</button>
+    </div>
+  `).join('');
+  renderCelkem();
+}
+function renderCelkem() {
+  const rows = document.getElementById('polozky-body').querySelectorAll('.polozka-row');
+  polozky.forEach((p,i) => { const c = rows[i]?.querySelector('.p-celkem'); if (c) c.textContent = fmtKc(p.mnozstvi*p.cena); });
+  document.getElementById('celkem-display').textContent = fmtKc(celkem());
+}
+function celkem() { return polozky.reduce((s,p) => s + p.mnozstvi*p.cena, 0); }
+function fmtKc(n) { return n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' Kč'; }
+function esc(s) {  /* Přehled vybraných */
   #s-vybrano-wrap { margin-bottom:12px; }
   .s-vybrano-title { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
   .s-vybrano-table { border-collapse:collapse; font-size:13px; }
