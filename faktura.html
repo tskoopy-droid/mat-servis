@@ -486,7 +486,8 @@ function generujPrint() {
   const vs = cislo.replace(/\D/g,'');
   const qrString = `SPD*1.0*ACC:${DODAVATEL.iban}*AM:${total.toFixed(2)}*CC:CZK*X-VS:${vs}*MSG:Faktura ${cislo}`;
 
-  const polozkyHTML = polozky.filter(p => p.popis || p.cena > 0).map((p,i) => `
+  const cisteP = polozky.map(p => ({ ...p, mnozstvi: qOf(p), cena: cOf(p) }));
+  const polozkyHTML = cisteP.filter(p => p.popis || p.cena > 0).map((p,i) => `
     <tr>
       <td>${i+1}.</td>
       <td>${esc(p.popis)}</td>
