@@ -420,7 +420,8 @@ function zobrazNahled() {
 async function ulozAVytiskni() {
   const cislo = document.getElementById('cislo').value.trim();
   if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
-  const platne = polozky.filter(p => p.popis || p.cena > 0);
+  const cisteP = polozky.map(p => ({ ...p, mnozstvi: qOf(p), cena: cOf(p) }));
+  const platne = cisteP.filter(p => p.popis || p.cena > 0);
   if (!platne.length || celkem() <= 0) { alert('Faktura nemá žádné položky s cenou.'); return; }
 
   const btn = document.getElementById('save-btn');
