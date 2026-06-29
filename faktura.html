@@ -383,10 +383,10 @@ function renderPolozky() {
 }
 function renderCelkem() {
   const rows = document.getElementById('polozky-body').querySelectorAll('.polozka-row');
-  polozky.forEach((p,i) => { const c = rows[i]?.querySelector('.p-celkem'); if (c) c.textContent = fmtKc(p.mnozstvi*p.cena); });
+  polozky.forEach((p,i) => { const c = rows[i]?.querySelector('.p-celkem'); if (c) c.textContent = fmtKc(lineTotal(p)); });
   document.getElementById('celkem-display').textContent = fmtKc(celkem());
 }
-function celkem() { return polozky.reduce((s,p) => s + p.mnozstvi*p.cena, 0); }
+function celkem() { return polozky.reduce((s,p) => s + lineTotal(p), 0); }
 function fmtKc(n) { return n.toLocaleString('cs-CZ',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' Kč'; }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
