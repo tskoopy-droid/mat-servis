@@ -342,7 +342,7 @@ function pridatZCeniku(idx) {
   if (idx === '') return;
   const c = cenik[parseInt(idx, 10)];
   if (!c) return;
-  polozky.push({ popis:c.nazev, mnozstvi:1, jednotka:c.jednotka || 'ks', cena:c.cena || 0 });
+  polozky.push({ popis:c.nazev, mnozstvi:'', jednotka:c.jednotka || 'ks', cena:(c.cena != null ? c.cena : '') });
   renderPolozky();
   document.getElementById('cenik-select').value = '';
 }
