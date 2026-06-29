@@ -360,10 +360,14 @@ function fmtIn(d) { return d.toISOString().split('T')[0]; }
 function fmtCZ(s) { if (!s) return ''; const [y,m,d]=s.split('-'); return `${d}. ${m}. ${y}`; }
 
 // ── Položky ──
-function pridatPolozku() { polozky.push({ popis:'', mnozstvi:1, jednotka:'ks', cena:0 }); renderPolozky(); }
+function pridatPolozku() { polozky.push({ popis:'', mnozstvi:'', jednotka:'ks', cena:'' }); renderPolozky(); }
 function odebratiPolozku(i) { polozky.splice(i,1); if (!polozky.length) pridatPolozku(); else renderPolozky(); }
-function updatePolozka(i,f,v) { polozky[i][f] = (f==='mnozstvi'||f==='cena') ? (parseFloat(v)||0) : v; renderCelkem(); }
+function updatePolozka(i,f,v) { polozky[i][f] = v; renderCelkem(); }
 
+// prázdné množství = 1, prázdná cena = 0
+function qOf(p) { return (p.mnozstvi === '' || p.mnozstvi == null) ? 1 : (parseFloat(p.mnozstvi) || 0); }
+function cOf(p) { return parseFloat(p.cena) || 0; }
+function lineTotal(p) { return qOf(p) * cOf(p); }
 function renderPolozky() {
   document.getElementById('polozky-body').innerHTML = polozky.map((p,i) => `
     <div class="polozka-row">
