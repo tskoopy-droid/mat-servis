@@ -432,7 +432,8 @@ async function ulozAVytiskni() {
     polozky: platne,
     forma_uhrady: document.getElementById('forma').value,
     poznamka: document.getElementById('poznamka').value.trim(),
-    cislo_zakazky: ''
+    cislo_zakazky: '',
+    z_rezervace: !!(rezervaceId && rezervaceCol)
   };
 
   try {
