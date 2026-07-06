@@ -57,11 +57,11 @@
   input:last-child, select:last-child, textarea:last-child { margin-bottom:0; }
   textarea { resize:vertical; min-height:62px; }
 
-  .polozky-head { display:grid; grid-template-columns:1fr 70px 64px 92px 92px 30px; gap:8px; padding:0 4px 8px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); margin-bottom:10px; }
-  .polozky-head span:nth-child(2),.polozky-head span:nth-child(3),.polozky-head span:nth-child(4),.polozky-head span:nth-child(5) { text-align:right; }
+  .polozky-head { display:grid; grid-template-columns:1fr 60px 54px 84px 54px 92px 30px; gap:6px; padding:0 4px 8px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); margin-bottom:10px; }
+  .polozky-head span:nth-child(2),.polozky-head span:nth-child(3),.polozky-head span:nth-child(4),.polozky-head span:nth-child(5),.polozky-head span:nth-child(6) { text-align:right; }
   @media (max-width:640px) { .polozky-head { display:none; } }
 
-  .polozka-row { display:grid; grid-template-columns:1fr 70px 64px 92px 92px 30px; gap:8px; align-items:center; margin-bottom:8px; }
+  .polozka-row { display:grid; grid-template-columns:1fr 60px 54px 84px 54px 92px 30px; gap:6px; align-items:center; margin-bottom:8px; }
   .polozka-row input { margin-bottom:0; padding:9px 11px; font-size:14px; }
   .polozka-row .p-celkem { font-size:14px; font-weight:700; text-align:right; color:var(--text); padding-right:4px; }
   .polozka-row .btn-remove { background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:20px; line-height:1; padding:4px; border-radius:6px; justify-self:center; }
@@ -70,7 +70,7 @@
     .polozka-row { grid-template-columns:1fr 30px; gap:6px; padding:12px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; }
     .polozka-row .p-popis { grid-column:1; }
     .polozka-row .btn-remove { grid-column:2; grid-row:1/4; align-self:start; }
-    .polozka-row .p-mnozstvi,.polozka-row .p-jednotka,.polozka-row .p-cena { grid-column:1; }
+    .polozka-row .p-mnozstvi,.polozka-row .p-jednotka,.polozka-row .p-cena,.polozka-row .p-koef { grid-column:1; }
     .polozka-row .p-celkem { grid-column:1; text-align:left; padding-top:4px; }
   }
 
@@ -194,8 +194,12 @@
         </select>
         <button class="btn btn-light btn-sm" onclick="pridatPolozku()">+ Prázdná položka</button>
       </div>
+      <div class="cenik-row">
+        <input type="text" id="zakazka-cislo" placeholder="Číslo zakázky (Z-2026-001)" style="margin-bottom:0;flex:1;min-width:200px;">
+        <button class="btn btn-light btn-sm" id="zakazka-btn" onclick="nactiZeZakazky()">🔧 Načíst díly</button>
+      </div>
       <div class="polozky-head">
-        <span>Popis</span><span>Množství</span><span>Jedn.</span><span>Cena/j</span><span>Celkem</span><span></span>
+        <span>Popis</span><span>Množ.</span><span>Jedn.</span><span>Cena/j</span><span>Koef</span><span>Celkem</span><span></span>
       </div>
       <div id="polozky-body"></div>
       <div class="celkem-box">
@@ -322,6 +326,37 @@ async function nactiZRezervace(id, col) {
   }
 }
 
+// ── Načtení dílů ze zakázky (Firemní výdaje, kategorie „díly na prodej") ──
+const KOEF_DEFAULT = 1.3;
+async function nactiZeZakazky() {
+  const input = document.getElementById('zakazka-cislo');
+  const cz = input.value.trim();
+  if (!cz) { alert('Zadej číslo zakázky (např. Z-2026-001).'); input.focus(); return; }
+
+  const btn = document.getElementById('zakazka-btn');
+  btn.disabled = true; btn.textContent = 'Načítám…';
+  try {
+    const r = await gasPost({ akce:'faktura_ze_zakazky', token:getToken(), cislo_zakazky: cz });
+    if (r.error === 'bad_token') { handleBadToken(); return; }
+    if (!r.ok) { setStatus('Chyba: ' + (r.message || r.error || 'neznámá'), 'err'); return; }
+    if (!r.polozky || !r.polozky.length) {
+      setStatus('Zakázka ' + cz + ': žádné díly na prodej ve výdajích.', 'err');
+      return;
+    }
+    // odstranit úvodní prázdný řádek, pokud je jediný a nevyplněný
+    if (polozky.length === 1 && !polozky[0].popis && !cOf(polozky[0])) polozky = [];
+    r.polozky.forEach(d => {
+      polozky.push({ popis: d.popis || '', mnozstvi:'', jednotka:'ks', cena: d.cena, koef: KOEF_DEFAULT });
+    });
+    renderPolozky();
+    setStatus('✓ Načteno ' + r.polozky.length + ' položek ze zakázky ' + cz + ' (koef ' + KOEF_DEFAULT + ', uprav dle potřeby).', 'ok');
+  } catch(e) {
+    setStatus('Chyba připojení k serveru.', 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = '🔧 Načíst díly';
+  }
+}
+
 function zobrazRezBanner(jmeno, vozidlo, typ) {
   const banner = document.createElement('div');
   banner.style.cssText = 'background:var(--blue-light);border:1px solid var(--blue-mid);border-radius:12px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:var(--blue-dark);';
@@ -342,7 +377,7 @@ function pridatZCeniku(idx) {
   if (idx === '') return;
   const c = cenik[parseInt(idx, 10)];
   if (!c) return;
-  polozky.push({ popis:c.nazev, mnozstvi:'', jednotka:c.jednotka || 'ks', cena:(c.cena != null ? c.cena : '') });
+  polozky.push({ popis:c.nazev, mnozstvi:'', jednotka:c.jednotka || 'ks', cena:(c.cena != null ? c.cena : ''), koef:'' });
   renderPolozky();
   document.getElementById('cenik-select').value = '';
 }
@@ -360,14 +395,17 @@ function fmtIn(d) { return d.toISOString().split('T')[0]; }
 function fmtCZ(s) { if (!s) return ''; const [y,m,d]=s.split('-'); return `${d}. ${m}. ${y}`; }
 
 // ── Položky ──
-function pridatPolozku() { polozky.push({ popis:'', mnozstvi:'', jednotka:'ks', cena:'' }); renderPolozky(); }
+function pridatPolozku() { polozky.push({ popis:'', mnozstvi:'', jednotka:'ks', cena:'', koef:'' }); renderPolozky(); }
 function odebratiPolozku(i) { polozky.splice(i,1); if (!polozky.length) pridatPolozku(); else renderPolozky(); }
 function updatePolozka(i,f,v) { polozky[i][f] = v; renderCelkem(); }
 
-// prázdné množství = 1, prázdná cena = 0
+// prázdné množství = 1, prázdná cena = 0, prázdný koef = 1
 function qOf(p) { return (p.mnozstvi === '' || p.mnozstvi == null) ? 1 : (parseFloat(p.mnozstvi) || 0); }
 function cOf(p) { return parseFloat(p.cena) || 0; }
-function lineTotal(p) { return qOf(p) * cOf(p); }
+function kOf(p) { return (p.koef === '' || p.koef == null) ? 1 : (parseFloat(p.koef) || 1); }
+// prodejní cena/j: s koeficientem zaokrouhlená nahoru na celé Kč, bez koeficientu beze změny
+function unitPrice(p) { const k = kOf(p); return k === 1 ? cOf(p) : Math.ceil(cOf(p) * k); }
+function lineTotal(p) { return qOf(p) * unitPrice(p); }
 function renderPolozky() {
   document.getElementById('polozky-body').innerHTML = polozky.map((p,i) => `
     <div class="polozka-row">
@@ -375,6 +413,7 @@ function renderPolozky() {
       <input class="p-mnozstvi" type="number" value="${p.mnozstvi}" placeholder="1" min="0" step="0.01" style="text-align:right" oninput="updatePolozka(${i},'mnozstvi',this.value)">
       <input class="p-jednotka" type="text" value="${esc(p.jednotka)}" placeholder="ks" oninput="updatePolozka(${i},'jednotka',this.value)">
       <input class="p-cena" type="number" value="${p.cena}" placeholder="0" min="0" step="0.01" style="text-align:right" oninput="updatePolozka(${i},'cena',this.value)">
+      <input class="p-koef" type="number" value="${p.koef != null ? p.koef : ''}" placeholder="—" min="0" step="0.05" style="text-align:right" title="Koeficient (nákup × koef = prodej)" oninput="updatePolozka(${i},'koef',this.value)">
       <div class="p-celkem">${fmtKc(lineTotal(p))}</div>
       <button class="btn-remove" onclick="odebratiPolozku(${i})" title="Odebrat">×</button>
     </div>
@@ -399,7 +438,7 @@ function setStatus(msg, type) {
 // ── Reset ──
 function resetForm() {
   if (!confirm('Vymazat celý formulář?')) return;
-  ['odberatel_nazev','odberatel_ico','odberatel_adresa','poznamka'].forEach(id => document.getElementById(id).value = '');
+  ['odberatel_nazev','odberatel_ico','odberatel_adresa','poznamka','zakazka-cislo'].forEach(id => document.getElementById(id).value = '');
   polozky = []; ulozeno = false;
   setStatus('');
   document.getElementById('save-btn').disabled = false;
@@ -420,7 +459,7 @@ function zobrazNahled() {
 async function ulozAVytiskni() {
   const cislo = document.getElementById('cislo').value.trim();
   if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
-  const cisteP = polozky.map(p => ({ ...p, mnozstvi: qOf(p), cena: cOf(p) }));
+  const cisteP = polozky.map(p => ({ popis:p.popis, jednotka:p.jednotka, mnozstvi: qOf(p), cena: unitPrice(p) }));
   const platne = cisteP.filter(p => p.popis || p.cena > 0);
   if (!platne.length || celkem() <= 0) { alert('Faktura nemá žádné položky s cenou.'); return; }
 
@@ -437,7 +476,7 @@ async function ulozAVytiskni() {
     polozky: platne,
     forma_uhrady: document.getElementById('forma').value,
     poznamka: document.getElementById('poznamka').value.trim(),
-    cislo_zakazky: '',
+    cislo_zakazky: document.getElementById('zakazka-cislo').value.trim(),
     z_rezervace: !!(rezervaceId && rezervaceCol)
   };
 
@@ -486,7 +525,7 @@ function generujPrint() {
   const vs = cislo.replace(/\D/g,'');
   const qrString = `SPD*1.0*ACC:${DODAVATEL.iban}*AM:${total.toFixed(2)}*CC:CZK*X-VS:${vs}*MSG:Faktura ${cislo}`;
 
-  const cisteP = polozky.map(p => ({ ...p, mnozstvi: qOf(p), cena: cOf(p) }));
+  const cisteP = polozky.map(p => ({ popis:p.popis, jednotka:p.jednotka, mnozstvi: qOf(p), cena: unitPrice(p) }));
   const polozkyHTML = cisteP.filter(p => p.popis || p.cena > 0).map((p,i) => `
     <tr>
       <td>${i+1}.</td>
