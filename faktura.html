@@ -195,8 +195,9 @@
         <button class="btn btn-light btn-sm" onclick="pridatPolozku()">+ Prázdná položka</button>
       </div>
       <div class="cenik-row">
-        <input type="text" id="zakazka-cislo" list="zakazky-list" placeholder="Číslo zakázky (Z-2026-001)" style="margin-bottom:0;flex:1;min-width:200px;">
-        <datalist id="zakazky-list"></datalist>
+        <select id="zakazka-cislo" style="margin-bottom:0;flex:1;min-width:200px;">
+          <option value="">— Vyber zakázku —</option>
+        </select>
         <button class="btn btn-light btn-sm" id="zakazka-btn" onclick="nactiZeZakazky()">🔧 Načíst díly</button>
       </div>
       <div class="polozky-head">
@@ -334,19 +335,24 @@ async function nactiZRezervace(id, col) {
 const KOEF_DEFAULT = 1.3;
 
 async function nactiSeznamZakazek() {
+  const sel = document.getElementById('zakazka-cislo');
   try {
     const r = await gasPost({ akce:'faktura_zakazky', token:getToken() });
     if (r.ok && r.zakazky && r.zakazky.length) {
-      document.getElementById('zakazky-list').innerHTML =
-        r.zakazky.map(z => `<option value="${esc(z)}">`).join('');
+      sel.innerHTML = '<option value="">— Vyber zakázku —</option>' +
+        r.zakazky.map(z => `<option value="${esc(z.cislo)}">${esc(z.label)}</option>`).join('');
+    } else {
+      sel.innerHTML = '<option value="">— Žádné zakázky ve výdajích —</option>';
     }
-  } catch(e) { /* našeptávač je bonus — ruční zápis funguje vždy */ }
+  } catch(e) {
+    sel.innerHTML = '<option value="">— Seznam se nenačetl —</option>';
+  }
 }
 
 async function nactiZeZakazky() {
   const input = document.getElementById('zakazka-cislo');
   const cz = input.value.trim();
-  if (!cz) { alert('Zadej číslo zakázky (např. Z-2026-001).'); input.focus(); return; }
+  if (!cz) { alert('Vyber zakázku ze seznamu.'); input.focus(); return; }
 
   const btn = document.getElementById('zakazka-btn');
   btn.disabled = true; btn.textContent = 'Načítám…';
