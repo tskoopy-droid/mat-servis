@@ -63,6 +63,9 @@
 
   .polozka-row { display:grid; grid-template-columns:1fr 60px 54px 84px 54px 92px 30px; gap:6px; align-items:center; margin-bottom:8px; }
   .polozka-row input { margin-bottom:0; padding:9px 11px; font-size:14px; }
+  .polozka-row input[type=number] { padding:9px 6px; text-align:right; appearance:textfield; -moz-appearance:textfield; }
+  .polozka-row input[type=number]::-webkit-outer-spin-button,
+  .polozka-row input[type=number]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   .polozka-row .p-celkem { font-size:14px; font-weight:700; text-align:right; color:var(--text); padding-right:4px; }
   .polozka-row .btn-remove { background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:20px; line-height:1; padding:4px; border-radius:6px; justify-self:center; }
   .polozka-row .btn-remove:hover { color:var(--red); background:var(--red-light); }
