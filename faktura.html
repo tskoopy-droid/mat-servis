@@ -368,7 +368,7 @@ async function nactiZeZakazky() {
     // odstranit úvodní prázdný řádek, pokud je jediný a nevyplněný
     if (polozky.length === 1 && !polozky[0].popis && !cOf(polozky[0])) polozky = [];
     r.polozky.forEach(d => {
-      polozky.push({ popis: d.popis || '', mnozstvi:'', jednotka:'ks', cena: d.cena, koef: KOEF_DEFAULT });
+      polozky.push({ popis: d.popis || '', mnozstvi:1, jednotka:'ks', cena: d.cena, koef: KOEF_DEFAULT });
     });
     renderPolozky();
     setStatus('✓ Načteno ' + r.polozky.length + ' položek ze zakázky ' + cz + ' (koef ' + KOEF_DEFAULT + ', uprav dle potřeby).', 'ok');
@@ -432,10 +432,10 @@ function renderPolozky() {
   document.getElementById('polozky-body').innerHTML = polozky.map((p,i) => `
     <div class="polozka-row">
       <input class="p-popis" type="text" value="${esc(p.popis)}" placeholder="Popis služby nebo zboží" oninput="updatePolozka(${i},'popis',this.value)">
-      <input class="p-mnozstvi" type="number" value="${p.mnozstvi}" placeholder="1" min="0" step="1" style="text-align:right" oninput="updatePolozka(${i},'mnozstvi',this.value)">
+      <input class="p-mnozstvi" type="number" value="${p.mnozstvi}" placeholder="1" min="0" step="1" style="text-align:right" onfocus="this.select()" oninput="updatePolozka(${i},'mnozstvi',this.value)">
       <input class="p-jednotka" type="text" value="${esc(p.jednotka)}" placeholder="ks" oninput="updatePolozka(${i},'jednotka',this.value)">
-      <input class="p-cena" type="number" value="${p.cena}" placeholder="0" min="0" step="1" style="text-align:right" oninput="updatePolozka(${i},'cena',this.value)">
-      <input class="p-koef" type="number" value="${p.koef != null ? p.koef : ''}" placeholder="—" min="0" step="0.1" style="text-align:right" title="Koeficient (nákup × koef = prodej)" oninput="updatePolozka(${i},'koef',this.value)">
+      <input class="p-cena" type="number" value="${p.cena}" placeholder="0" min="0" step="1" style="text-align:right" onfocus="this.select()" oninput="updatePolozka(${i},'cena',this.value)">
+      <input class="p-koef" type="number" value="${p.koef != null ? p.koef : ''}" placeholder="—" min="0" step="0.1" style="text-align:right" title="Koeficient (nákup × koef = prodej)" onfocus="this.select()" oninput="updatePolozka(${i},'koef',this.value)">
       <div class="p-celkem">${fmtKc(lineTotal(p))}</div>
       <button class="btn-remove" onclick="odebratiPolozku(${i})" title="Odebrat">×</button>
     </div>
