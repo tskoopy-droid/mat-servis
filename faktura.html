@@ -195,7 +195,8 @@
         <button class="btn btn-light btn-sm" onclick="pridatPolozku()">+ Prázdná položka</button>
       </div>
       <div class="cenik-row">
-        <input type="text" id="zakazka-cislo" placeholder="Číslo zakázky (Z-2026-001)" style="margin-bottom:0;flex:1;min-width:200px;">
+        <input type="text" id="zakazka-cislo" list="zakazky-list" placeholder="Číslo zakázky (Z-2026-001)" style="margin-bottom:0;flex:1;min-width:200px;">
+        <datalist id="zakazky-list"></datalist>
         <button class="btn btn-light btn-sm" id="zakazka-btn" onclick="nactiZeZakazky()">🔧 Načíst díly</button>
       </div>
       <div class="polozky-head">
@@ -286,6 +287,9 @@ async function nactiInit() {
     // offline / chyba — formulář funguje ručně, číslo si zadáš sám
   }
 
+  // ── Seznam čísel zakázek pro našeptávač (sestupně) ──
+  nactiSeznamZakazek();
+
   // ── Předvyplnění z rezervace (pokud přišli přes ?id=&col=) ──
   const params = new URLSearchParams(window.location.search);
   const rezId  = params.get('id');
@@ -328,6 +332,17 @@ async function nactiZRezervace(id, col) {
 
 // ── Načtení dílů ze zakázky (Firemní výdaje, kategorie „díly na prodej") ──
 const KOEF_DEFAULT = 1.3;
+
+async function nactiSeznamZakazek() {
+  try {
+    const r = await gasPost({ akce:'faktura_zakazky', token:getToken() });
+    if (r.ok && r.zakazky && r.zakazky.length) {
+      document.getElementById('zakazky-list').innerHTML =
+        r.zakazky.map(z => `<option value="${esc(z)}">`).join('');
+    }
+  } catch(e) { /* našeptávač je bonus — ruční zápis funguje vždy */ }
+}
+
 async function nactiZeZakazky() {
   const input = document.getElementById('zakazka-cislo');
   const cz = input.value.trim();
