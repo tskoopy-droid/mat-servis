@@ -630,7 +630,7 @@ function generujPrint() {
   setTimeout(() => {
     if (forma !== 'Převodem') return;
     const qrEl = document.getElementById('print-qr');
-    if (qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:qrString, width:90, height:90, correctLevel:QRCode.CorrectLevel.M }); }
+    if (qrEl) { qrEl.innerHTML = ''; new QRCode(qrEl, { text:qrString, width:400, height:400, correctLevel:QRCode.CorrectLevel.M }); }
   }, 50);
 }
 
