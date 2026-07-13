@@ -132,6 +132,7 @@
   .print-poznamka { margin-top:14px; padding:8px 10px; border:1px solid #94a3b8; border-left:3px solid #1e293b; font-size:8pt; color:#475569; }
   .print-dph-note { margin-top:10px; font-size:8pt; font-style:italic; color:#475569; }
   #print-qr img, #print-qr canvas { width:150px !important; height:150px !important; }
+</style>
 </head>
 <body>
 
@@ -551,7 +552,7 @@ function generujPrint() {
   const poznamka = document.getElementById('poznamka').value.trim();
   const total = celkem();
   const vs = cislo.replace(/\D/g,'');
-  const qrString = `SPD*1.0*ACC:${DODAVATEL.iban}*AM:${total.toFixed(2)}*CC:CZK*X-VS:${vs}*MSG:Faktura ${cislo}`;
+  const qrString = `SPD*1.0*ACC:${DODAVATEL.iban}*AM:${total.toFixed(2)}*CC:CZK*VS:${vs}*MSG:Faktura ${cislo}`;
 
   const cisteP = polozky.map(p => ({ popis:p.popis, jednotka:p.jednotka, mnozstvi: qOf(p), cena: unitPrice(p) }));
   const polozkyHTML = cisteP.filter(p => p.popis || p.cena > 0).map((p,i) => `
