@@ -71,6 +71,19 @@
   .archiv-btn:active { background:#bbf7d0; }
   .archiv-btn:disabled { opacity:0.5; cursor:not-allowed; }
   .archived-msg { background:var(--green-light); border:2px solid var(--green-mid); color:var(--green); text-align:center; padding:12px; border-radius:10px; font-weight:700; font-size:14px; }
+
+  /* Detail nacenění */
+  .nac-toggle { background:#f1f5f9; border:1.5px solid var(--border); color:var(--text-muted);
+    border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600;
+    font-family:'Inter',sans-serif; cursor:pointer; margin-top:10px; }
+  .nac-toggle:hover { background:#e2e8f0; }
+  .nac-detail { margin-top:8px; padding:10px 12px; background:#f8fafc;
+    border:1px solid var(--border); border-radius:10px; font-family:'Courier New',monospace;
+    font-size:12px; line-height:1.65; color:var(--text); white-space:pre-wrap;
+    word-break:break-word; }
+  .nac-detail .nac-warn { color:#b45309; font-weight:600; }
+  .nac-detail .nac-odhad { color:var(--text-muted); }
+
   .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
   .loading { text-align:center; padding:40px; color:var(--text-muted); }
 
@@ -607,9 +620,32 @@
           ${r.cena?'<br>💰 '+r.cena:''}
           ${r.poznamka?'<br>📝 '+r.poznamka:''}
         </div>
+        ${r.naceneni_detail?`<button class="nac-toggle" data-nac-btn="${r.id}" onclick="toggleNac('${r.id}')">🔍 Detail nacenění</button><div class="nac-detail" id="nac-${r.id}" style="display:none">${nacDetailHtml(r.naceneni_detail)}</div>`:''}
         ${archivRowHtml}
       </div>`;
     }).join('');
+  }
+
+  // ── DETAIL NACENĚNÍ ────────────────────────────────────────
+  function escHtml(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // Obarví hlášení (!) oranžově a tiché odhady (~) šedě.
+  function nacDetailHtml(text){
+    return String(text||'').split('\n').map(function(r){
+      const cls = r.indexOf('!')===0 ? 'nac-warn' : (r.indexOf('~')===0 ? 'nac-odhad' : '');
+      return cls ? '<span class="'+cls+'">'+escHtml(r)+'</span>' : escHtml(r);
+    }).join('\n');
+  }
+
+  window.toggleNac=function(id){
+    const el=document.getElementById('nac-'+id);
+    if(!el)return;
+    const skryte = el.style.display==='none';
+    el.style.display = skryte ? 'block' : 'none';
+    const btn=document.querySelector('[data-nac-btn="'+id+'"]');
+    if(btn)btn.textContent = skryte ? '🔍 Skrýt detail nacenění' : '🔍 Detail nacenění';
   }
 
   window.archivovat=async function(id,col,typ){
