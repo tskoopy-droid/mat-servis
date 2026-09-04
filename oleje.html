@@ -33,9 +33,9 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 /* Značka dílu na dlaždici: logo na vlastním řádku, pod ním název.
    Samotné logo nestačí — u Blue Print z obrázku není poznat, o koho jde.
    Číslo dílu se zákazníkovi NEUKAZUJE, na rozdíl od testovací stránky. */
-.znacka-radek{margin-top:5px;min-height:16px;}
-.znacka-logo{height:17px;max-width:80px;width:auto;object-fit:contain;
-  object-position:left center;display:block;margin-bottom:1px;}
+.znacka-radek{margin-top:4px;margin-bottom:2px;min-height:15px;}
+.znacka-logo{height:15px;max-width:72px;width:auto;object-fit:contain;
+  object-position:left center;display:block;}
 .znacka-nazev{font-size:10.5px;font-weight:700;letter-spacing:.03em;
   text-transform:uppercase;color:var(--text-muted);line-height:1.1;}
 .olej-znacka-logo{height:30px;max-width:150px;width:auto;object-fit:contain;
@@ -59,6 +59,23 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 
   /* Steps */
   .steps{display:flex;align-items:center;margin-bottom:6px;background:var(--white);border-radius:16px;padding:12px 12px;box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+  /* Lišta bez čísel — vyplněný proužek a pod ním název kroku.
+     Počet karet se liší podle vozu (u benzínu bez externího filtru
+     odpadá palivový), takže pevná čísla by lhala. */
+  .olej-inline-logo{height:15px;width:auto;object-fit:contain;vertical-align:-2px;}
+  .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+    padding:14px 0;border-bottom:1px solid var(--border);}
+  .zaklad-radek:first-of-type{padding-top:4px;}
+  .zaklad-popis{flex:1;min-width:0;}
+  .zaklad-nazev{font-size:14.5px;font-weight:700;color:var(--text);}
+  .zaklad-detail{font-size:12.5px;color:var(--text-muted);margin-top:3px;line-height:1.45;}
+  .zaklad-cena{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;}
+  .zaklad-soucet{display:flex;justify-content:space-between;align-items:baseline;
+    padding-top:14px;}
+  .zaklad-soucet b{font-size:19px;font-weight:700;color:var(--blue);}
+  .progress-track{height:6px;border-radius:999px;background:var(--border);overflow:hidden;}
+  .progress-fill{height:100%;border-radius:999px;background:var(--blue);
+    width:0;transition:width .35s ease;}
   .step-item{display:flex;align-items:center;flex-shrink:0;}
   .step-circle{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:2px solid var(--border);background:var(--white);color:var(--text-muted);transition:all 0.3s;}
   .step-circle.active{border-color:var(--blue);background:var(--blue);color:#fff;}
@@ -216,15 +233,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 
   <!-- Steps -->
   <div class="steps">
-    <div class="step-item"><div class="step-circle active" id="sc1">1</div></div>
-    <div class="step-line" id="line1"></div>
-    <div class="step-item"><div class="step-circle" id="sc2">2</div></div>
-    <div class="step-line" id="line2"></div>
-    <div class="step-item"><div class="step-circle" id="sc3">3</div></div>
-    <div class="step-line" id="line3"></div>
-    <div class="step-item"><div class="step-circle" id="sc4">4</div></div>
-    <div class="step-line" id="line4"></div>
-    <div class="step-item"><div class="step-circle" id="sc5">5</div></div>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
   </div>
   <div class="step-popisek" id="step-popisek">Vozidlo</div>
 
@@ -281,7 +290,10 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     <img class="olej-znacka-logo" src="logocastrol.png" alt="Castrol"
       onerror="this.style.display='none'">
     <div id="olejLoading" style="text-align:center;padding:28px 0;display:none;">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Načítám databázi Castrol…</div>
+      <img src="logocastrol.png" alt="Castrol" id="loadingLogo"
+        style="height:26px;width:auto;object-fit:contain;display:block;margin:0 auto 10px;"
+        onerror="loadingLogoChybi(this)">
+      <div id="loadingText" style="font-size:13px;color:var(--text-muted);margin-bottom:8px;display:none;">Načítám databázi Castrol…</div>
       <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
     </div>
     <div class="kategorie-item" id="katStandard" onclick="vyberKategorii('standard')" style="display:none;">
@@ -300,23 +312,6 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       </div>
       <div class="kategorie-popis" id="katLLPopis">Varianta vhodná pro vozy s vysokým ročním nájezdem, které se pohybují převážně na dlouhých dálničních trasách. Umožňuje prodloužit interval návštěvy servisu při zachování předepsaných norem výrobce.</div>
     </div>
-    <!-- Olejový filtr je povinná součást výměny a dlaždici nemá.
-         Značku proto vidí zákazník tady, ne až v souhrnu. -->
-    <div class="sluzba-item" id="olejovyFiltrBox" style="display:none;margin-top:14px;">
-      <div class="sluzba-left">
-        <div class="sluzba-check" style="visibility:hidden;"></div>
-        <div><div class="sluzba-name">Olejový filtr</div>
-          <div class="znacka-radek" id="znackaOlejovy"></div>
-          <div class="sluzba-detail">Součást výměny · práce v ceně</div></div>
-      </div>
-      <div class="sluzba-cena" id="cenaOlejovy">—</div>
-    </div>
-    <div class="olej-vybran hidden" id="olejVybranBox">
-      <div class="olej-vybran-label">Vybraný olej</div>
-      <div class="olej-vybran-nazev" id="olejVybranNazev"></div>
-      <div class="olej-vybran-visc" id="olejVybranVisc"></div>
-      <div class="olej-vybran-cena" id="olejVybranCena"></div>
-    </div>
     <div class="info-box" id="infoNaceneni">Pro vaše vozidlo nemáme olej v ceníku. Odešlete poptávku a my vás kontaktujeme.</div>
     <div class="naceneni-section" id="naceneniSection">
       <div class="naceneni-title">Odeslat k nacenění</div>
@@ -325,35 +320,42 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       <button onclick="odeslaPoptavku()" style="width:100%;padding:13px;background:var(--blue);border:none;border-radius:12px;font-family:Inter,sans-serif;font-weight:700;font-size:14px;color:#fff;cursor:pointer;">Odeslat poptávku</button>
     </div>
     <div id="olejContinueWrap" style="margin-top:16px;display:none;">
-      <button onclick="zpetNa('cardDoliti', 2)" style="width:100%;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+      <button onclick="naZakladniCenu()" style="width:100%;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
     </div>
   </div>
 
-  <!-- Krok 3: Dolití + Reset -->
-  <div class="card hidden" id="cardDoliti">
+  <!-- Základní cena — ukáže se až po volbě intervalu.
+       Nic se tu nevybírá, je to rozpad povinné části objednávky. -->
+  <div class="card hidden" id="cardZaklad">
     <div class="krok-header">
       <button class="back-btn-cal" onclick="zpetNa('cardOlej', 2)">←</button>
-      <div class="section-title">Doplňkové služby k oleji</div>
+      <div class="section-title">Základní cena výměny</div>
     </div>
-    <div class="sekce-nadpis">1 l oleje na dolití</div>
-    <div class="sekce-popis">I moderní motory občas spotřebují mezi servisy trochu oleje. Dostanete od nás litrovou láhev správného oleje pro váš vůz — když bude potřeba dolít, máte ho po ruce.</div>
-    <div class="doliti-item" id="slDoliti" onclick="toggleDoliti()">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div class="doliti-check" id="chkDoliti"></div>
-        <div style="font-size:14px;font-weight:600;color:var(--text);">Přidat 1 l oleje s sebou</div>
+    <div class="zaklad-radek">
+      <div class="zaklad-popis">
+        <div class="zaklad-nazev" id="zakladOlejNazev">—</div>
+        <div class="zaklad-detail" id="zakladOlejDetail"></div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:var(--blue);" id="cenaDoliti">—</div>
+      <div class="zaklad-cena" id="zakladOlejCena">—</div>
     </div>
-    <div class="sekce-nadpis" style="margin-top:16px;">Reset servisního intervalu</div>
-    <div class="sekce-popis">Po každé výměně oleje je nutné resetovat servisní interval — jinak palubní počítač stále hlásí potřebu výměny. Provádíme automaticky v ceně výměny.</div>
-    <div class="sluzba-item selected" id="slReset" onclick="toggleSluzba('reset')">
-      <div class="sluzba-left">
-        <div class="sluzba-check" id="chkReset">✓</div>
-        <div><div class="sluzba-name">Reset servisního intervalu</div></div>
+    <div class="zaklad-radek">
+      <div class="zaklad-popis">
+        <div class="zaklad-nazev">Olejový filtr</div>
+        <div class="znacka-radek" id="znackaOlejovy"></div>
       </div>
-      <div class="sluzba-cena" style="color:var(--green);font-weight:700;">Zdarma</div>
+      <div class="zaklad-cena" id="zakladFiltrCena">—</div>
     </div>
-    <button onclick="dalPo('cardDoliti')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    <div class="zaklad-radek">
+      <div class="zaklad-popis">
+        <div class="zaklad-nazev">Cena za výměnu</div>
+        <div class="zaklad-detail">Práce, ekologická likvidace oleje a reset servisního intervalu</div>
+      </div>
+      <div class="zaklad-cena" id="zakladPraceCena">—</div>
+    </div>
+    <div class="zaklad-soucet">
+      <span>Celkem základ</span><b id="zakladCelkem">—</b>
+    </div>
+    <button onclick="dalPo('cardZaklad')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
   <!-- Krok 4: Vzduchový filtr -->
@@ -554,14 +556,10 @@ var stav = {
 // ── Steps ─────────────────────────────────────────────────────
 function updateSteps(active) {
   var popisky = ['Vozidlo','Olej','Filtry','Termín','Kontakt'];
-  for (var i = 1; i <= 5; i++) {
-    var c = document.getElementById('sc' + i);
-    var ln = document.getElementById('line' + i);
-    if (!c) continue;
-    c.className = 'step-circle' + (i < active ? ' done' : i === active ? ' active' : '');
-    c.textContent = i < active ? '✓' : String(i);
-    if (ln) ln.className = 'step-line' + (i < active ? ' done' : '');
-  }
+  var podil = Math.max(0, Math.min(1, (active - 1) / (popisky.length - 1)));
+  var fill = document.getElementById('progressFill');
+  // první krok nemá být úplně prázdný, ať je proužek vidět
+  if (fill) fill.style.width = Math.round(8 + podil * 92) + '%';
   var p = document.getElementById('step-popisek');
   if (p) p.textContent = popisky[active - 1] || '';
 }
@@ -663,7 +661,7 @@ function zobrazAuto() {
 }
 
 function resetVin() {
-  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,kabinaVarianta:0,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:0,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
   document.getElementById('vinInput').value = '';
   document.getElementById('vinError').classList.remove('visible');
   zobrazKartu('cardVin');
@@ -680,8 +678,6 @@ function pokracujNaSluzby() {
   document.getElementById('katLL').classList.remove('selected');
   document.getElementById('chkKatStandard').textContent = '';
   document.getElementById('chkKatLL').textContent = '';
-  document.getElementById('olejVybranBox').classList.add('hidden');
-  document.getElementById('olejovyFiltrBox').style.display = 'none';
   document.getElementById('olejContinueWrap').style.display = 'none';
   document.getElementById('infoNaceneni').classList.remove('visible');
   document.getElementById('naceneniSection').classList.remove('visible');
@@ -746,8 +742,26 @@ function nactiCenik() {
 function zobrazKategorieOleje(data) {
   document.getElementById('olejLoading').style.display = 'none';
 
+  // Krátký interval musí být na výběr VŽDY. Když Castrol vrátí jen Long
+  // Life oleje, vezme se tentýž olej a nabídne se i s intervalem 15 000 —
+  // je to stejný produkt, jen s kratší výměnou.
   var standardOleje = data.oleje.filter(function(o) { return (o.km || 0) <= 20000; });
   var llOleje       = data.oleje.filter(function(o) { return (o.km || 0) > 20000; });
+
+  if (!standardOleje.length && llOleje.length) {
+    standardOleje = llOleje.map(function(o) {
+      var kopie = {};
+      for (var k in o) if (o.hasOwnProperty(k)) kopie[k] = o[k];
+      kopie.km = 15000;
+      kopie.interval = '15000 km/ 12 měs.';
+      kopie.zkracenyInterval = true;   // pro hlášení, zákazník nic nepozná
+      return kopie;
+    });
+  }
+
+  stav.olejeStandard = standardOleje;
+  stav.olejeLL       = llOleje;
+
   var maStandard = standardOleje.length > 0;
   var maLL       = llOleje.length > 0;
 
@@ -764,10 +778,6 @@ function zobrazKategorieOleje(data) {
     document.getElementById('katLL').style.display = '';
   }
 
-  if (maLL && !maStandard) {
-    document.getElementById('katLLPopis').textContent = 'Váš vůz vyžaduje olej Long Life dle specifikace výrobce. Interval výměny je ' + (document.getElementById('intervalLL').textContent) + '.';
-  }
-
   if (maStandard)   vyberKategorii('standard');
   else if (maLL)    vyberKategorii('ll');
 }
@@ -775,11 +785,6 @@ function zobrazKategorieOleje(data) {
 // ── Ceny filtrů z nacenění ───────────────────────────────────
 function nastavCenyFiltru() {
   var p = (stav.naceneni && stav.naceneni.polozky) || {};
-  if (p.olejovy) {
-    document.getElementById('cenaOlejovy').textContent = p.olejovy.cena + ' Kč';
-    document.getElementById('znackaOlejovy').innerHTML = znackaHtml(p.olejovy.znacka);
-    document.getElementById('olejovyFiltrBox').style.display = '';
-  }
   if (p.vzduchovy) {
     document.getElementById('cenaVzduch').textContent = p.vzduchovy.cena + ' Kč';
     document.getElementById('znackaVzduch').innerHTML = znackaHtml(p.vzduchovy.znacka);
@@ -849,46 +854,86 @@ function vyberKategorii(typ) {
   document.getElementById(idKat).classList.add('selected');
   document.getElementById(idChk).textContent = '✓';
 
-  // Filtruj oleje podle kategorie (km <= 20000 = Standard, > 20000 = LL)
-  var filtrovane = oleje.filter(function(o) {
-    return typ === 'standard' ? (o.km || 0) <= 20000 : (o.km || 0) > 20000;
-  });
+  // Seznamy se sestavily v zobrazKategorieOleje — Standard může být
+  // dopočítaný z Long Life oleje, takže se tady znovu nefiltruje podle km.
+  var filtrovane = (typ === 'standard' ? stav.olejeStandard : stav.olejeLL) || [];
   if (filtrovane.length === 0) return;
 
   // Vyber olej s nejlepší prioritou
   filtrovane.sort(function(a, b) { return (a.priorita || 999) - (b.priorita || 999); });
-  var vybrany = filtrovane[0];
-  stav.olejVybrany = vybrany;
-  stav.doliti = false;
-
-  // Zobraz vybraný olej
-  var viscMatch = vybrany.nazev.match(/\b(\d+[wW]-\d+)\b/);
-  var visc = viscMatch ? viscMatch[1] : '';
-  var nazevBezVisc = visc ? vybrany.nazev.replace(visc, '').replace(/\s+/g, ' ').trim() : vybrany.nazev;
-  document.getElementById('olejVybranNazev').textContent = stav.objem + ' l ' + nazevBezVisc;
-  // Zobrazit viskozitu + interval
-  var intervalText = vybrany.interval || '10 000 km / 1 rok';
-  document.getElementById('olejVybranVisc').textContent = (visc ? visc + ' · ' : '') + intervalText;
-  document.getElementById('olejVybranCena').textContent = (vybrany.cenaOleje || '—') + ' Kč';
-  document.getElementById('olejVybranBox').classList.remove('hidden');
-
-  // Nastav cenu dolití + reset checkboxu
-  document.getElementById('cenaDoliti').textContent = vybrany.cena1lDoliti ? vybrany.cena1lDoliti + ' Kč' : '—';
-  document.getElementById('slDoliti').classList.remove('selected');
-  document.getElementById('chkDoliti').textContent = '';
+  stav.olejVybrany = filtrovane[0];
 
   document.getElementById('olejContinueWrap').style.display = 'block';
   aktualizujSouhrn();
 }
 
-function toggleDoliti() {
-  if (!stav.olejVybrany) return;
-  stav.doliti = !stav.doliti;
-  var item = document.getElementById('slDoliti');
-  var chk  = document.getElementById('chkDoliti');
-  if (stav.doliti) { item.classList.add('selected'); chk.textContent = '✓'; }
-  else             { item.classList.remove('selected'); chk.textContent = ''; }
-  aktualizujSouhrn();
+/** Přechod z výběru intervalu na kartu se základní cenou. */
+function naZakladniCenu() {
+  zobrazZaklad();
+  zobrazKartu('cardZaklad');
+  updateSteps(2);
+}
+
+/**
+ * Rozpad povinné části objednávky. Nic se tu nevybírá — zákazník jen vidí,
+ * z čeho se skládá základ, než se dostane k volitelným filtrům.
+ */
+function zobrazZaklad() {
+  var o = stav.olejVybrany;
+  var p = (stav.naceneni && stav.naceneni.polozky) || {};
+  var c = stav.cenik || {};
+  if (!o) return;
+
+  var viscMatch = o.nazev.match(/\b(\d+[wW]-\d+)\b/);
+  var visc = viscMatch ? viscMatch[1] : '';
+  var nazev = visc ? o.nazev.replace(visc, '').replace(/\s+/g, ' ').trim() : o.nazev;
+
+  document.getElementById('zakladOlejNazev').innerHTML =
+    stav.objem + ' l ' + olejNazevHtml(nazev);
+  document.getElementById('zakladOlejDetail').textContent =
+    (visc ? visc + ' · ' : '') + (o.interval || '');
+
+  var cenaOleje  = Math.round(Number(o.cenaOleje) || 0);
+  var cenaFiltru = p.olejovy ? Math.round(Number(p.olejovy.cena) || 0) : 0;
+  var cenaPrace  = Math.round(Number(c.cenaPrace) || 0);
+
+  document.getElementById('zakladOlejCena').textContent  = cenaOleje + ' Kč';
+  document.getElementById('zakladFiltrCena').textContent = cenaFiltru + ' Kč';
+  document.getElementById('zakladPraceCena').textContent = cenaPrace + ' Kč';
+  document.getElementById('zakladCelkem').textContent =
+    (cenaOleje + cenaFiltru + cenaPrace) + ' Kč';
+
+  if (p.olejovy) {
+    document.getElementById('znackaOlejovy').innerHTML = znackaHtml(p.olejovy.znacka);
+  }
+}
+
+/**
+ * Název oleje s logem Castrolu na místě slova "Castrol".
+ * Castrolí API to plní nekonzistentně — jednou "Castrol EDGE LL",
+ * jindy jen "EDGE A3/B4". Když slovo v názvu není, logo se nevkládá.
+ */
+function olejNazevHtml(nazev) {
+  var t = String(nazev || '');
+  if (!/castrol/i.test(t)) return escHtml(t);
+  var zbytek = t.replace(/castrol\s*/i, '').trim();
+  return '<img src="logocastrol.png" alt="Castrol" class="olej-inline-logo" ' +
+         'onerror="olejLogoChybi(this)"> ' + escHtml(zbytek);
+}
+
+/** Logo v názvu oleje se nenačetlo — vrátí se slovo Castrol. */
+function olejLogoChybi(img) {
+  var t = document.createTextNode('Castrol ');
+  if (img.parentNode) img.parentNode.replaceChild(t, img);
+}
+
+
+
+/** Logo Castrolu v hlášce o načítání se nenačetlo — nastoupí text. */
+function loadingLogoChybi(img) {
+  img.style.display = 'none';
+  var t = document.getElementById('loadingText');
+  if (t) t.style.display = '';
 }
 
 // Loga značek filtrů — soubory vedle stránky, stejné jako na testovací
@@ -913,11 +958,21 @@ function escHtml(t) {
  */
 function znackaHtml(znacka) {
   if (!znacka) return '';
-  var nazev = '<div class="znacka-nazev">' + escHtml(znacka) + '</div>';
   var soubor = LOGA_ZNACEK[String(znacka).toUpperCase()];
-  if (!soubor) return nazev;
+  // Loga značek mají název přímo v obrázku, takže se text nepřidává.
+  // Když logo chybí nebo se nenačte, nastoupí místo něj název — obsluhu
+  // dělá znackaChybi(), inline řetězec s uvozovkami by rozbil atribut.
+  if (!soubor) return '<span class="znacka-nazev">' + escHtml(znacka) + '</span>';
   return '<img class="znacka-logo" src="' + soubor + '" alt="' + escHtml(znacka) + '" ' +
-         'loading="lazy" onerror="this.style.display=\'none\'">' + nazev;
+         'loading="lazy" onerror="znackaChybi(this)">';
+}
+
+/** Logo se nenačetlo — nahradí se názvem značky z atributu alt. */
+function znackaChybi(img) {
+  var nahrada = document.createElement('span');
+  nahrada.className = 'znacka-nazev';
+  nahrada.textContent = img.getAttribute('alt') || '';
+  if (img.parentNode) img.parentNode.replaceChild(nahrada, img);
 }
 
 // Důvody, proč se místo cen nabízí ruční nacenění.
@@ -984,7 +1039,6 @@ function sestavPolozky() {
   if (p.olejovy) polozky.push({ popis: sZnackou('Olejový filtr', p.olejovy.znacka), cena: Math.round(Number(p.olejovy.cena) || 0) });
   polozky.push({ popis: 'Práce', cena: Math.round(Number(c.cenaPrace) || 0) });
 
-  if (stav.doliti && o.cena1lDoliti) polozky.push({ popis: '1 l oleje na dolití', cena: Math.round(Number(o.cena1lDoliti) || 0) });
   if (stav.sluzby.vzduch && p.vzduchovy) polozky.push({ popis: sZnackou('Vzduchový filtr', p.vzduchovy.znacka), cena: Math.round(Number(p.vzduchovy.cena) || 0) });
 
   if (p.kabinovy && p.kabinovy.varianty && stav.kabinaVarianta >= 0) {
@@ -1093,7 +1147,7 @@ function odeslaPoptavku() {
 }
 
 // ── Navigace ──────────────────────────────────────────────────
-var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardDoliti','cardVzduch','cardKabina','cardPalivo','cardSouhrn','cardTermin','cardKontakt','cardHotovo'];
+var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardZaklad','cardVzduch','cardKabina','cardPalivo','cardSouhrn','cardTermin','cardKontakt','cardHotovo'];
 
 function zobrazKartu(id) {
   VSECHNY_KARTY.forEach(function(k) { document.getElementById(k).classList.add('hidden'); });
@@ -1124,7 +1178,7 @@ function kartaMaObsah(id) {
 }
 
 function dalPo(id) {
-  var od = (id === 'cardDoliti') ? 0 : FILTR_KARTY.indexOf(id) + 1;
+  var od = (id === 'cardZaklad') ? 0 : FILTR_KARTY.indexOf(id) + 1;
   for (var i = od; i < FILTR_KARTY.length; i++) {
     if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
   }
@@ -1138,7 +1192,7 @@ function zpetPred(id) {
   for (var i = idx - 1; i >= 0; i--) {
     if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
   }
-  zobrazKartu('cardDoliti');
+  zobrazKartu('cardZaklad');
   updateSteps(2);
 }
 
@@ -1146,7 +1200,7 @@ function zpetZeSouhrnu() {
   for (var i = FILTR_KARTY.length - 1; i >= 0; i--) {
     if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
   }
-  zobrazKartu('cardDoliti');
+  zobrazKartu('cardZaklad');
   updateSteps(2);
 }
 
