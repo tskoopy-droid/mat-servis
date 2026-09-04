@@ -1448,16 +1448,6 @@ window.addEventListener('load', function() {
   if (vinParam&&vinParam.length===17) { document.getElementById('vinInput').value=vinParam.toUpperCase(); nactiVin(); }
 });
 
-if (location.search.indexOf('testkab=') >= 0) {
-  var kolik = parseInt(location.search.match(/testkab=(\d)/)[1], 10);
-  var puvodni = vykresliKabinu;
-  vykresliKabinu = function() {
-    var k = stav.naceneni && stav.naceneni.polozky && stav.naceneni.polozky.kabinovy;
-    if (k && k.varianty.length > kolik) k.varianty.length = kolik;
-    puvodni();
-  };
-}
-  
 document.getElementById('vinInput').addEventListener('keydown', function(e) { if(e.key==='Enter') nactiVin(); });
 </script>
 </body>
