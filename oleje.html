@@ -943,7 +943,13 @@ function odeslaPoptavku() {
     method: 'POST', redirect: 'follow',
     body: JSON.stringify({ akce:'poptavka', duvod:(stav.naceneniDuvod || 'olej_chybi'), vin:stav.vin, znacka:stav.znacka, model:stav.model, kodMotoru:stav.kodMotoru, palivo:stav.palivo, objem:stav.objem, email:email })
   })
-  .then(function() {
+  .then(function(r) { return r.json(); })
+  .then(function(resp) {
+    if (!resp || (resp.status && resp.status !== 'ok')) {
+      alert((resp && resp.message) || 'Poptávku se nepodařilo odeslat. Zkuste to prosím znovu nebo volejte 731 885 825.');
+      return;
+    }
+    document.getElementById('infoNaceneni').classList.remove('visible');
     document.getElementById('naceneniSection').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-weight:600;">✓ Poptávka odeslána! Brzy vás kontaktujeme.</div>';
   })
   .catch(function() { alert('Chyba při odesílání. Zkuste znovu.'); });
