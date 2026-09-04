@@ -36,8 +36,8 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 .znacka-radek{margin-top:4px;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
 .znacka-logo{height:15px;max-width:72px;width:auto;object-fit:contain;
   object-position:left center;display:block;flex-shrink:0;}
-.znacka-nazev{font-size:10.5px;font-weight:700;letter-spacing:.03em;
-  text-transform:uppercase;color:var(--text-muted);line-height:1.1;}
+.znacka-nazev{font-size:11.5px;font-weight:700;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--text);opacity:.8;line-height:1.1;}
 .olej-znacka-logo{height:30px;max-width:150px;width:auto;object-fit:contain;
   object-position:left center;display:block;margin-bottom:10px;}
   .hidden{display:none!important;}
@@ -69,14 +69,21 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
      a značkou, ne vedle nich. */
   .sluzba-item{flex-direction:column;align-items:stretch;}
   .sluzba-item .sluzba-left{width:100%;}
-  .sluzba-item .sluzba-cena{align-self:flex-end;margin-top:6px;}
-  .olej-inline-logo{height:15px;width:auto;object-fit:contain;vertical-align:-2px;}
+  /* Název s logem na jednom řádku, pod ním popisek vlevo a cena vpravo.
+     Odsazení kopíruje šířku zaškrtávátka, ať text lícuje. */
+  .sluzba-hlavni{display:flex;align-items:center;gap:7px;min-width:0;}
+  .sluzba-hlavni .znacka-logo{flex-shrink:0;}
+  .sluzba-spodek{display:flex;justify-content:space-between;align-items:baseline;
+    gap:12px;margin-top:7px;padding-left:32px;}
+  .olej-inline-logo{height:20px;width:auto;object-fit:contain;vertical-align:-4px;
+    margin-right:4px;}
   .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
     padding:14px 0;border-bottom:1px solid var(--border);}
   .zaklad-radek:first-of-type{padding-top:4px;}
   .zaklad-popis{flex:1;min-width:0;}
   .zaklad-nazev{font-size:14.5px;font-weight:700;color:var(--text);}
-  .zaklad-detail{font-size:12.5px;color:var(--text-muted);margin-top:3px;line-height:1.45;}
+  .zaklad-detail{font-size:12.5px;color:var(--text);opacity:.75;font-weight:500;
+    margin-top:3px;line-height:1.45;}
   .zaklad-cena{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;}
   .zaklad-soucet{display:flex;justify-content:space-between;align-items:baseline;
     padding-top:14px;}
@@ -135,7 +142,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .sluzba-check{width:20px;height:20px;border:2px solid var(--border);border-radius:5px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.15s;}
   .sluzba-item.selected .sluzba-check{background:var(--blue);border-color:var(--blue);color:#fff;}
   .sluzba-name{font-size:14px;font-weight:600;color:var(--text);}
-  .sluzba-detail{font-size:12px;color:var(--text-muted);margin-top:2px;}
+  .sluzba-detail{font-size:12.5px;color:var(--text);font-weight:500;opacity:.75;}
   .sluzba-cena{font-size:15px;font-weight:700;color:var(--blue);white-space:nowrap;}
   .sluzba-cena.naceneni{color:var(--text-muted);font-size:13px;}
 
@@ -299,8 +306,6 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       <button class="back-btn-cal" onclick="zpetNa('cardAuto', 1)">←</button>
       <div class="section-title">Výběr oleje</div>
     </div>
-    <img class="olej-znacka-logo" src="logocastrol.png" alt="Castrol"
-      onerror="this.style.display='none'">
     <div id="olejLoading" style="text-align:center;padding:28px 0;display:none;">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Načítá se databáze</div>
       <img src="logocastrol.png" alt="Castrol" id="loadingLogo"
@@ -346,15 +351,14 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     </div>
     <div class="zaklad-radek">
       <div class="zaklad-popis">
-        <div class="zaklad-nazev" id="zakladOlejNazev">—</div>
+        <div class="zaklad-nazev sluzba-hlavni" id="zakladOlejNazev">—</div>
         <div class="zaklad-detail" id="zakladOlejDetail"></div>
       </div>
       <div class="zaklad-cena" id="zakladOlejCena">—</div>
     </div>
     <div class="zaklad-radek">
       <div class="zaklad-popis">
-        <div class="zaklad-nazev">Olejový filtr</div>
-        <div class="znacka-radek" id="znackaOlejovy"></div>
+        <div class="zaklad-nazev sluzba-hlavni" id="zakladFiltrNazev">Olejový filtr</div>
       </div>
       <div class="zaklad-cena" id="zakladFiltrCena">—</div>
     </div>
@@ -381,9 +385,12 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     <div class="sluzba-item" id="slVzduch" onclick="toggleSluzba('vzduch')">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkVzduch"></div>
-        <div><div class="sluzba-name">Vzduchový filtr</div><div class="znacka-radek" id="znackaVzduch"></div><div class="sluzba-detail">Výměna v ceně</div></div>
+        <div class="sluzba-hlavni" id="nazevVzduch"><span class="sluzba-name">Vzduchový filtr</span></div>
       </div>
-      <div class="sluzba-cena" id="cenaVzduch">—</div>
+      <div class="sluzba-spodek">
+        <span class="sluzba-detail">Výměna v ceně</span>
+        <span class="sluzba-cena" id="cenaVzduch">—</span>
+      </div>
     </div>
     <button onclick="dalPo('cardVzduch')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
@@ -409,9 +416,12 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     <div class="sluzba-item" id="slPalivo" onclick="toggleSluzba('palivo')">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkPalivo"></div>
-        <div><div class="sluzba-name">Palivový filtr</div><div class="znacka-radek" id="znackaPalivo"></div><div class="sluzba-detail">Výměna v ceně</div></div>
+        <div class="sluzba-hlavni" id="nazevPalivo"><span class="sluzba-name">Palivový filtr</span></div>
       </div>
-      <div class="sluzba-cena" id="cenaPalivo">—</div>
+      <div class="sluzba-spodek">
+        <span class="sluzba-detail">Výměna v ceně</span>
+        <span class="sluzba-cena" id="cenaPalivo">—</span>
+      </div>
     </div>
     <button onclick="dalPo('cardPalivo')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
@@ -807,11 +817,13 @@ function nastavCenyFiltru() {
   var p = (stav.naceneni && stav.naceneni.polozky) || {};
   if (p.vzduchovy) {
     document.getElementById('cenaVzduch').textContent = p.vzduchovy.cena + ' Kč';
-    document.getElementById('znackaVzduch').innerHTML = znackaHtml(p.vzduchovy.znacka);
+    document.getElementById('nazevVzduch').innerHTML =
+      nazevSeZnackou(p.vzduchovy.znacka, 'Vzduchový filtr');
   }
   if (p.palivovy) {
     document.getElementById('cenaPalivo').textContent = p.palivovy.cena + ' Kč';
-    document.getElementById('znackaPalivo').innerHTML = znackaHtml(p.palivovy.znacka);
+    document.getElementById('nazevPalivo').innerHTML =
+      nazevSeZnackou(p.palivovy.znacka, 'Palivový filtr');
   }
   vykresliKabinu();
 }
@@ -833,7 +845,8 @@ function vykresliKabinu() {
   var html = '';
   kab.varianty.forEach(function(v, i) {
     var sel = (stav.kabinaVarianta === i);
-    html += dlazdiceKabiny(i, v.nazev, v.cena + ' Kč', sel, v.znacka);
+    // celý název v jednom řádku: "Základní kabinový filtr"
+    html += dlazdiceKabiny(i, v.nazev + ' kabinový filtr', v.cena + ' Kč', sel, v.znacka);
   });
   html += dlazdiceKabiny(-1, 'Bez kabinového filtru', '—', stav.kabinaVarianta === -1, null);
   box.innerHTML = html;
@@ -846,12 +859,14 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka) {
          'style="margin-bottom:10px;" onclick="vyberKabinu(' + index + ')">' +
          '<div class="sluzba-left">' +
          '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
-         '<div><div class="sluzba-name">' + escHtml(nazev) + '</div>' +
-         (index >= 0 ? '<div class="znacka-radek">' + znackaHtml(znacka) + '</div>' +
-                       '<div class="sluzba-detail">Výměna v ceně</div>' : '') +
+         '<div class="sluzba-hlavni">' +
+         (index >= 0 ? nazevSeZnackou(znacka, nazev)
+                     : '<span class="sluzba-name">' + escHtml(nazev) + '</span>') +
          '</div></div>' +
-         '<div class="sluzba-cena">' + cena + '</div>' +
-         '</div>';
+         '<div class="sluzba-spodek">' +
+         '<span class="sluzba-detail">' + (index >= 0 ? 'Výměna v ceně' : '') + '</span>' +
+         '<span class="sluzba-cena">' + cena + '</span>' +
+         '</div></div>';
 }
 
 function vyberKabinu(index) {
@@ -910,10 +925,10 @@ function zobrazZaklad() {
   var visc = viscMatch ? viscMatch[1] : '';
   var nazev = visc ? o.nazev.replace(visc, '').replace(/\s+/g, ' ').trim() : o.nazev;
 
-  document.getElementById('zakladOlejNazev').innerHTML =
-    stav.objem + ' l ' + olejNazevHtml(nazev);
+  // Řádek začíná logem Castrolu, množství patří k ostatním údajům dole.
+  document.getElementById('zakladOlejNazev').innerHTML = olejNazevHtml(nazev);
   document.getElementById('zakladOlejDetail').textContent =
-    (visc ? visc + ' · ' : '') + (o.interval || '');
+    stav.objem + ' l · ' + (visc ? visc + ' · ' : '') + (o.interval || '');
 
   var cenaOleje  = Math.round(Number(o.cenaOleje) || 0);
   var cenaFiltru = p.olejovy ? Math.round(Number(p.olejovy.cena) || 0) : 0;
@@ -926,7 +941,8 @@ function zobrazZaklad() {
     (cenaOleje + cenaFiltru + cenaPrace) + ' Kč';
 
   if (p.olejovy) {
-    document.getElementById('znackaOlejovy').innerHTML = znackaHtml(p.olejovy.znacka);
+    document.getElementById('zakladFiltrNazev').innerHTML =
+      nazevSeZnackou(p.olejovy.znacka, 'Olejový filtr');
   }
 }
 
@@ -1041,6 +1057,14 @@ function znackaHtml(znacka) {
   }
   return '<img class="znacka-logo" src="' + soubor + '" alt="' + escHtml(znacka) + '" ' +
          'loading="lazy" onerror="znackaChybi(this)">';
+}
+
+/**
+ * Název dílu se značkou v jednom řádku: logo vlevo, za ním text.
+ * Používá se na dlaždicích i v rozpadu základní ceny.
+ */
+function nazevSeZnackou(znacka, text) {
+  return znackaHtml(znacka) + '<span class="sluzba-name">' + escHtml(text) + '</span>';
 }
 
 /** Logo se nenačetlo — nahradí se názvem značky z atributu alt. */
