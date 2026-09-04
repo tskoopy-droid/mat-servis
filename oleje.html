@@ -300,6 +300,17 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       </div>
       <div class="kategorie-popis" id="katLLPopis">Varianta vhodná pro vozy s vysokým ročním nájezdem, které se pohybují převážně na dlouhých dálničních trasách. Umožňuje prodloužit interval návštěvy servisu při zachování předepsaných norem výrobce.</div>
     </div>
+    <!-- Olejový filtr je povinná součást výměny a dlaždici nemá.
+         Značku proto vidí zákazník tady, ne až v souhrnu. -->
+    <div class="sluzba-item" id="olejovyFiltrBox" style="display:none;margin-top:14px;">
+      <div class="sluzba-left">
+        <div class="sluzba-check" style="visibility:hidden;"></div>
+        <div><div class="sluzba-name">Olejový filtr</div>
+          <div class="znacka-radek" id="znackaOlejovy"></div>
+          <div class="sluzba-detail">Součást výměny · práce v ceně</div></div>
+      </div>
+      <div class="sluzba-cena" id="cenaOlejovy">—</div>
+    </div>
     <div class="olej-vybran hidden" id="olejVybranBox">
       <div class="olej-vybran-label">Vybraný olej</div>
       <div class="olej-vybran-nazev" id="olejVybranNazev"></div>
@@ -670,6 +681,7 @@ function pokracujNaSluzby() {
   document.getElementById('chkKatStandard').textContent = '';
   document.getElementById('chkKatLL').textContent = '';
   document.getElementById('olejVybranBox').classList.add('hidden');
+  document.getElementById('olejovyFiltrBox').style.display = 'none';
   document.getElementById('olejContinueWrap').style.display = 'none';
   document.getElementById('infoNaceneni').classList.remove('visible');
   document.getElementById('naceneniSection').classList.remove('visible');
@@ -763,6 +775,11 @@ function zobrazKategorieOleje(data) {
 // ── Ceny filtrů z nacenění ───────────────────────────────────
 function nastavCenyFiltru() {
   var p = (stav.naceneni && stav.naceneni.polozky) || {};
+  if (p.olejovy) {
+    document.getElementById('cenaOlejovy').textContent = p.olejovy.cena + ' Kč';
+    document.getElementById('znackaOlejovy').innerHTML = znackaHtml(p.olejovy.znacka);
+    document.getElementById('olejovyFiltrBox').style.display = '';
+  }
   if (p.vzduchovy) {
     document.getElementById('cenaVzduch').textContent = p.vzduchovy.cena + ' Kč';
     document.getElementById('znackaVzduch').innerHTML = znackaHtml(p.vzduchovy.znacka);
