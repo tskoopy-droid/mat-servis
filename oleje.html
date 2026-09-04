@@ -33,9 +33,9 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 /* Značka dílu na dlaždici: logo na vlastním řádku, pod ním název.
    Samotné logo nestačí — u Blue Print z obrázku není poznat, o koho jde.
    Číslo dílu se zákazníkovi NEUKAZUJE, na rozdíl od testovací stránky. */
-.znacka-radek{margin-top:4px;margin-bottom:2px;min-height:15px;}
+.znacka-radek{margin-top:4px;margin-bottom:2px;display:flex;align-items:center;gap:6px;}
 .znacka-logo{height:15px;max-width:72px;width:auto;object-fit:contain;
-  object-position:left center;display:block;}
+  object-position:left center;display:block;flex-shrink:0;}
 .znacka-nazev{font-size:10.5px;font-weight:700;letter-spacing:.03em;
   text-transform:uppercase;color:var(--text-muted);line-height:1.1;}
 .olej-znacka-logo{height:30px;max-width:150px;width:auto;object-fit:contain;
@@ -62,6 +62,16 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   /* Lišta bez čísel — vyplněný proužek a pod ním název kroku.
      Počet karet se liší podle vozu (u benzínu bez externího filtru
      odpadá palivový), takže pevná čísla by lhala. */
+  .auto-hlavicka{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .auto-logo{height:28px;max-width:74px;width:auto;object-fit:contain;
+    object-position:left center;flex-shrink:0;}
+  /* Cena je vždy o řádek níž a zarovnaná doprava — pod názvem
+     a značkou, ne vedle nich. */
+  .sluzba-item{flex-direction:column;align-items:stretch;}
+  .sluzba-item.bez-filtru .sluzba-name{color:var(--text-muted);font-weight:600;}
+  .sluzba-item.bez-filtru .sluzba-cena{color:var(--text-muted);}
+  .sluzba-item .sluzba-left{width:100%;}
+  .sluzba-item .sluzba-cena{align-self:flex-end;margin-top:6px;}
   .olej-inline-logo{height:15px;width:auto;object-fit:contain;vertical-align:-2px;}
   .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
     padding:14px 0;border-bottom:1px solid var(--border);}
@@ -73,7 +83,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .zaklad-soucet{display:flex;justify-content:space-between;align-items:baseline;
     padding-top:14px;}
   .zaklad-soucet b{font-size:19px;font-weight:700;color:var(--blue);}
-  .progress-track{height:6px;border-radius:999px;background:var(--border);overflow:hidden;}
+  .progress-track{flex:1;height:6px;border-radius:999px;background:var(--border);overflow:hidden;}
   .progress-fill{height:100%;border-radius:999px;background:var(--blue);
     width:0;transition:width .35s ease;}
   .step-item{display:flex;align-items:center;flex-shrink:0;}
@@ -273,7 +283,11 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 
   <!-- Krok 1b: Data vozidla -->
   <div class="card hidden" id="cardAuto">
-    <div class="section-title" id="autoTitle">Vaše vozidlo</div>
+    <div class="auto-hlavicka">
+      <img class="auto-logo" id="autoLogo" alt="" style="display:none;"
+        onerror="this.style.display='none'">
+      <div class="section-title" id="autoTitle">Vaše vozidlo</div>
+    </div>
     <table class="info-table" id="autoTable"></table>
     <div style="margin-top:14px;display:flex;gap:10px;">
       <button onclick="resetVin()" style="flex:1;padding:12px;background:var(--white);border:1.5px solid var(--border);border-radius:12px;font-family:Inter,sans-serif;font-weight:600;font-size:13px;color:var(--text-muted);cursor:pointer;">← Jiné vozidlo</button>
@@ -290,10 +304,11 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     <img class="olej-znacka-logo" src="logocastrol.png" alt="Castrol"
       onerror="this.style.display='none'">
     <div id="olejLoading" style="text-align:center;padding:28px 0;display:none;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Načítá se databáze</div>
       <img src="logocastrol.png" alt="Castrol" id="loadingLogo"
-        style="height:26px;width:auto;object-fit:contain;display:block;margin:0 auto 10px;"
+        style="height:24px;width:auto;object-fit:contain;display:block;margin:0 auto 12px;"
         onerror="loadingLogoChybi(this)">
-      <div id="loadingText" style="font-size:13px;color:var(--text-muted);margin-bottom:8px;display:none;">Načítám databázi Castrol…</div>
+      <div id="loadingText" style="font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:10px;display:none;">Castrol</div>
       <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
     </div>
     <div class="kategorie-item" id="katStandard" onclick="vyberKategorii('standard')" style="display:none;">
@@ -329,7 +344,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   <div class="card hidden" id="cardZaklad">
     <div class="krok-header">
       <button class="back-btn-cal" onclick="zpetNa('cardOlej', 2)">←</button>
-      <div class="section-title">Základní cena výměny</div>
+      <div class="section-title">Výměna oleje</div>
     </div>
     <div class="zaklad-radek">
       <div class="zaklad-popis">
@@ -353,7 +368,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       <div class="zaklad-cena" id="zakladPraceCena">—</div>
     </div>
     <div class="zaklad-soucet">
-      <span>Celkem základ</span><b id="zakladCelkem">—</b>
+      <span>Celkem</span><b id="zakladCelkem">—</b>
     </div>
     <button onclick="dalPo('cardZaklad')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
@@ -381,7 +396,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       <button class="back-btn-cal" onclick="zpetPred('cardKabina')">←</button>
       <div class="section-title">Kabinový filtr</div>
     </div>
-    <div class="sekce-popis">Čistý filtr chrání posádku před alergeny a zamezuje pronikání nepříjemných pachů do interiéru. Zajišťuje svěží vzduch během jízdy, šetří klimatizaci a účinně zabraňuje zamlžování oken.</div>
+    <div class="sekce-popis">Čistý filtr chrání posádku před alergeny a zamezuje pronikání nepříjemných pachů do interiéru. Zajišťuje svěží vzduch během jízdy, šetří klimatizaci a účinně zabraňuje zamlžování oken. <b>Doporučujeme měnit každý rok.</b></div>
     <div id="kabinaVarianty"></div>
     <button onclick="dalPo('cardKabina')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
@@ -556,10 +571,7 @@ var stav = {
 // ── Steps ─────────────────────────────────────────────────────
 function updateSteps(active) {
   var popisky = ['Vozidlo','Olej','Filtry','Termín','Kontakt'];
-  var podil = Math.max(0, Math.min(1, (active - 1) / (popisky.length - 1)));
-  var fill = document.getElementById('progressFill');
-  // první krok nemá být úplně prázdný, ať je proužek vidět
-  if (fill) fill.style.width = Math.round(8 + podil * 92) + '%';
+  // šířku proužku řeší nastavProgress podle karty, tady jen popisek
   var p = document.getElementById('step-popisek');
   if (p) p.textContent = popisky[active - 1] || '';
 }
@@ -639,14 +651,24 @@ function nactiVin() {
     });
 }
 
+/**
+ * Karta vozu ukazuje JEN údaje z registru — logo značky, značku, model,
+ * rok první registrace, kód motoru a kW.
+ *
+ * Záměrně tu není marketingové označení motorizace ("1.9 TDI 16V").
+ * Registr ho nedává a muselo by se brát z napárovaného katalogu; tím by
+ * zákazník viděl výsledek párování dřív než ceny, a případná chyba by
+ * byla první věc na stránce.
+ */
 function zobrazAuto() {
   document.getElementById('autoTitle').textContent = stav.znacka + ' ' + stav.model;
+  nastavLogoVozu(stav.znacka);
   var rows = [
-    ['Tovární značka', stav.znacka], ['Obchodní označení', stav.model],
-    ['Typ', stav.typ], ['Varianta', stav.varianta], ['Karoserie', stav.karoserie],
-    ['Emisní úroveň', stav.emisniUroven], ['Kód motoru', stav.kodMotoru],
-    ['Max. výkon', stav.vykon + ' kW'], ['Palivo', stav.palivo],
-    ['Zdvihový objem', stav.objem + ' cm³'], ['Modelový rok', stav.rok],
+    ['Tovární značka', stav.znacka],
+    ['Obchodní označení', stav.model],
+    ['Rok první registrace', stav.rok],
+    ['Kód motoru', stav.kodMotoru],
+    ['Max. výkon', stav.vykon + ' kW'],
   ];
   var html = '';
   rows.forEach(function(r) {
@@ -820,7 +842,10 @@ function vykresliKabinu() {
 }
 
 function dlazdiceKabiny(index, nazev, cena, vybrano, znacka) {
-  return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
+  // Odmítnutí je opticky slabší, ale zůstává stejně velké, na svém místě
+  // (poslední, hned nad tlačítkem) a stejně snadno klikatelné.
+  var trida = 'sluzba-item' + (vybrano ? ' selected' : '') + (index < 0 ? ' bez-filtru' : '');
+  return '<div class="' + trida + '" ' +
          'style="margin-bottom:10px;" onclick="vyberKabinu(' + index + ')">' +
          '<div class="sluzba-left">' +
          '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
@@ -929,6 +954,42 @@ function olejLogoChybi(img) {
 
 
 
+// Loga automobilek — soubory vedle stránky, stejné názvy jako na
+// testovací stránce. Klíč je to, co může přijít z registru.
+var LOGA_VOZU = [
+  [/SKODA|ŠKODA/,          'logoskoda.png'],
+  [/VOLKSWAGEN|^VW$/,      'logovw.png'],
+  [/SEAT/,                 'logoseat.png'],
+  [/AUDI/,                 'logoaudi.png'],
+  [/PEUGEOT/,              'logopeugeot.png'],
+  [/CITRO/,                'logocitroen.png'],
+  [/OPEL|VAUXHALL/,        'logoopel.png'],
+  [/RENAULT/,              'logorenault.png'],
+  [/DACIA/,                'logodacia.png'],
+  [/^MG\b|MORRIS GARAGES/, 'logomg.png'],
+  [/FIAT/,                 'logofiat.png'],
+  [/\bKIA\b/,              'logokia.png'],
+  [/HYUNDAI/,              'logohyundai.png'],
+  [/FORD/,                 'logoford.png'],
+  [/TOYOTA/,               'logotoyota.png'],
+  [/\bBMW\b/,              'logobmw.png']
+];
+
+/** Logo automobilky na kartě vozu. Když značku neznáme, zůstane skryté. */
+function nastavLogoVozu(znacka) {
+  var img = document.getElementById('autoLogo');
+  if (!img) return;
+  var t = String(znacka || '').toUpperCase().trim();
+  var soubor = null;
+  for (var i = 0; i < LOGA_VOZU.length; i++) {
+    if (LOGA_VOZU[i][0].test(t)) { soubor = LOGA_VOZU[i][1]; break; }
+  }
+  if (!soubor) { img.style.display = 'none'; return; }
+  img.src = soubor;
+  img.alt = znacka;
+  img.style.display = '';
+}
+
 /** Logo Castrolu v hlášce o načítání se nenačetlo — nastoupí text. */
 function loadingLogoChybi(img) {
   img.style.display = 'none';
@@ -956,13 +1017,31 @@ function escHtml(t) {
  * Značka dílu pro zákazníka: logo a pod ním název.
  * Číslo dílu se NEUKAZUJE — endpoint ho ani neposílá.
  */
+/**
+ * Značka dílu pro zákazníka. Dvě chování podle značky:
+ *
+ *   Bosch a MAHLE     — logo NAHRAZUJE název, mají ho přímo v obrázku.
+ *                       Když se logo nenačte, nastoupí místo něj text.
+ *   Febi a Blue Print — logo je PŘED textem a název se píše vždycky,
+ *                       samotné logo u nich nestačí. Když se nenačte,
+ *                       řádek se sesype a text nastoupí na jeho místo.
+ *
+ * Číslo dílu se neukazuje nikdy — endpoint ho ani neposílá.
+ */
+var ZNACKY_S_NAZVEM = {'FEBI BILSTEIN': 1, 'FEBI': 1, 'BLUE PRINT': 1};
+
 function znackaHtml(znacka) {
   if (!znacka) return '';
-  var soubor = LOGA_ZNACEK[String(znacka).toUpperCase()];
-  // Loga značek mají název přímo v obrázku, takže se text nepřidává.
-  // Když logo chybí nebo se nenačte, nastoupí místo něj název — obsluhu
-  // dělá znackaChybi(), inline řetězec s uvozovkami by rozbil atribut.
-  if (!soubor) return '<span class="znacka-nazev">' + escHtml(znacka) + '</span>';
+  var klic = String(znacka).toUpperCase();
+  var soubor = LOGA_ZNACEK[klic];
+  var nazev = '<span class="znacka-nazev">' + escHtml(znacka) + '</span>';
+
+  if (!soubor) return nazev;
+
+  if (ZNACKY_S_NAZVEM[klic]) {
+    return '<img class="znacka-logo" src="' + soubor + '" alt="" ' +
+           'loading="lazy" onerror="this.style.display=\'none\'">' + nazev;
+  }
   return '<img class="znacka-logo" src="' + soubor + '" alt="' + escHtml(znacka) + '" ' +
          'loading="lazy" onerror="znackaChybi(this)">';
 }
@@ -1152,7 +1231,20 @@ var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardZaklad','cardVzduch','
 function zobrazKartu(id) {
   VSECHNY_KARTY.forEach(function(k) { document.getElementById(k).classList.add('hidden'); });
   document.getElementById(id).classList.remove('hidden');
+  nastavProgress(id);
   window.scrollTo(0, 0);
+}
+
+/**
+ * Proužek postupu podle pořadí karty. Fáze na to nestačí — výběr oleje
+ * a základní cena jsou obě fáze "Olej", takže by se lišta mezi nimi nehnula.
+ */
+function nastavProgress(id) {
+  var i = VSECHNY_KARTY.indexOf(id);
+  if (i < 0) return;
+  var podil = i / (VSECHNY_KARTY.length - 1);
+  var fill = document.getElementById('progressFill');
+  if (fill) fill.style.width = Math.round(6 + podil * 94) + '%';
 }
 
 function zpetNa(id, step) {
