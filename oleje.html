@@ -30,6 +30,16 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 </script>
 <style>
   @keyframes vinSpin{to{transform:rotate(360deg)}}
+/* Značka dílu na dlaždici: logo na vlastním řádku, pod ním název.
+   Samotné logo nestačí — u Blue Print z obrázku není poznat, o koho jde.
+   Číslo dílu se zákazníkovi NEUKAZUJE, na rozdíl od testovací stránky. */
+.znacka-radek{margin-top:5px;min-height:16px;}
+.znacka-logo{height:17px;max-width:80px;width:auto;object-fit:contain;
+  object-position:left center;display:block;margin-bottom:1px;}
+.znacka-nazev{font-size:10.5px;font-weight:700;letter-spacing:.03em;
+  text-transform:uppercase;color:var(--text-muted);line-height:1.1;}
+.olej-znacka-logo{height:30px;max-width:150px;width:auto;object-fit:contain;
+  object-position:left center;display:block;margin-bottom:10px;}
   .hidden{display:none!important;}
   :root {--blue:#2563eb;--blue-dark:#1d4ed8;--blue-light:#eff6ff;--blue-mid:#bfdbfe;
     --text:#1e293b;--text-muted:#64748b;--border:#e2e8f0;
@@ -268,6 +278,8 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       <button class="back-btn-cal" onclick="zpetNa('cardAuto', 1)">←</button>
       <div class="section-title">Výběr oleje</div>
     </div>
+    <img class="olej-znacka-logo" src="logocastrol.png" alt="Castrol"
+      onerror="this.style.display='none'">
     <div id="olejLoading" style="text-align:center;padding:28px 0;display:none;">
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Načítám databázi Castrol…</div>
       <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
@@ -330,58 +342,52 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
       </div>
       <div class="sluzba-cena" style="color:var(--green);font-weight:700;">Zdarma</div>
     </div>
-    <button onclick="zpetNa('cardVzduch', 3)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    <button onclick="dalPo('cardDoliti')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
   <!-- Krok 4: Vzduchový filtr -->
   <div class="card hidden" id="cardVzduch">
     <div class="krok-header">
-      <button class="back-btn-cal" onclick="zpetNa('cardDoliti', 3)">←</button>
+      <button class="back-btn-cal" onclick="zpetPred('cardVzduch')">←</button>
       <div class="section-title">Vzduchový filtr</div>
     </div>
     <div class="sekce-popis">Průchodný filtr znamená nižší spotřebu a plný výkon motoru. Výměnou každých 30 000 km zajistíte, že motor nebude zbytečně namáhán kvůli nedostatku vzduchu.</div>
     <div class="sluzba-item" id="slVzduch" onclick="toggleSluzba('vzduch')">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkVzduch"></div>
-        <div><div class="sluzba-name">Vzduchový filtr Bosch</div><div class="sluzba-detail">Výměna v ceně</div></div>
+        <div><div class="sluzba-name">Vzduchový filtr</div><div class="znacka-radek" id="znackaVzduch"></div><div class="sluzba-detail">Výměna v ceně</div></div>
       </div>
       <div class="sluzba-cena" id="cenaVzduch">—</div>
     </div>
-    <button onclick="zpetNa('cardKabina', 3)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    <button onclick="dalPo('cardVzduch')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
   <!-- Krok 5: Kabinový filtr -->
   <div class="card hidden" id="cardKabina">
     <div class="krok-header">
-      <button class="back-btn-cal" onclick="zpetNa('cardVzduch', 3)">←</button>
+      <button class="back-btn-cal" onclick="zpetPred('cardKabina')">←</button>
       <div class="section-title">Kabinový filtr</div>
     </div>
     <div class="sekce-popis">Čistý filtr chrání posádku před alergeny a zamezuje pronikání nepříjemných pachů do interiéru. Zajišťuje svěží vzduch během jízdy, šetří klimatizaci a účinně zabraňuje zamlžování oken.</div>
-    <div class="sluzba-item" id="slKabina" onclick="toggleSluzba('kabina')">
-      <div class="sluzba-left">
-        <div class="sluzba-check" id="chkKabina"></div>
-        <div><div class="sluzba-name">Kabinový filtr Bosch</div><div class="sluzba-detail">Výměna v ceně</div></div>
-      </div>
-      <div class="sluzba-cena" id="cenaKabina">—</div>
-    </div>
-    <button onclick="pokracujZKabiny()" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    <div id="kabinaVarianty"></div>
+    <button onclick="dalPo('cardKabina')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
   <!-- Krok 6: Palivový filtr (jen diesel) -->
   <div class="card hidden" id="cardPalivo">
     <div class="krok-header">
-      <button class="back-btn-cal" onclick="zpetNa('cardKabina', 3)">←</button>
+      <button class="back-btn-cal" onclick="zpetPred('cardPalivo')">←</button>
       <div class="section-title">Palivový filtr</div>
     </div>
     <div class="sekce-popis">Klíčová ochrana pro citlivé a drahé vstřikovače před nečistotami v naftě. Výměna v rozmezí 30 000–60 000 km je nejlevnější pojistkou proti náhlým poruchám palivového systému a špatným startům.</div>
     <div class="sluzba-item" id="slPalivo" onclick="toggleSluzba('palivo')">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkPalivo"></div>
-        <div><div class="sluzba-name">Palivový filtr Bosch</div><div class="sluzba-detail">Výměna v ceně</div></div>
+        <div><div class="sluzba-name">Palivový filtr</div><div class="znacka-radek" id="znackaPalivo"></div><div class="sluzba-detail">Výměna v ceně</div></div>
       </div>
       <div class="sluzba-cena" id="cenaPalivo">—</div>
     </div>
-    <button onclick="zpetNa('cardSouhrn', 3)" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+    <button onclick="dalPo('cardPalivo')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
   <!-- Krok 7: Souhrn -->
@@ -523,6 +529,9 @@ var stav = {
   palivo:'', objem:0, rok:'', vykon:'',
   castrolData: null,
   castrolPreloadPromise: null,
+  naceneni: null,               // odpoved z ?action=naceneni
+  naceneniPromise: null,
+  kabinaVarianta: 0,            // index varianty, -1 = bez kabinoveho filtru
   olejVybrany: null,
   doliti: false,
   cenik: null,
@@ -587,7 +596,7 @@ function nactiVin() {
       stav.model        = data.model;
       stav.typ          = data.typ ? data.typ.replace(/^[^a-zA-Z0-9]+/, '').trim() : '';
       stav.varianta     = data.varianta;
-      stav.karoserie    = data.karoserie ? data.karoserie.split(/[\s.]/)[0] : '';
+      stav.karoserie    = data.karoserie || '';   // parovani bezi v GASu, nic se neoreziva
       stav.emisniUroven = data.emisniUroven;
       stav.kodMotoru    = data.kodMotoru;
       stav.palivo       = data.palivo;
@@ -601,6 +610,12 @@ function nactiVin() {
       stav.castrolPreloadPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=olej'
             + (data.rok ? '&rok=' + encodeURIComponent(data.rok) : '')
             + (data.znacka ? '&znacka=' + encodeURIComponent(data.znacka) : ''),
+            { redirect: 'follow' })
+        .then(function(r) { return r.json(); })
+        .catch(function() { return null; });
+
+      // ── Preload nacenění filtrů na pozadí ──
+      stav.naceneniPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=naceneni',
             { redirect: 'follow' })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
@@ -637,7 +652,7 @@ function zobrazAuto() {
 }
 
 function resetVin() {
-  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',castrolData:null,castrolPreloadPromise:null,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,kabinaVarianta:0,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
   document.getElementById('vinInput').value = '';
   document.getElementById('vinError').classList.remove('visible');
   zobrazKartu('cardVin');
@@ -683,63 +698,122 @@ function nactiCenik() {
 
   olejePromise
     .then(function(data) {
-      document.getElementById('olejLoading').style.display = 'none';
-
-      if (!data || data.error) {
-        zobrazNaceneni('olej_chyba');
-        return;
-      }
-      if (!data.oleje || data.oleje.length === 0) {
-        zobrazNaceneni('olej_chybi');
-        return;
-      }
+      if (!data || data.error)                        return selhalo('olej_chyba');
+      if (!data.oleje || data.oleje.length === 0)     return selhalo('olej_chybi');
 
       stav.castrolData = data;
       stav.objem       = data.objem || stav.objem;
       stav.kodMotoru   = data.kodMotoru || stav.kodMotoru;
       stav.cenik       = data;
 
-      // Nastav ceny filtrů
-      document.getElementById('cenaVzduch').textContent = (data.cenaVzduch || '—') + ' Kč';
-      document.getElementById('cenaKabina').textContent = (data.cenaKabina || '—') + ' Kč';
-      document.getElementById('cenaPalivo').textContent = (data.cenaPalivo || '—') + ' Kč';
+      // Bez nacenění se objednat nedá — fixní ceny už stránka nemá.
+      // Proto se čeká i na ně, teprve pak se ukáže výběr oleje.
+      var naceneniPromise = stav.naceneniPromise ||
+        fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=naceneni', { redirect: 'follow' })
+          .then(function(r) { return r.json(); })
+          .catch(function() { return null; });
 
-      // Zkontroluj dostupnost kategorií
-      var standardOleje = data.oleje.filter(function(o) { return (o.km || 0) <= 20000; });
-      var llOleje        = data.oleje.filter(function(o) { return (o.km || 0) > 20000; });
-      var maStandard = standardOleje.length > 0;
-      var maLL       = llOleje.length > 0;
-
-      if (!maStandard && !maLL) { zobrazNaceneni('olej_chybi'); return; }
-
-      // Nastav interval tagy z dat Castrol
-      if (maStandard) {
-        var bestStd = standardOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
-        document.getElementById('intervalStandard').textContent = bestStd.interval || '15 000 km / 1 rok';
-        document.getElementById('katStandard').style.display = '';
-      }
-      if (maLL) {
-        var bestLL = llOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
-        document.getElementById('intervalLL').textContent = bestLL.interval || '30 000 km / 2 roky';
-        document.getElementById('katLL').style.display = '';
-      }
-
-      // Upravit popis LL pokud je to jediná kategorie
-      if (maLL && !maStandard) {
-        document.getElementById('katLLPopis').textContent = 'Váš vůz vyžaduje olej Long Life dle specifikace výrobce. Interval výměny je ' + (document.getElementById('intervalLL').textContent) + '.';
-      }
-
-      // Automatický předvýběr
-      if (maStandard) {
-        vyberKategorii('standard');
-      } else if (maLL) {
-        vyberKategorii('ll');
-      }
+      return naceneniPromise.then(function(n) {
+        if (!n || n.error || !n.uspech) {
+          return selhalo(n && n.preteceno ? 'zahlceno' : 'naceneni_selhalo');
+        }
+        stav.naceneni = n;
+        nastavCenyFiltru();
+        zobrazKategorieOleje(data);
+      });
     })
-    .catch(function() {
-      document.getElementById('olejLoading').style.display = 'none';
-      zobrazNaceneni('olej_chyba');
-    });
+    .catch(function() { selhalo('olej_chyba'); });
+
+  function selhalo(duvod) {
+    document.getElementById('olejLoading').style.display = 'none';
+    zobrazNaceneni(duvod);
+  }
+}
+
+/** Vykreslí kategorie olejů — volá se až když je hotové i nacenění filtrů. */
+function zobrazKategorieOleje(data) {
+  document.getElementById('olejLoading').style.display = 'none';
+
+  var standardOleje = data.oleje.filter(function(o) { return (o.km || 0) <= 20000; });
+  var llOleje       = data.oleje.filter(function(o) { return (o.km || 0) > 20000; });
+  var maStandard = standardOleje.length > 0;
+  var maLL       = llOleje.length > 0;
+
+  if (!maStandard && !maLL) { zobrazNaceneni('olej_chybi'); return; }
+
+  if (maStandard) {
+    var bestStd = standardOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
+    document.getElementById('intervalStandard').textContent = bestStd.interval || '15 000 km / 1 rok';
+    document.getElementById('katStandard').style.display = '';
+  }
+  if (maLL) {
+    var bestLL = llOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
+    document.getElementById('intervalLL').textContent = bestLL.interval || '30 000 km / 2 roky';
+    document.getElementById('katLL').style.display = '';
+  }
+
+  if (maLL && !maStandard) {
+    document.getElementById('katLLPopis').textContent = 'Váš vůz vyžaduje olej Long Life dle specifikace výrobce. Interval výměny je ' + (document.getElementById('intervalLL').textContent) + '.';
+  }
+
+  if (maStandard)   vyberKategorii('standard');
+  else if (maLL)    vyberKategorii('ll');
+}
+
+// ── Ceny filtrů z nacenění ───────────────────────────────────
+function nastavCenyFiltru() {
+  var p = (stav.naceneni && stav.naceneni.polozky) || {};
+  if (p.vzduchovy) {
+    document.getElementById('cenaVzduch').textContent = p.vzduchovy.cena + ' Kč';
+    document.getElementById('znackaVzduch').innerHTML = znackaHtml(p.vzduchovy.znacka);
+  }
+  if (p.palivovy) {
+    document.getElementById('cenaPalivo').textContent = p.palivovy.cena + ' Kč';
+    document.getElementById('znackaPalivo').innerHTML = znackaHtml(p.palivovy.znacka);
+  }
+  vykresliKabinu();
+}
+
+/**
+ * Kabinový filtr jako dlaždice. Pořadí: varianty podle ceny, poslední
+ * je odmítnutí. Předvybraná je ta, kterou nacenění označí jako výchozí.
+ */
+function vykresliKabinu() {
+  var box = document.getElementById('kabinaVarianty');
+  if (!box) return;
+  var kab = stav.naceneni && stav.naceneni.polozky && stav.naceneni.polozky.kabinovy;
+  if (!kab || !kab.varianty || !kab.varianty.length) { box.innerHTML = ''; return; }
+
+  if (stav.kabinaVarianta === 0) {
+    kab.varianty.forEach(function(v, i) { if (v.vychozi) stav.kabinaVarianta = i; });
+  }
+
+  var html = '';
+  kab.varianty.forEach(function(v, i) {
+    var sel = (stav.kabinaVarianta === i);
+    html += dlazdiceKabiny(i, v.nazev, v.cena + ' Kč', sel, v.znacka);
+  });
+  html += dlazdiceKabiny(-1, 'Bez kabinového filtru', '—', stav.kabinaVarianta === -1, null);
+  box.innerHTML = html;
+}
+
+function dlazdiceKabiny(index, nazev, cena, vybrano, znacka) {
+  return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
+         'style="margin-bottom:10px;" onclick="vyberKabinu(' + index + ')">' +
+         '<div class="sluzba-left">' +
+         '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
+         '<div><div class="sluzba-name">' + escHtml(nazev) + '</div>' +
+         (index >= 0 ? '<div class="znacka-radek">' + znackaHtml(znacka) + '</div>' +
+                       '<div class="sluzba-detail">Výměna v ceně</div>' : '') +
+         '</div></div>' +
+         '<div class="sluzba-cena">' + cena + '</div>' +
+         '</div>';
+}
+
+function vyberKabinu(index) {
+  stav.kabinaVarianta = index;
+  vykresliKabinu();
+  aktualizujSouhrn();
 }
 
 function vyberKategorii(typ) {
@@ -800,6 +874,35 @@ function toggleDoliti() {
   aktualizujSouhrn();
 }
 
+// Loga značek filtrů — soubory vedle stránky, stejné jako na testovací
+// stránce. Když soubor chybí nebo se nenačte, zůstane jen název značky.
+var LOGA_ZNACEK = {
+  'BOSCH': 'logobosch.png',
+  'MAHLE': 'logomahle.png',
+  'FEBI BILSTEIN': 'logofebi.png',
+  'FEBI': 'logofebi.png',
+  'BLUE PRINT': 'logoblue.png'
+};
+
+function escHtml(t) {
+  return String(t == null ? '' : t).replace(/[&<>"]/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+  });
+}
+
+/**
+ * Značka dílu pro zákazníka: logo a pod ním název.
+ * Číslo dílu se NEUKAZUJE — endpoint ho ani neposílá.
+ */
+function znackaHtml(znacka) {
+  if (!znacka) return '';
+  var nazev = '<div class="znacka-nazev">' + escHtml(znacka) + '</div>';
+  var soubor = LOGA_ZNACEK[String(znacka).toUpperCase()];
+  if (!soubor) return nazev;
+  return '<img class="znacka-logo" src="' + soubor + '" alt="' + escHtml(znacka) + '" ' +
+         'loading="lazy" onerror="this.style.display=\'none\'">' + nazev;
+}
+
 // Důvody, proč se místo cen nabízí ruční nacenění.
 // Text vidí zákazník, klíč jde do POST poptavka a odtud do předmětu mailu.
 var NACENENI_DUVODY = {
@@ -843,19 +946,36 @@ function toggleSluzba(klic) {
   aktualizujSouhrn();
 }
 
+/**
+ * Ceny filtrů jdou z nacenění podle VIN, cena práce a oleje z Castrolu/Sheets.
+ * Značka dílu se zákazníkovi neukazuje — vybírá ji priorita v GASu.
+ */
+/** Popis položky se značkou — olejový filtr nemá dlaždici, značku ukáže souhrn. */
+function sZnackou(popis, znacka) {
+  return znacka ? (popis + ' ' + znacka) : popis;
+}
+
 function sestavPolozky() {
-  if (!stav.olejVybrany || !stav.cenik) return [];
+  if (!stav.olejVybrany || !stav.cenik || !stav.naceneni) return [];
   var c = stav.cenik;
   var o = stav.olejVybrany;
+  var p = stav.naceneni.polozky || {};
   var polozky = [];
   var intervalLabel = o.interval || '10 000 km / 1 rok';
+
   polozky.push({ popis: stav.objem + ' l ' + o.nazev + ' (' + intervalLabel + ')', cena: Math.round(Number(o.cenaOleje) || 0) });
-  polozky.push({ popis: 'Olejový filtr BOSCH', cena: Math.round(Number(c.cenaFiltr) || 0) });
+  if (p.olejovy) polozky.push({ popis: sZnackou('Olejový filtr', p.olejovy.znacka), cena: Math.round(Number(p.olejovy.cena) || 0) });
   polozky.push({ popis: 'Práce', cena: Math.round(Number(c.cenaPrace) || 0) });
+
   if (stav.doliti && o.cena1lDoliti) polozky.push({ popis: '1 l oleje na dolití', cena: Math.round(Number(o.cena1lDoliti) || 0) });
-  if (stav.sluzby.vzduch && c.cenaVzduch) polozky.push({ popis: 'Vzduchový filtr BOSCH', cena: Math.round(Number(c.cenaVzduch) || 0) });
-  if (stav.sluzby.kabina && c.cenaKabina) polozky.push({ popis: 'Kabinový filtr BOSCH', cena: Math.round(Number(c.cenaKabina) || 0) });
-  if (stav.sluzby.palivo && c.cenaPalivo) polozky.push({ popis: 'Palivový filtr BOSCH', cena: Math.round(Number(c.cenaPalivo) || 0) });
+  if (stav.sluzby.vzduch && p.vzduchovy) polozky.push({ popis: sZnackou('Vzduchový filtr', p.vzduchovy.znacka), cena: Math.round(Number(p.vzduchovy.cena) || 0) });
+
+  if (p.kabinovy && p.kabinovy.varianty && stav.kabinaVarianta >= 0) {
+    var v = p.kabinovy.varianty[stav.kabinaVarianta];
+    if (v) polozky.push({ popis: sZnackou('Kabinový filtr – ' + v.nazev, v.znacka), cena: Math.round(Number(v.cena) || 0) });
+  }
+
+  if (stav.sluzby.palivo && p.palivovy) polozky.push({ popis: sZnackou('Palivový filtr', p.palivovy.znacka), cena: Math.round(Number(p.palivovy.cena) || 0) });
   return polozky;
 }
 
@@ -971,14 +1091,46 @@ function zpetNa(id, step) {
   if (id === 'cardSouhrn') aktualizujSouhrn();
 }
 
-function pokracujZKabiny() {
-  if (stav.palivo === 'diesel') { zobrazKartu('cardPalivo'); updateSteps(3); }
-  else { aktualizujSouhrn(); zobrazKartu('cardSouhrn'); updateSteps(4); }
+// ── Průchod kartami filtrů ───────────────────────────────────
+// Karta se ukáže jen tehdy, když pro ni nacenění vrátilo cenu.
+// Palivový se tím pádem neřídí palivem, ale tím, co přišlo z GASu:
+// u nafty se dohledává vždy, u benzínu jen filtr v potrubí.
+var FILTR_KARTY = ['cardVzduch', 'cardKabina', 'cardPalivo'];
+
+function kartaMaObsah(id) {
+  var p = stav.naceneni && stav.naceneni.polozky;
+  if (!p) return false;
+  if (id === 'cardVzduch') return !!p.vzduchovy;
+  if (id === 'cardKabina') return !!(p.kabinovy && p.kabinovy.varianty && p.kabinovy.varianty.length);
+  if (id === 'cardPalivo') return !!p.palivovy;
+  return false;
+}
+
+function dalPo(id) {
+  var od = (id === 'cardDoliti') ? 0 : FILTR_KARTY.indexOf(id) + 1;
+  for (var i = od; i < FILTR_KARTY.length; i++) {
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
+  }
+  aktualizujSouhrn();
+  zobrazKartu('cardSouhrn');
+  updateSteps(4);
+}
+
+function zpetPred(id) {
+  var idx = FILTR_KARTY.indexOf(id);
+  for (var i = idx - 1; i >= 0; i--) {
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
+  }
+  zobrazKartu('cardDoliti');
+  updateSteps(2);
 }
 
 function zpetZeSouhrnu() {
-  if (stav.palivo === 'diesel') { zobrazKartu('cardPalivo'); updateSteps(3); }
-  else { zobrazKartu('cardKabina'); updateSteps(3); }
+  for (var i = FILTR_KARTY.length - 1; i >= 0; i--) {
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
+  }
+  zobrazKartu('cardDoliti');
+  updateSteps(2);
 }
 
 // ── Kalendář ─────────────────────────────────────────────────
