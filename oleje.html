@@ -68,8 +68,6 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   /* Cena je vždy o řádek níž a zarovnaná doprava — pod názvem
      a značkou, ne vedle nich. */
   .sluzba-item{flex-direction:column;align-items:stretch;}
-  .sluzba-item.bez-filtru .sluzba-name{color:var(--text-muted);font-weight:600;}
-  .sluzba-item.bez-filtru .sluzba-cena{color:var(--text-muted);}
   .sluzba-item .sluzba-left{width:100%;}
   .sluzba-item .sluzba-cena{align-self:flex-end;margin-top:6px;}
   .olej-inline-logo{height:15px;width:auto;object-fit:contain;vertical-align:-2px;}
@@ -842,10 +840,9 @@ function vykresliKabinu() {
 }
 
 function dlazdiceKabiny(index, nazev, cena, vybrano, znacka) {
-  // Odmítnutí je opticky slabší, ale zůstává stejně velké, na svém místě
-  // (poslední, hned nad tlačítkem) a stejně snadno klikatelné.
-  var trida = 'sluzba-item' + (vybrano ? ' selected' : '') + (index < 0 ? ' bez-filtru' : '');
-  return '<div class="' + trida + '" ' +
+  // Odmítnutí vypadá jako ostatní dlaždice, jen nemá logo ani doporučení —
+  // je nezajímavé, ne schované.
+  return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
          'style="margin-bottom:10px;" onclick="vyberKabinu(' + index + ')">' +
          '<div class="sluzba-left">' +
          '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
@@ -1144,15 +1141,6 @@ function aktualizujSouhrn() {
     );
     total += p.cena;
   });
-
-  if (stav.sluzby.reset) {
-    itemsHtml.push(
-      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
-      '<div style="font-size:13px;color:var(--text-muted);">Reset servisního intervalu</div>' +
-      '<div style="font-size:14px;font-weight:700;color:var(--green);white-space:nowrap;margin-left:12px;">Zdarma</div>' +
-      '</div>'
-    );
-  }
 
   document.getElementById('summaryItems').innerHTML = itemsHtml.join('');
 
