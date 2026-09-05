@@ -666,10 +666,6 @@ function nactiVin() {
  * se u modelu prostě vynechá.
  */
 function zobrazAuto() {
-    alert('rok: ' + stav.rok
-      + '\nrokRegistrace: ' + stav.rokRegistrace
-      + '\nkodMotoru: ' + stav.kodMotoru
-      + '\nkodMotoruRegistr: ' + stav.kodMotoruRegistr);
   var model = stav.model || '';
   if (stav.rokRegistrace && String(stav.rokRegistrace).trim()) {
     model += ' (' + String(stav.rokRegistrace).trim() + ')';
@@ -1487,13 +1483,8 @@ function odeslat() {
   if (!polozky.length) { err.textContent='Nepodařilo se sestavit položky. Zkuste to prosím znovu.'; err.classList.add('visible'); return; }
 
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
-
-    alert('PŘED ODESLÁNÍM\nrok: ' + stav.rok
-        + '\nrokRegistrace: ' + stav.rokRegistrace
-        + '\nkodMotoru: ' + stav.kodMotoru
-        + '\nkodMotoruRegistr: ' + stav.kodMotoruRegistr);
-
-    fetch(window.GAS_URL, {
+  
+  fetch(window.GAS_URL, {
     method:'POST', redirect:'follow',
     body: JSON.stringify({
       akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
