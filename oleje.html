@@ -665,6 +665,10 @@ function nactiVin() {
  * se u modelu prostě vynechá.
  */
 function zobrazAuto() {
+    alert('rok: ' + stav.rok
+      + '\nrokRegistrace: ' + stav.rokRegistrace
+      + '\nkodMotoru: ' + stav.kodMotoru
+      + '\nkodMotoruRegistr: ' + stav.kodMotoruRegistr);
   var model = stav.model || '';
   if (stav.rokRegistrace && String(stav.rokRegistrace).trim()) {
     model += ' (' + String(stav.rokRegistrace).trim() + ')';
@@ -1483,13 +1487,14 @@ function odeslat() {
 
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
 
-  fetch(window.GAS_URL, {
+    fetch(window.GAS_URL, {
     method:'POST', redirect:'follow',
     body: JSON.stringify({
       akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
       vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
       kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
-      rok:stav.rok||'', vykon:stav.vykon||'',
+      rok:stav.rokRegistrace||stav.rok||'', vykon:stav.vykon||'',
+      kodMotoruRegistr:stav.kodMotoruRegistr||stav.kodMotoru||'',
       olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
       datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem,
       slevovy_kod:stav.slevovyKod||''
