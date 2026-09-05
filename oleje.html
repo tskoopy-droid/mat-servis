@@ -75,6 +75,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .sluzba-hlavni .znacka-logo{flex-shrink:0;}
   .sluzba-spodek{display:flex;justify-content:space-between;align-items:baseline;
     gap:12px;margin-top:7px;padding-left:32px;}
+  .sluzba-spodek.s-odrazkami{margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9;}
   /* Castrol má logo v oválu s hodně bílého okraje, takže při stejné výšce
      jako Bosch působí menší — proto je nastavené vyšší. */
   .olej-inline-logo{height:30px;width:auto;object-fit:contain;vertical-align:-9px;
@@ -892,10 +893,11 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka, odrazky) {
                      : '<span class="sluzba-name">' + escHtml(nazev) + '</span>') +
          '</div></div>' +
          (index >= 0
-            ? '<div class="sluzba-spodek">' +
+            ? odrazkyHtml +
+              '<div class="sluzba-spodek' + (odrazkyHtml ? ' s-odrazkami' : '') + '">' +
               '<span class="sluzba-detail">Výměna v ceně</span>' +
               '<span class="sluzba-cena">' + cena + '</span>' +
-              '</div>' + odrazkyHtml
+              '</div>'
             : '') +
          '</div>';
 }
