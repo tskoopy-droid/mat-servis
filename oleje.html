@@ -75,8 +75,10 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .sluzba-hlavni .znacka-logo{flex-shrink:0;}
   .sluzba-spodek{display:flex;justify-content:space-between;align-items:baseline;
     gap:12px;margin-top:7px;padding-left:32px;}
-  .olej-inline-logo{height:20px;width:auto;object-fit:contain;vertical-align:-4px;
-    margin-right:4px;}
+  /* Castrol má logo v oválu s hodně bílého okraje, takže při stejné výšce
+     jako Bosch působí menší — proto je nastavené vyšší. */
+  .olej-inline-logo{height:30px;width:auto;object-fit:contain;vertical-align:-9px;
+    margin-right:5px;}
   .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
     padding:14px 0;border-bottom:1px solid var(--border);}
   .zaklad-radek:first-of-type{padding-top:4px;}
@@ -180,7 +182,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .krok-header .section-title{margin:0;}
 
   .sekce-nadpis{font-size:15px;font-weight:700;color:var(--text);margin:16px 0 6px;}
-  .sekce-popis{font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:12px;}
+  .sekce-popis{font-size:13px;color:var(--text);opacity:.85;line-height:1.6;margin-bottom:12px;}
   .kategorie-item{border:2px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;background:var(--white);}
   .kategorie-item:active,.kategorie-item.selected{border-color:var(--blue);background:var(--blue-light);}
   .kategorie-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -346,7 +348,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
        Nic se tu nevybírá, je to rozpad povinné části objednávky. -->
   <div class="card hidden" id="cardZaklad">
     <div class="krok-header">
-      <button class="back-btn-cal" onclick="zpetNa('cardOlej', 2)">←</button>
+      <button class="back-btn-cal" onclick="zpetZVymeny()">←</button>
       <div class="section-title">Výměna oleje</div>
     </div>
     <div class="zaklad-radek">
@@ -365,7 +367,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     <div class="zaklad-radek">
       <div class="zaklad-popis">
         <div class="zaklad-nazev">Cena za výměnu</div>
-        <div class="zaklad-detail">Práce, ekologická likvidace oleje a reset servisního intervalu</div>
+        <div class="zaklad-detail">Práce, ekologická likvidace a reset servisního intervalu</div>
       </div>
       <div class="zaklad-cena" id="zakladPraceCena">—</div>
     </div>
@@ -810,6 +812,10 @@ function zobrazKategorieOleje(data) {
 
   if (maStandard)   vyberKategorii('standard');
   else if (maLL)    vyberKategorii('ll');
+
+  // Když je jen jedna kategorie, není z čeho vybírat — krok se přeskočí
+  // a jde se rovnou na rozpad ceny.
+  if (maStandard !== maLL) naZakladniCenu();
 }
 
 // ── Ceny filtrů z nacenění ───────────────────────────────────
@@ -863,10 +869,13 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka) {
          (index >= 0 ? nazevSeZnackou(znacka, nazev)
                      : '<span class="sluzba-name">' + escHtml(nazev) + '</span>') +
          '</div></div>' +
-         '<div class="sluzba-spodek">' +
-         '<span class="sluzba-detail">' + (index >= 0 ? 'Výměna v ceně' : '') + '</span>' +
-         '<span class="sluzba-cena">' + cena + '</span>' +
-         '</div></div>';
+         (index >= 0
+            ? '<div class="sluzba-spodek">' +
+              '<span class="sluzba-detail">Výměna v ceně</span>' +
+              '<span class="sluzba-cena">' + cena + '</span>' +
+              '</div>'
+            : '') +
+         '</div>';
 }
 
 function vyberKabinu(index) {
@@ -902,6 +911,17 @@ function vyberKategorii(typ) {
 
   document.getElementById('olejContinueWrap').style.display = 'block';
   aktualizujSouhrn();
+}
+
+/**
+ * Zpět z karty Výměna oleje. Když má vůz jen jednu kategorii oleje,
+ * karta s výběrem intervalu se přeskakuje, takže se jde rovnou na vozidlo.
+ */
+function zpetZVymeny() {
+  var jenJedna = !(stav.olejeStandard && stav.olejeStandard.length) !==
+                 !(stav.olejeLL && stav.olejeLL.length);
+  if (jenJedna) { zpetNa('cardAuto', 1); return; }
+  zpetNa('cardOlej', 2);
 }
 
 /** Přechod z výběru intervalu na kartu se základní cenou. */
