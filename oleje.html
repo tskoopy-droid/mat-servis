@@ -662,21 +662,27 @@ function nactiVin() {
 }
 
 /**
- * Karta vozu ukazuje JEN údaje z registru — logo značky, značku, model,
- * rok první registrace, kód motoru a kW.
+ * Karta vozu ukazuje JEN údaje z registru — logo značky, značku, model
+ * (s rokem první registrace na konci), kód motoru a kW.
  *
- * Záměrně tu není marketingové označení motorizace ("1.9 TDI 16V").
- * Registr ho nedává a muselo by se brát z napárovaného katalogu; tím by
- * zákazník viděl výsledek párování dřív než ceny, a případná chyba by
- * byla první věc na stránce.
+ * Rok první registrace jde ze stejného API volání jako ostatní údaje
+ * (data.rok / stav.rokRegistrace) — NE z dekódování VIN (stav.rok),
+ * protože to je jen odhad modelového roku/roku výroby a nemusí sedět
+ * na to, co má zákazník v TP. Když rokRegistrace nepřijde, závorka
+ * se u modelu prostě vynechá.
  */
 function zobrazAuto() {
+  var model = stav.model || '';
+  if (stav.rokRegistrace && String(stav.rokRegistrace).trim()) {
+    model += ' (' + String(stav.rokRegistrace).trim() + ')';
+  }
   document.getElementById('autoTitle').textContent = stav.znacka + ' ' + stav.model;
   nastavLogoVozu(stav.znacka);
+  // Titulek nahoře zůstává bez roku (jen značka + model) — rok patří
+  // pouze do řádku "Obchodní označení" v tabulce, viz proměnná model níže.
   var rows = [
     ['Tovární značka', stav.znacka],
-    ['Obchodní označení', stav.model],
-    ['Rok první registrace', stav.rok],
+    ['Obchodní označení', model],
     ['Kód motoru', stav.kodMotoru],
     ['Max. výkon', stav.vykon + ' kW'],
   ];
