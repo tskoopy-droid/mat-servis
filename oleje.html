@@ -1487,6 +1487,11 @@ function odeslat() {
 
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
 
+    alert('PŘED ODESLÁNÍM\nrok: ' + stav.rok
+        + '\nrokRegistrace: ' + stav.rokRegistrace
+        + '\nkodMotoru: ' + stav.kodMotoru
+        + '\nkodMotoruRegistr: ' + stav.kodMotoruRegistr);
+
     fetch(window.GAS_URL, {
     method:'POST', redirect:'follow',
     body: JSON.stringify({
