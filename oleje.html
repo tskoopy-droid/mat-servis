@@ -127,7 +127,11 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .info-table td:last-child{font-weight:600;color:var(--text);}
 
   /* Služby */
-  .sluzba-item{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--white);border:2px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;user-select:none;}
+  /* align-items MUSÍ zůstat stretch — dlaždice je sloupcový flex (viz výše),
+     takže align-items řídí vodorovné zarovnání. Při center se potomci smrští
+     na šířku obsahu a vycentrují: odrážky by se posouvaly podle délky textu
+     a cena by nešla zarovnat doprava. */
+  .sluzba-item{display:flex;align-items:stretch;justify-content:space-between;padding:14px 16px;background:var(--white);border:2px solid var(--border);border-radius:14px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;user-select:none;}
   .sluzba-item:active,.sluzba-item.selected{border-color:var(--blue);background:var(--blue-light);}
   .sluzba-item.disabled{opacity:0.4;cursor:not-allowed;}
   .sluzba-left{display:flex;align-items:center;gap:12px;}
@@ -196,7 +200,8 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .doliti-item.selected .doliti-check{background:var(--blue);border-color:var(--blue);color:#fff;}
 
   .naceneni-section{display:none;margin-top:16px;padding:16px;background:#f8fafc;border:1px solid var(--border);border-radius:14px;}
-  .kabina-odrazky{list-style:none;margin-top:8px;padding-left:32px;}
+  .kabina-odsazeni{padding-left:32px;}
+  .kabina-odrazky{list-style:none;margin-top:8px;box-sizing:border-box;}
   .kabina-odrazky li{font-size:12.5px;color:var(--text);opacity:.75;font-weight:500;
     line-height:1.5;position:relative;padding-left:14px;}
   .kabina-odrazky li::before{content:'•';position:absolute;left:0;color:var(--blue);font-weight:700;}
@@ -880,9 +885,9 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka, odrazky) {
   // je nezajímavé, ne schované.
   var odrazkyHtml = '';
   if (odrazky && odrazky.length) {
-    odrazkyHtml = '<ul class="kabina-odrazky">' +
+    odrazkyHtml = '<div class="kabina-odsazeni"><ul class="kabina-odrazky">' +
       odrazky.map(function(o) { return '<li>' + escHtml(o) + '</li>'; }).join('') +
-      '</ul>';
+      '</ul></div>';
   }
   return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
          'style="margin-bottom:10px;" onclick="vyberKabinu(' + index + ')">' +
