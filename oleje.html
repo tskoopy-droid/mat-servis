@@ -626,6 +626,7 @@ function nactiVin() {
       stav.palivo       = data.palivo;
       stav.objem        = data.obsah;
       stav.rok          = dekodujRokVin(vin);
+      stav.kodMotoruRegistr = data.kodMotoru || '';   // plný kód, párování ho zkracuje
       stav.rokRegistrace = data.rok || '';   // z registru — GAS ho potřebuje
                                              // pro značky, které rok do VINu nekódují
       stav.vykon        = data.vykon ? data.vykon.split('/')[0].trim() : '';
