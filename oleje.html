@@ -656,27 +656,20 @@ function nactiVin() {
 }
 
 /**
- * Karta vozu ukazuje JEN údaje z registru — logo značky, značku, model
- * (s rokem první registrace na konci), kód motoru a kW.
+ * Karta vozu ukazuje JEN údaje z registru — logo značky, značku, model,
+ * rok první registrace, kód motoru a kW.
  *
  * Rok první registrace jde ze stejného API volání jako ostatní údaje
  * (data.rok / stav.rokRegistrace) — NE z dekódování VIN (stav.rok),
  * protože to je jen odhad modelového roku/roku výroby a nemusí sedět
- * na to, co má zákazník v TP. Když rokRegistrace nepřijde, závorka
- * se u modelu prostě vynechá.
+ * na to, co má zákazník v TP.
  */
 function zobrazAuto() {
-  var model = stav.model || '';
-  if (stav.rokRegistrace && String(stav.rokRegistrace).trim()) {
-    model += ' (' + String(stav.rokRegistrace).trim() + ')';
-  }
   document.getElementById('autoTitle').textContent = stav.znacka + ' ' + stav.model;
   nastavLogoVozu(stav.znacka);
-  // Titulek nahoře zůstává bez roku (jen značka + model) — rok patří
-  // pouze do řádku "Obchodní označení" v tabulce, viz proměnná model níže.
   var rows = [
     ['Tovární značka', stav.znacka],
-    ['Obchodní označení', stav. model],
+    ['Obchodní označení', stav.model],
     ['Rok 1. registrace', stav.rokRegistrace],
     ['Kód motoru', stav.kodMotoru],
     ['Max. výkon', stav.vykon + ' kW'],
@@ -1483,7 +1476,7 @@ function odeslat() {
   if (!polozky.length) { err.textContent='Nepodařilo se sestavit položky. Zkuste to prosím znovu.'; err.classList.add('visible'); return; }
 
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
-  
+
   fetch(window.GAS_URL, {
     method:'POST', redirect:'follow',
     body: JSON.stringify({
