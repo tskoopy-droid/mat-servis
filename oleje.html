@@ -687,7 +687,10 @@ function zobrazAuto() {
 }
 
 function resetVin() {
-  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:0,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
+  // Všechny klíče, které nactiVin plní, musí být i tady — jinak by po
+  // "Jiné vozidlo" a neúspěšném načtení zůstaly hodnoty z předchozího vozu
+  // a odešly by v objednávce.
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:0,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
   document.getElementById('vinInput').value = '';
   document.getElementById('vinError').classList.remove('visible');
   zobrazKartu('cardVin');
@@ -1488,6 +1491,8 @@ function odeslat() {
       vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
       kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
       rok:stav.rokRegistrace||stav.rok||'', vykon:stav.vykon||'',
+      rokVin:stav.rok||'',   // modelový rok z 10. znaku VIN — mail ho ukáže
+                             // jen u značek, které ho tam kódují
       kodMotoruRegistr:stav.kodMotoruRegistr||stav.kodMotoru||'',
       castrolVarianty:stav.castrolVarianty||[],
       olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
