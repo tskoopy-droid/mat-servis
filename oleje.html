@@ -739,6 +739,10 @@ function nactiCenik() {
       stav.objem       = data.objem || stav.objem;
       stav.kodMotoru   = data.kodMotoru || stav.kodMotoru;
       stav.cenik       = data;
+      // Varianty vozu, které Castrol po VINu nabídl. Zákazníkovi se
+      // neukazují — jdou jen do operátorského mailu, aby bylo vidět,
+      // mezi čím se vybíralo a co vyhrálo.
+      stav.castrolVarianty = data.varianty || [];
 
       // Bez nacenění se objednat nedá — fixní ceny už stránka nemá.
       // Proto se čeká i na ně, teprve pak se ukáže výběr oleje.
@@ -1485,6 +1489,7 @@ function odeslat() {
       kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
       rok:stav.rokRegistrace||stav.rok||'', vykon:stav.vykon||'',
       kodMotoruRegistr:stav.kodMotoruRegistr||stav.kodMotoru||'',
+      castrolVarianty:stav.castrolVarianty||[],
       olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
       datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem,
       slevovy_kod:stav.slevovyKod||''
