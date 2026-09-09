@@ -118,6 +118,11 @@
   /* Dřív break-all kvůli dlouhým URL. Odkazy jsou teď čitelný text,
      takže se láme jen mezi slovy a až když je to nutné. */
   .nac-blok a { color:var(--blue); word-break:normal; overflow-wrap:break-word; }
+  /* Slug má být na jednom řádku i za cenu vlastního řádku pod popiskem.
+     Když se přesto nevejde, dá se posunout do strany. */
+  .nac-radek-blok { display:block; }
+  .nac-radek-blok b { display:block; margin-bottom:2px; }
+  .nac-slug { display:block; white-space:nowrap; overflow-x:auto; }
   .nac-detail .nac-odhad { color:var(--text-muted); }
 
   .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
@@ -743,8 +748,9 @@
         '</span></div>';
     }
     const pu=pegasUrl(r.slug);
-    if(pu) radky += '<div class="nac-radek"><b>Pegas</b><span><a href="'+
-      escHtml(pu)+'" target="_blank">'+escHtml(pegasPopis(r.slug))+'&nbsp;↗</a></span></div>';
+    if(pu) radky += '<div class="nac-radek nac-radek-blok"><b>Pegas</b>'+
+      '<span class="nac-slug"><a href="'+escHtml(pu)+'" target="_blank">'+
+      escHtml(pegasPopis(r.slug))+'&nbsp;↗</a></span></div>';
 
     if(!radky)return'';
     return'<div class="nac-blok"><div class="nac-blok-nadpis">Vozidlo</div>'+radky+'</div>';
@@ -774,7 +780,7 @@
     if(!k.length)return'';
     const li=k.map(x=>{
       const url=pegasUrl(x.slug);
-      const odkaz=url?('<br><a href="'+escHtml(url)+'" target="_blank">'+escHtml(pegasPopis(x.slug))+'&nbsp;↗</a>'):'';
+      const odkaz=url?('<span class="nac-slug"><a href="'+escHtml(url)+'" target="_blank">'+escHtml(pegasPopis(x.slug))+'&nbsp;↗</a></span>'):'';
       const popis=escHtml(String(x.popis||'').trim());
       if(x.slouceno){
         const zn=x.skupinaOK?' <span class="nac-vybran">← z této skupiny</span>':'';
