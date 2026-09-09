@@ -1490,7 +1490,10 @@ function odeslat() {
       akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
       vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
       kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
-      rok:stav.rokRegistrace||stav.rok||'', vykon:stav.vykon||'',
+      // Rok 1. registrace jen z registru. Bez fallbacku na stav.rok —
+      // to je modelový rok z VINu a v mailu i v adminu je vedle jako
+      // samostatný řádek. Když registr rok nedá, řádek se prostě vynechá.
+      rok:stav.rokRegistrace||'', vykon:stav.vykon||'',
       rokVin:stav.rok||'',   // modelový rok z 10. znaku VIN — mail ho ukáže
                              // jen u značek, které ho tam kódují
       kodMotoruRegistr:stav.kodMotoruRegistr||stav.kodMotoru||'',
