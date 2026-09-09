@@ -744,7 +744,7 @@
     }
     const pu=pegasUrl(r.slug);
     if(pu) radky += '<div class="nac-radek"><b>Pegas</b><span><a href="'+
-      escHtml(pu)+'" target="_blank">'+escHtml(pegasPopis(r.slug))+' ↗</a></span></div>';
+      escHtml(pu)+'" target="_blank">'+escHtml(pegasPopis(r.slug))+'&nbsp;↗</a></span></div>';
 
     if(!radky)return'';
     return'<div class="nac-blok"><div class="nac-blok-nadpis">Vozidlo</div>'+radky+'</div>';
@@ -774,7 +774,7 @@
     if(!k.length)return'';
     const li=k.map(x=>{
       const url=pegasUrl(x.slug);
-      const odkaz=url?('<br><a href="'+escHtml(url)+'" target="_blank">'+escHtml(pegasPopis(x.slug))+' ↗</a>'):'';
+      const odkaz=url?('<br><a href="'+escHtml(url)+'" target="_blank">'+escHtml(pegasPopis(x.slug))+'&nbsp;↗</a>'):'';
       const popis=escHtml(String(x.popis||'').trim());
       if(x.slouceno){
         const zn=x.skupinaOK?' <span class="nac-vybran">← z této skupiny</span>':'';
