@@ -99,6 +99,22 @@
     font-size:14px; line-height:1.8; color:var(--text); white-space:pre-wrap;
     word-break:break-word; }
   .nac-detail .nac-warn { color:#b45309; font-weight:700; }
+  /* Bloky nad textovým detailem — vozidlo, varianty Castrol, spárované
+     vozy. Nejsou monospace jako detail, jsou to čitelné údaje. */
+  .nac-blok { padding:14px 16px; border-bottom:1px solid var(--border);
+    font-family:'Inter',sans-serif; font-size:13.5px; line-height:1.7; }
+  .nac-blok:last-child { border-bottom:none; }
+  .nac-blok-nadpis { font-size:11px; font-weight:700; color:var(--text-muted);
+    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
+  .nac-radek { display:flex; gap:10px; }
+  .nac-radek b { font-weight:400; color:var(--text-muted); min-width:44%; }
+  .nac-radek span { font-weight:600; color:var(--text); }
+  .nac-seznam { list-style:none; margin:0; padding:0; }
+  .nac-seznam li { margin-bottom:8px; }
+  .nac-seznam li:last-child { margin-bottom:0; }
+  .nac-vybran { color:var(--green); font-weight:700; }
+  .nac-sedy { color:var(--text-muted); }
+  .nac-blok a { color:var(--blue); word-break:break-all; }
   .nac-detail .nac-odhad { color:var(--text-muted); }
 
   .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
@@ -637,7 +653,7 @@
           ${r.cena?'<br>💰 '+r.cena:''}
           ${r.poznamka?'<br>📝 '+r.poznamka:''}
         </div>
-        ${r.naceneni_detail?`<button class="nac-toggle" onclick="otevriNac('${r.id}')">🔍 Detail nacenění</button>`:''}
+        ${(r.naceneni_detail||r.vin)?`<button class="nac-toggle" onclick="otevriNac('${r.id}')">🔍 Detail nacenění</button>`:''}
         ${archivRowHtml}
       </div>`;
     }).join('');
@@ -656,12 +672,108 @@
     }).join('\n');
   }
 
+  // Odkaz do Pegasu ze slugu motorizace — stejné pravidlo jako v mailu.
+  //   citroen--c4-ii--1.6-hdi-90-68kw
+  //   → https://pegasdily.cz/autodily/citroen/c4-ii/1.6-hdi-90-68kw
+  function pegasUrl(slug){
+    const s=String(slug||'').trim();
+    return s?('https://pegasdily.cz/autodily/'+s.split('--').join('/')):'';
+  }
+
+  function nacJson(text){
+    try{ const x=JSON.parse(text||'[]'); return Array.isArray(x)?x:[]; }catch(e){ return []; }
+  }
+
+  function nacRadek(popisek,hodnota){
+    const h=String(hodnota==null?'':hodnota).trim();
+    if(!h)return'';
+    return'<div class="nac-radek"><b>'+escHtml(popisek)+'</b><span>'+escHtml(h)+'</span></div>';
+  }
+
+  // Vozidlo — totéž, co je v operátorském mailu. Shodné kódy motoru
+  // se slučují do jednoho řádku, rozdíl mezi zdroji je naopak signál.
+  function nacBlokVozidlo(r){
+    let radky = nacRadek('Značka a model', r.auto);
+    radky += nacRadek('Rok 1. registrace', r.rok);
+    radky += nacRadek('Modelový rok (z VIN)', r.rok_vin);
+
+    const zdroje=[['registr MV',r.kod_motoru_registr],['Castrol',r.kodMotoru],
+                  ['párování',r.kod_motoru_pegas]];
+    const videne=[];
+    zdroje.forEach(function(z){
+      const popis=z[0], h=String(z[1]||'').trim(); if(!h)return;
+      const shoda=videne.find(v=>v.h.toUpperCase()===h.toUpperCase());
+      if(shoda)shoda.z.push(popis); else videne.push({h:h,z:[popis]});
+    });
+    videne.forEach(v=>{ radky += nacRadek('Kód motoru ('+v.z.join(' + ')+')', v.h); });
+
+    radky += nacRadek('Max. výkon', r.vykon?(r.vykon+' kW'):'');
+    radky += nacRadek('Palivo', r.palivo);
+
+    if(r.vin){
+      const vin=escHtml(r.vin);
+      radky += '<div class="nac-radek"><b>VIN</b><span>'+
+        (r.tp_url?('<a href="'+escHtml(r.tp_url)+'" target="_blank">'+vin+'</a>'):vin)+
+        '</span></div>';
+    }
+    const pu=pegasUrl(r.slug);
+    if(pu) radky += '<div class="nac-radek"><b>Pegas</b><span><a href="'+
+      escHtml(pu)+'" target="_blank">otevřít vůz ↗</a></span></div>';
+
+    if(!radky)return'';
+    return'<div class="nac-blok"><div class="nac-blok-nadpis">Vozidlo</div>'+radky+'</div>';
+  }
+
+  // Varianty, které Castrol nabídl po zadání VINu — použitá je zvýrazněná.
+  function nacBlokVarianty(r){
+    const v=nacJson(r.castrol_varianty_json);
+    if(!v.length)return'';
+    const li=v.map(x=>{
+      const roky=(x.rokOd||x.rokDo)?(' ('+(x.rokOd||'?')+' – '+(x.rokDo||'?')+')'):'';
+      const popis=escHtml(String(x.popis||'').trim()+roky);
+      const motor=x.motor?('<br><span class="nac-sedy">'+escHtml(x.motor)+'</span>'):'';
+      return x.pouzita
+        ?'<li><b>'+popis+'</b> <span class="nac-vybran">← použito</span>'+motor+'</li>'
+        :'<li class="nac-sedy">'+popis+motor+'</li>';
+    }).join('');
+    return'<div class="nac-blok"><div class="nac-blok-nadpis">Varianty Castrol ('+
+      v.length+')</div><ul class="nac-seznam">'+li+'</ul></div>';
+  }
+
+  // Vozy, na které sedlo párování. U sloučených karosářských verzí se
+  // označuje celá skupina — díly jsou sjednocené, takže nelze říct,
+  // ze kterého auta ceny jsou.
+  function nacBlokVozy(r){
+    const k=nacJson(r.kandidati_json);
+    if(!k.length)return'';
+    const li=k.map(x=>{
+      const url=pegasUrl(x.slug);
+      const odkaz=url?('<br><a href="'+escHtml(url)+'" target="_blank">'+escHtml(url)+'</a>'):'';
+      const popis=escHtml(String(x.popis||'').trim());
+      if(x.slouceno){
+        const zn=x.skupinaOK?' <span class="nac-vybran">← z této skupiny</span>':'';
+        return'<li'+(x.skupinaOK?'':' class="nac-sedy"')+'>'+
+          (x.skupinaOK?'<b>'+popis+'</b>':popis)+zn+
+          ' <span class="nac-sedy">(sloučeno — díly shodné)</span>'+odkaz+'</li>';
+      }
+      if(x.nacenen)return'<li><b>'+popis+'</b> <span class="nac-vybran">← vybrán a naceněn</span>'+odkaz+'</li>';
+      return'<li class="nac-sedy">'+popis+odkaz+'</li>';
+    }).join('');
+    return'<div class="nac-blok"><div class="nac-blok-nadpis">Spárované vozy ('+
+      k.length+')</div><ul class="nac-seznam">'+li+'</ul></div>';
+  }
+
   window.otevriNac=function(id){
     const r=allData.find(x=>x.id===id);
-    if(!r||!r.naceneni_detail)return;
+    if(!r||(!r.naceneni_detail&&!r.vin))return;
     document.getElementById('nac-modal-sub').textContent =
       [r.jmeno,r.auto,r.datum].filter(Boolean).join(' · ');
-    document.getElementById('nac-modal-text').innerHTML = nacDetailHtml(r.naceneni_detail);
+    // Starší objednávky nová pole nemají — bloky, které nejsou z čeho
+    // vykreslit, se prostě vynechají.
+    const bloky = nacBlokVozidlo(r) + nacBlokVarianty(r) + nacBlokVozy(r);
+    const text = r.naceneni_detail
+      ? '<div class="nac-detail">'+nacDetailHtml(r.naceneni_detail)+'</div>' : '';
+    document.getElementById('nac-modal-text').innerHTML = bloky + text;
     document.getElementById('nac-modal').classList.add('open');
     document.body.style.overflow='hidden';
     // Zpětné tlačítko telefonu zavře modál místo odchodu ze stránky
@@ -966,7 +1078,7 @@ function sBuildMailText(){
       </div>
       <button class="nac-modal-close" onclick="zavriNac()">&times;</button>
     </div>
-    <div class="nac-detail" id="nac-modal-text"></div>
+    <div id="nac-modal-text"></div>
   </div>
 </div>
 
