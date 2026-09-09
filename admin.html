@@ -106,15 +106,18 @@
   .nac-blok:last-child { border-bottom:none; }
   .nac-blok-nadpis { font-size:11px; font-weight:700; color:var(--text-muted);
     text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
-  .nac-radek { display:flex; gap:10px; }
-  .nac-radek b { font-weight:400; color:var(--text-muted); min-width:44%; }
-  .nac-radek span { font-weight:600; color:var(--text); }
+  .nac-radek { display:flex; gap:10px; align-items:baseline; }
+  .nac-radek b { flex:0 1 44%; min-width:0; font-weight:400; color:var(--text-muted); }
+  .nac-radek span { flex:1 1 auto; min-width:0; font-weight:600; color:var(--text);
+    overflow-wrap:break-word; }
   .nac-seznam { list-style:none; margin:0; padding:0; }
   .nac-seznam li { margin-bottom:8px; }
   .nac-seznam li:last-child { margin-bottom:0; }
   .nac-vybran { color:var(--green); font-weight:700; }
   .nac-sedy { color:var(--text-muted); }
-  .nac-blok a { color:var(--blue); word-break:break-all; }
+  /* Dřív break-all kvůli dlouhým URL. Odkazy jsou teď čitelný text,
+     takže se láme jen mezi slovy a až když je to nutné. */
+  .nac-blok a { color:var(--blue); word-break:normal; overflow-wrap:break-word; }
   .nac-detail .nac-odhad { color:var(--text-muted); }
 
   .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
@@ -614,6 +617,11 @@
     }).join('');
   }
 
+  // Cena s mezerou po tisících — 3 151 místo 3151.
+  function fmtKc(n){
+    return String(Math.round(Number(n)||0)).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0');
+  }
+
   function renderList(){
     const data=currentTab==='all'?allData:allData.filter(r=>r.typ===currentTab);
     const list=document.getElementById('rez-list');
@@ -660,7 +668,7 @@
           ${r.email?'✉️ '+r.email+'<br>':''}
           🚙 ${r.auto||r.sluzba||'—'}
           ${r.vin?'<br>🔑 VIN: '+r.vin:''}
-          ${r.kodMotoru?'<br>⚙️ Motor: '+r.kodMotoru:''}
+          ${r.cena_celkem?'<br>💰 '+fmtKc(r.cena_celkem)+' Kč':''}
           ${r.sluzby?'<br>🔧 '+r.sluzby:''}
           ${r.cena?'<br>💰 '+r.cena:''}
           ${r.poznamka?'<br>📝 '+r.poznamka:''}
