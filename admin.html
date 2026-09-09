@@ -140,6 +140,7 @@
   .week-tabs { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
   .week-tab { padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:2px solid var(--border); background:var(--white); color:var(--text-muted); text-align:left; font-family:'Inter',sans-serif; }
   .week-tab.active { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .week-tab-parita { float:right; font-weight:700; opacity:0.75; }
   .day-block.past { opacity:0.45; }
   .day-block.past .hour-btn { cursor:not-allowed; background:#f8fafc; color:#cbd5e1; border-color:#e2e8f0; }
   .day-block.past .sel-btn { opacity:0.6; cursor:not-allowed; }
@@ -545,12 +546,23 @@
   let selectedWeek=0;
   function fmtDate(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function fmtHourSlot(h){return String(h).padStart(2,'0')+':00';}
+  // Kalendářní číslo týdne podle ISO 8601. Týden patří tomu roku, do kterého
+  // spadá jeho čtvrtek — proto se počítá od čtvrtka, ne od pondělí.
+  function isoTyden(d){
+    const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+    const dow=t.getUTCDay()||7;              // neděle 0 → 7
+    t.setUTCDate(t.getUTCDate()+4-dow);      // posun na čtvrtek téhož týdne
+    const rok=new Date(Date.UTC(t.getUTCFullYear(),0,1));
+    return Math.ceil(((t-rok)/86400000+1)/7);
+  }
   function renderWeekTabs(){
     const weeks=getWeeks();
     document.getElementById('week-tabs').innerHTML=weeks.map((week,idx)=>{
       const first=week[0],last=week[6];
+      const cislo=isoTyden(first);
+      const parita=(cislo%2===0)?'sudý':'lichý';
       const label=`${first.getDate()}. ${MONTHS_CS[first.getMonth()].substring(0,3)}. – ${last.getDate()}. ${MONTHS_CS[last.getMonth()].substring(0,3)}.`;
-      return`<button class="week-tab${idx===selectedWeek?' active':''}" onclick="switchWeek(${idx})">${label}</button>`;
+      return`<button class="week-tab${idx===selectedWeek?' active':''}" onclick="switchWeek(${idx})">${label} <span class="week-tab-parita">${cislo}. ${parita}</span></button>`;
     }).join('');
   }
   window.switchWeek=function(idx){selectedWeek=idx;renderWeekTabs();renderRozvrh();}
@@ -763,6 +775,54 @@
       k.length+')</div><ul class="nac-seznam">'+li+'</ul></div>';
   }
 
+  // Odkaz na výpis kategorie u konkrétního vozu, filtrovaný na značku dílu.
+  // Stejné pravidlo jako pegasOdkaz_ v naceneni_odkazy.gs — ID značky je
+  // v odkazu povinné, proto se značka ukládá k objednávce vedle čísla dílu.
+  const PEGAS_BASE='https://pegasdily.cz/autodily-podle-typu/filtr/';
+  const PEGAS_ZN_ID={'BOSCH':2025,'MAHLE':3081,'FEBI BILSTEIN':3063,'FEBI':3063,'BLUE PRINT':3072};
+  const PEGAS_KATEGORIE={
+    olejovy:['Olejový filtr','olejovy-filtr'],
+    vzduchovy:['Vzduchový filtr','vzduchovy-filtr'],
+    kabinovy:['Kabinový filtr','kabinovy-vzduchovy-filtr'],
+    palivovy:['Palivový filtr','palivovy-filtr']
+  };
+  function pegasOdkaz(slug,kategorie,znacka){
+    const id=PEGAS_ZN_ID[String(znacka||'').toUpperCase()]||PEGAS_ZN_ID['BOSCH'];
+    const filtr=btoa('BrandProductFieldsFilter%5B0%5D='+id);
+    const typ=(PEGAS_KATEGORIE[kategorie]||[])[1]||'';
+    return PEGAS_BASE+typ+'?filter='+filtr+'&v='+encodeURIComponent(slug||'');
+  }
+
+  // Objednání dílů — číslo dílu, značka a odkaz na Pegas. Data pocházejí
+  // z dily_json uloženého k objednávce, ne z přepočtu, takže odkazy vedou
+  // na díly platné v době objednání.
+  function nacBlokDily(r){
+    let d={};
+    try{ d=JSON.parse(r.dily_json||'{}')||{}; }catch(e){ return''; }
+    const slug=r.slug||'';
+    let radky='';
+    function radek(kat,nazev,dil,znacka){
+      if(!dil)return'';
+      const url=pegasOdkaz(slug,kat,znacka);
+      return'<li><b>'+escHtml(nazev)+'</b><br><span class="nac-sedy">'+
+        escHtml((znacka||'')+' '+dil)+'</span> · <a href="'+escHtml(url)+
+        '" target="_blank">Objednat ↗</a></li>';
+    }
+    ['olejovy','vzduchovy','kabinovy','palivovy'].forEach(function(kat){
+      const p=d[kat]; if(!p)return;
+      if(kat==='kabinovy'&&Array.isArray(p.varianty)&&p.varianty.length){
+        p.varianty.forEach(function(v){
+          radky+=radek(kat,PEGAS_KATEGORIE[kat][0]+' — '+(v.nazev||''),v.dil,v.znacka);
+        });
+        return;
+      }
+      radky+=radek(kat,PEGAS_KATEGORIE[kat][0],p.dil,p.znacka);
+    });
+    if(!radky)return'';
+    return'<div class="nac-blok"><div class="nac-blok-nadpis">Objednání dílů</div>'+
+      '<ul class="nac-seznam">'+radky+'</ul></div>';
+  }
+
   window.otevriNac=function(id){
     const r=allData.find(x=>x.id===id);
     if(!r||(!r.naceneni_detail&&!r.vin))return;
@@ -770,7 +830,7 @@
       [r.jmeno,r.auto,r.datum].filter(Boolean).join(' · ');
     // Starší objednávky nová pole nemají — bloky, které nejsou z čeho
     // vykreslit, se prostě vynechají.
-    const bloky = nacBlokVozidlo(r) + nacBlokVarianty(r) + nacBlokVozy(r);
+    const bloky = nacBlokVozidlo(r) + nacBlokDily(r) + nacBlokVarianty(r) + nacBlokVozy(r);
     const text = r.naceneni_detail
       ? '<div class="nac-detail">'+nacDetailHtml(r.naceneni_detail)+'</div>' : '';
     document.getElementById('nac-modal-text').innerHTML = bloky + text;
