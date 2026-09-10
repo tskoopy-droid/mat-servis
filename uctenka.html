@@ -241,20 +241,25 @@ window.odeslat = async function(){
   okEl.style.display = 'none';
 
   const popis = document.getElementById('popis').value.trim();
-  const castka = document.getElementById('castka').value;
+  // normalizace: mezery pryč, čárka -> tečka (backend používá parseFloat)
+  const castka = String(document.getElementById('castka').value).replace(/\s/g, '').replace(',', '.');
   const dodavatel = document.getElementById('dodavatel').value.trim() || 'Kamenný obchod';
+  const token = new URLSearchParams(window.location.search).get('t') || '';
 
+  if (!token) {
+    errEl.textContent = 'Chybí token v adrese (?t=...). Otevři stránku přes odkaz s tokenem.';
+    errEl.style.display = 'block'; return;
+  }
   if (!popis) { errEl.textContent = 'Chybí popis.'; errEl.style.display = 'block'; return; }
-  if (!castka || Number(String(castka).replace(',','.')) <= 0) {
+  if (!castka || isNaN(Number(castka)) || Number(castka) <= 0) {
     errEl.textContent = 'Chybí nebo neplatná částka.'; errEl.style.display = 'block'; return;
   }
 
   btn.disabled = true; btn.textContent = 'Ukládám...';
   try {
-  const klic = new URLSearchParams(window.location.search).get('t') || '';
     const payload = {
       akce: 'uctenka_save',
-      klic: klic,
+      token: token,
       data: {
         dodavatel: dodavatel,
         popis: popis,
@@ -275,8 +280,11 @@ window.odeslat = async function(){
       document.getElementById('fotoNahled').style.display = 'none';
       document.getElementById('fotoStav').textContent = '';
       if (kategorie) vyberKategorii(kategorie); // odznačí
+    } else if (r.error === 'bad_token') {
+      errEl.textContent = 'Neplatný token. Zkontroluj ?t= v adrese.';
+      errEl.style.display = 'block';
     } else {
-      errEl.textContent = r.chyba || 'Uložení se nezdařilo.';
+      errEl.textContent = r.chyba || r.error || 'Uložení se nezdařilo.';
       errEl.style.display = 'block';
     }
   } catch (e) {
