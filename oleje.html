@@ -1188,7 +1188,9 @@ function sestavPolozky() {
 
   polozky.push({ popis: stav.objem + ' l ' + o.nazev + ' (' + intervalLabel + ')', cena: Math.round(Number(o.cenaOleje) || 0) });
   if (p.olejovy) polozky.push({ popis: sZnackou('Olejový filtr', p.olejovy.znacka), cena: Math.round(Number(p.olejovy.cena) || 0) });
-  polozky.push({ popis: 'Práce', cena: Math.round(Number(c.cenaPrace) || 0) });
+  // Jedna položka, ne dvě — cena práce se nerozděluje, jen se pojmenuje
+  // celá. Ekologická likvidace je v ní zahrnutá, ne přiúčtovaná navíc.
+  polozky.push({ popis: 'Práce a ekologická likvidace oleje', cena: Math.round(Number(c.cenaPrace) || 0) });
 
   if (stav.sluzby.vzduch && p.vzduchovy) polozky.push({ popis: sZnackou('Vzduchový filtr', p.vzduchovy.znacka), cena: Math.round(Number(p.vzduchovy.cena) || 0) });
 
