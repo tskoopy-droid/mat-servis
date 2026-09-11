@@ -177,7 +177,7 @@
 </div>
 
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyqWoHAPxVAsB-qYeF40XmxM4hTy0cW7dqV4h8pQ-CdycTWGnNoo0Q2nIamqAYMY302-w/exec';
 
 async function gasPost(payload){
   const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
@@ -259,7 +259,7 @@ window.odeslat = async function(){
   try {
     const payload = {
       akce: 'uctenka_save',
-      token: token,
+      klic: token,
       data: {
         dodavatel: dodavatel,
         popis: popis,
@@ -280,9 +280,6 @@ window.odeslat = async function(){
       document.getElementById('fotoNahled').style.display = 'none';
       document.getElementById('fotoStav').textContent = '';
       if (kategorie) vyberKategorii(kategorie); // odznačí
-    } else if (r.error === 'bad_token') {
-      errEl.textContent = 'Neplatný token. Zkontroluj ?t= v adrese.';
-      errEl.style.display = 'block';
     } else {
       errEl.textContent = r.chyba || r.error || 'Uložení se nezdařilo.';
       errEl.style.display = 'block';
