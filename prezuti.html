@@ -213,7 +213,6 @@ function znacuZnovaRozvrh() {
   window.GAS_ROZVRH = null;
   window.GAS_BOOKED = {};
   renderCalendar();
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
   const pRozvrh = fetch(GAS_URL + '?action=get_rozvrh', { redirect: 'follow' })
     .then(r => r.json())
     .then(d => { window.GAS_ROZVRH = (d && d.ok) ? (d.rozvrh || {}) : 'error'; })
@@ -658,4 +657,4 @@ showView("date");
 
 <div style="text-align:center;padding:16px;border-top:1px solid var(--border);margin-top:8px;font-size:12px;color:#94a3b8">
   Sledujte nás: <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" style="color:#1877f2;font-weight:600;text-decoration:none">M&T Servis na Facebooku</a>
-  &nbsp;·&nbsp; <a href="/cdn-cgi/l/email-protection#573e393138173a36237a243225213e2479342d" style="color:var(--blue);font-weight:600;text-decoration:none"><span 
+  &nbsp;·&nbsp; <a href="/cdn-cgi/l/email-protection#573e393138173a36237a243225213e2479342d" style="color:var(--blue);font-weight:600;text-decoration:none"><span
