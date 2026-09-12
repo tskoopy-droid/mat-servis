@@ -169,7 +169,7 @@
 <div class="container">
 
   
-<div style="background:#fff;border-radius:16px;padding:16px 20px;margin:16px 0 4px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #e2e8f0">
+<div id="cenik-box" style="background:#fff;border-radius:16px;padding:16px 20px;margin:16px 0 4px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #e2e8f0">
   <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Ceník</div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
     <span style="font-size:14px;color:#1e293b">Vyvážení s montáží na vůz (pneu z disku se nesundává)</span>
@@ -319,6 +319,9 @@ function showView(name) {
   });
   document.getElementById("steps").style.display = name==="confirm" ? "none" : "flex";
   document.getElementById("main-header").style.display = name==="confirm" ? "none" : "block";
+  // Na potvrzení rezervace nepatří ceník ani popisek kroku
+  document.getElementById("cenik-box").style.display = name==="confirm" ? "none" : "block";
+  document.getElementById("step-popisek").style.display = name==="confirm" ? "none" : "block";
 }
 
 function renderCalendar() {
