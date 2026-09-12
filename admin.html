@@ -282,7 +282,7 @@
       <div class="tab" id="tab-prezuti" onclick="switchTab('prezuti')">🚙 Přezutí</div>
       <div class="tab" id="tab-oleje" onclick="switchTab('oleje')">🛢️ Oleje</div>
       <div class="tab" id="tab-rozvrh" onclick="switchTab('rozvrh')">📅 Rozvrh</div>
-      <div class="tab" onclick="window.open('prehled.html?t=13dba40d-3a85-4ec6-8d33-9ac617e8f88a','_blank')">📋 Přehled</div>
+      <div class="tab" onclick="otevritPrehled()">📋 Přehled</div>
       <div class="tab" onclick="location.href='faktura.html'">📄 Faktura</div>
       <div class="tab" onclick="window.open('uctenka.html?t=AKstNCKhxcTsh1NrtciIfc0HtcSFYyw6','_blank')">🧾 Účtenka</div>
       <div class="tab" id="tab-servis" onclick="switchTab('servis')">🔧 Nový servis</div>
@@ -409,6 +409,24 @@
     return res.json();
   }
   function getToken(){return sessionStorage.getItem('admin_token')||'';}
+
+  // Kolegův token se v kódu nedrží (repozitář je veřejný) — vyžádá se
+  // od backendu až po přihlášení.
+  async function otevritPrehled(){
+    const token=getToken();
+    if(!token){handleBadToken();return;}
+    const okno=window.open('','_blank');
+    try{
+      const r=await gasPost({akce:'admin_kolega_odkaz',token});
+      if(r.error==='bad_token'){if(okno)okno.close();handleBadToken();return;}
+      if(!r.ok||!r.token){if(okno)okno.close();alert(r.chyba||'Odkaz na přehled se nepodařilo získat.');return;}
+      const url='prehled.html?t='+encodeURIComponent(r.token);
+      if(okno){okno.location.href=url;}else{window.open(url,'_blank');}
+    }catch(e){
+      if(okno)okno.close();
+      alert('Chyba připojení.');
+    }
+  }
   function setToken(t){sessionStorage.setItem('admin_token',t);}
   function clearToken(){sessionStorage.removeItem('admin_token');}
 
