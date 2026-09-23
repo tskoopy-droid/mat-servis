@@ -1469,6 +1469,12 @@ function selectCalTime(t) {
 }
 
 // ── Odeslání rezervace ────────────────────────────────────────
+// Výsledky odeslání:
+//   ok / status:'ok'           → hotovo
+//   code:'slot_obsazen'        → zpět na výběr termínu
+//   status:'error' + code      → jistě neuloženo, zákazník může zkusit znovu
+//   cokoli jiného / síť        → NEJISTÉ: rezervace se mohla uložit.
+//                                Neodesílat znovu (duplicita), nahlásit Tomášovi.
 function odeslat() {
   var jmeno=document.getElementById('fJmeno').value.trim();
   var telefon=document.getElementById('fTelefon').value.trim();
@@ -1486,44 +1492,82 @@ function odeslat() {
 
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
 
-  fetch(window.GAS_URL, {
-    method:'POST', redirect:'follow',
-    body: JSON.stringify({
-      akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
-      vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
-      kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
-      // Rok 1. registrace jen z registru. Bez fallbacku na stav.rok —
-      // to je modelový rok z VINu a v mailu i v adminu je vedle jako
-      // samostatný řádek. Když registr rok nedá, řádek se prostě vynechá.
-      rok:stav.rokRegistrace||'', vykon:stav.vykon||'',
-      rokVin:stav.rok||'',   // modelový rok z 10. znaku VIN — mail ho ukáže
-                             // jen u značek, které ho tam kódují
-      kodMotoruRegistr:stav.kodMotoruRegistr||stav.kodMotoru||'',
-      castrolVarianty:stav.castrolVarianty||[],
-      olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
-      datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem,
-      slevovy_kod:stav.slevovyKod||''
-    })
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(resp) {
+  var payload={
+    akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
+    vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
+    kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
+    // Rok 1. registrace jen z registru. Bez fallbacku na stav.rok —
+    // to je modelový rok z VINu a v mailu i v adminu je vedle jako
+    // samostatný řádek. Když registr rok nedá, řádek se prostě vynechá.
+    rok:stav.rokRegistrace||'', vykon:stav.vykon||'',
+    rokVin:stav.rok||'',   // modelový rok z 10. znaku VIN — mail ho ukáže
+                           // jen u značek, které ho tam kódují
+    kodMotoruRegistr:stav.kodMotoruRegistr||stav.kodMotoru||'',
+    castrolVarianty:stav.castrolVarianty||[],
+    olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
+    datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem,
+    slevovy_kod:stav.slevovyKod||''
+  };
+
+  fetch(window.GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) })
+  // Čte se jako text, ne rovnou r.json() — při nečekané odpovědi
+  // se tak dá nahlásit přesně to, co přišlo.
+  .then(function(r){ return r.text(); })
+  .then(function(text) {
+    var resp=null;
+    try { resp=JSON.parse(text); } catch(e) {}
+
     if (resp&&(resp.ok||resp.status==='ok')) {
-      if (!window.GAS_BOOKED[stav.selDate]) window.GAS_BOOKED[stav.selDate]=[];
-      if (window.GAS_BOOKED[stav.selDate].indexOf(stav.selTime)<0) window.GAS_BOOKED[stav.selDate].push(stav.selTime);
+      try {
+        if (!window.GAS_BOOKED) window.GAS_BOOKED={};
+        if (!window.GAS_BOOKED[stav.selDate]) window.GAS_BOOKED[stav.selDate]=[];
+        if (window.GAS_BOOKED[stav.selDate].indexOf(stav.selTime)<0) window.GAS_BOOKED[stav.selDate].push(stav.selTime);
+      } catch(e) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
       zobrazKartu('cardHotovo'); updateSteps(5);
-    } else if (resp&&resp.code==='slot_obsazen') {
+      return;
+    }
+
+    if (resp&&resp.code==='slot_obsazen') {
       calState.selDate=null; calState.selTime=null; window._slotError=true;
       zobrazKartu('cardTermin'); updateSteps(4); renderCalendar();
       btn.textContent='Odeslat rezervaci'; btn.disabled=false;
-    } else {
-      err.textContent=(resp&&resp.message)?resp.message:'Nepodařilo se odeslat. Zavolejte 731 885 825.';
-      err.classList.add('visible'); btn.textContent='Odeslat rezervaci'; btn.disabled=false;
+      return;
     }
+
+    // Server výslovně říká, že neuložil (chyba s kódem) — opakování je bezpečné.
+    if (resp&&resp.status==='error'&&resp.code&&resp.message) {
+      err.textContent=resp.message;
+      err.classList.add('visible'); btn.textContent='Odeslat rezervaci'; btn.disabled=false;
+      return;
+    }
+
+    nejistyVysledek('neocekavana_odpoved', text);
   })
-  .catch(function() {
-    err.textContent='Nepodařilo se spojit se serverem. Zavolejte 731 885 825.';
-    err.classList.add('visible'); btn.textContent='Odeslat rezervaci'; btn.disabled=false;
+  .catch(function(e) {
+    nejistyVysledek('sit', String((e&&e.message)||e));
   });
+
+  // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
+  // aby zákazník nevytvořil druhou rezervaci.
+  function nejistyVysledek(typ, detail) {
+    err.textContent='Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. '+
+      (email ? 'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). ' : '')+
+      'Pokud neprošla, ozveme se vám na telefon '+telefon+'.';
+    err.classList.add('visible');
+    btn.textContent='Odesláno — ověřujeme'; btn.disabled=true;
+
+    try {
+      fetch(window.GAS_URL, {
+        method:'POST', redirect:'follow',
+        body: JSON.stringify({
+          akce:'klient_chyba', zdroj:'oleje', typ:typ,
+          detail:String(detail||'').slice(0,1000),
+          jmeno:jmeno, telefon:telefon, email:email,
+          vin:stav.vin||'', datum:stav.selDate||'', cas:stav.selTime||''
+        })
+      }).catch(function(){});
+    } catch(e) {}
+  }
 }
 
 // ── VIN z URL parametru ───────────────────────────────────────
