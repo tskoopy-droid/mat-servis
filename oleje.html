@@ -1484,6 +1484,10 @@ function odeslat() {
   err.classList.remove('visible');
 
   if (!jmeno||!telefon) { err.textContent='Vyplňte prosím jméno a telefon.'; err.classList.add('visible'); return; }
+  // E-mail je povinný — přichází na něj potvrzení a odkaz na zrušení.
+  // Kontrola tvaru zachytí překlepy (chybějící zavináč, tečka, mezera), ne vymyšlenou adresu.
+  if (!email) { err.textContent='Vyplňte prosím e-mail — pošleme na něj potvrzení rezervace.'; err.classList.add('visible'); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { err.textContent='Zkontrolujte prosím e-mail, adresa nevypadá správně.'; err.classList.add('visible'); return; }
   if (!stav.selDate||!stav.selTime) { err.textContent='Vyberte prosím termín.'; err.classList.add('visible'); return; }
   if (!stav.olejVybrany||!stav.cenaCelkem||stav.cenaCelkem<=0) { err.textContent='Chybí výběr oleje nebo výpočet ceny.'; err.classList.add('visible'); return; }
 
@@ -1547,6 +1551,28 @@ function odeslat() {
     nejistyVysledek('sit', String((e&&e.message)||e));
   });
 
+  // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
+  // aby zákazník nevytvořil druhou rezervaci.
+  function nejistyVysledek(typ, detail) {
+    err.textContent='Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. '+
+      'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). '+
+      'Pokud neprošla, ozveme se vám e-mailem.';
+    err.classList.add('visible');
+    btn.textContent='Odesláno — ověřujeme'; btn.disabled=true;
+
+    try {
+      fetch(window.GAS_URL, {
+        method:'POST', redirect:'follow',
+        body: JSON.stringify({
+          akce:'klient_chyba', zdroj:'oleje', typ:typ,
+          detail:String(detail||'').slice(0,1000),
+          jmeno:jmeno, telefon:telefon, email:email,
+          vin:stav.vin||'', datum:stav.selDate||'', cas:stav.selTime||''
+        })
+      }).catch(function(){});
+    } catch(e) {}
+  }
+}
   // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
   // aby zákazník nevytvořil druhou rezervaci.
   function nejistyVysledek(typ, detail) {
