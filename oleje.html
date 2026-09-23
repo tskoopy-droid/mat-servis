@@ -1551,8 +1551,9 @@ function odeslat() {
   // aby zákazník nevytvořil druhou rezervaci.
   function nejistyVysledek(typ, detail) {
     err.textContent='Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. '+
-      (email ? 'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). ' : '')+
-      'Pokud neprošla, ozveme se vám na telefon '+telefon+'.';
+      (email
+        ? 'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). Pokud neprošla, ozveme se vám e-mailem.'
+        : 'Pokud neprošla, ozveme se vám na telefon '+telefon+'.');
     err.classList.add('visible');
     btn.textContent='Odesláno — ověřujeme'; btn.disabled=true;
 
