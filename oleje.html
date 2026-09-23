@@ -465,7 +465,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
     <div class="section-sub">Vyplňte prosím své údaje pro potvrzení rezervace.</div>
     <div class="field"><label>Jméno a příjmení *</label><input type="text" id="fJmeno" placeholder="Jan Novák"></div>
     <div class="field"><label>Telefon *</label><input type="tel" id="fTelefon" placeholder="+420 777 123 456"></div>
-    <div class="field"><label>Email</label><input type="email" id="fEmail" placeholder="jan@email.cz"></div>
+    <div class="field"><label>E-mail * <span style="text-transform:none;font-weight:400;">(přijde vám potvrzení a odkaz na zrušení)</span></label><input type="email" id="fEmail" placeholder="jan@email.cz" autocomplete="email" inputmode="email"></div>
     <div class="field"><label>Poznámka</label><textarea id="fPoznamka" placeholder="Dotazy, speciální požadavky..."></textarea></div>
     <div class="error-box" id="kontaktError"></div>
     <button class="submit-btn" onclick="odeslat()">Odeslat rezervaci</button>
@@ -1557,29 +1557,6 @@ function odeslat() {
     err.textContent='Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. '+
       'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). '+
       'Pokud neprošla, ozveme se vám e-mailem.';
-    err.classList.add('visible');
-    btn.textContent='Odesláno — ověřujeme'; btn.disabled=true;
-
-    try {
-      fetch(window.GAS_URL, {
-        method:'POST', redirect:'follow',
-        body: JSON.stringify({
-          akce:'klient_chyba', zdroj:'oleje', typ:typ,
-          detail:String(detail||'').slice(0,1000),
-          jmeno:jmeno, telefon:telefon, email:email,
-          vin:stav.vin||'', datum:stav.selDate||'', cas:stav.selTime||''
-        })
-      }).catch(function(){});
-    } catch(e) {}
-  }
-}
-  // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
-  // aby zákazník nevytvořil druhou rezervaci.
-  function nejistyVysledek(typ, detail) {
-    err.textContent='Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. '+
-      (email
-        ? 'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). Pokud neprošla, ozveme se vám e-mailem.'
-        : 'Pokud neprošla, ozveme se vám na telefon '+telefon+'.');
     err.classList.add('visible');
     btn.textContent='Odesláno — ověřujeme'; btn.disabled=true;
 
