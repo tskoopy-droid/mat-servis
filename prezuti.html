@@ -122,6 +122,9 @@
   .field input:focus { border-color: var(--blue); }
   .field input::placeholder { color: #cbd5e1; }
 
+  /* Chybová hláška formuláře — místo alert(), který na mobilu vypadá jako chyba prohlížeče */
+  .form-error { display: none; margin: 4px 0 8px; padding: 12px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; font-size: 13px; color: #dc2626; line-height: 1.5; }
+
   /* SUBMIT BTN - velké mobilní tlačítko */
   .submit-btn { width: 100%; border: none; border-radius: 14px; padding: 18px; font-size: 17px; font-weight: 700; letter-spacing: 0.3px; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; margin-top: 10px; }
   .submit-btn.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
@@ -250,7 +253,20 @@ let state = {
   selDate: null,
   selTime: null,
   step: 1,
+  kontakt: { n: '', p: '', e: '', c: '' },   // vyplněné údaje — přežijí návrat do kalendáře
 };
+
+// Stav odesílání. Během požadavku a po nejistém výsledku se znovu
+// odeslat nesmí — jinak vznikne druhá rezervace.
+let odesilani = false;
+let zamceno = false;
+let zamcenoText = '';
+
+function escHtml(t) {
+  return String(t == null ? '' : t).replace(/[&<>"]/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+  });
+}
 
 function isFullyBooked(year, month, day) {
   const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
@@ -458,6 +474,7 @@ function renderTimeSlots() {
 }
 
 function renderForm() {
+  const k = state.kontakt || {};
   document.getElementById("view-form").innerHTML = `
     <div class="row">
       <button class="back-btn" onclick="goBack(3)">←</button>
@@ -472,23 +489,32 @@ function renderForm() {
     </div>
     <div class="field">
       <label>Jméno a příjmení *</label>
-      <input type="text" id="f-name" placeholder="Jan Novák" oninput="checkForm()">
+      <input type="text" id="f-name" placeholder="Jan Novák" value="${escHtml(k.n)}" autocomplete="name" oninput="checkForm()">
     </div>
     <div class="field">
       <label>Telefon *</label>
-      <input type="tel" id="f-phone" placeholder="777 000 000" oninput="checkForm()">
+      <input type="tel" id="f-phone" placeholder="777 000 000" value="${escHtml(k.p)}" autocomplete="tel" oninput="checkForm()">
     </div>
     <div class="field">
       <label>E-mail *</label>
-      <input type="email" id="f-email" placeholder="jan@email.cz" oninput="checkForm()">
+      <input type="email" id="f-email" placeholder="jan@email.cz" value="${escHtml(k.e)}" autocomplete="email" inputmode="email" oninput="checkForm()">
       <div id="email-error" style="color:#dc2626;font-size:12px;margin-top:4px;display:none">Zadejte platný e-mail (např. jan@email.cz)</div>
     </div>
     <div class="field">
       <label>Vozidlo *</label>
-      <input type="text" id="f-car" placeholder="Škoda Octavia" oninput="checkForm()">
+      <input type="text" id="f-car" placeholder="Škoda Octavia" value="${escHtml(k.c)}" oninput="checkForm()">
     </div>
+    <div class="form-error" id="form-error"></div>
     <button class="submit-btn inactive" id="submit-btn" onclick="submitForm()">Potvrdit rezervaci →</button>
   `;
+
+  // Po nejistém výsledku zůstává hláška i zamčené tlačítko,
+  // i když se zákazník mezitím vrátí na výběr času a zpět.
+  if (zamceno) {
+    zobrazChybu(zamcenoText);
+    document.getElementById("submit-btn").textContent = 'Odesláno, ověřujeme';
+  }
+  checkForm();
 }
 
 function renderConfirm(name, phone, email, car) {
@@ -496,10 +522,10 @@ function renderConfirm(name, phone, email, car) {
     <div class="confirm">
       <div class="confirm-icon">✅</div>
       <div class="confirm-title">Rezervace přijata!</div>
-      <div class="confirm-sub">Na adresu <strong style="color:#1e293b;font-size:16px">${email}</strong> vám zašleme potvrzovací e-mail.<br><span style="font-size:13px;color:#94a3b8">Pro zrušení klikněte na odkaz v emailu.</span></div>
+      <div class="confirm-sub">Na adresu <strong style="color:#1e293b;font-size:16px">${escHtml(email)}</strong> vám zašleme potvrzovací e-mail.<br><span style="font-size:13px;color:#94a3b8">Pro zrušení klikněte na odkaz v emailu.</span></div>
       <div class="confirm-card">
-        <div>👤 <strong>${name}</strong></div>
-        <div>🚗 ${car}</div>
+        <div>👤 <strong>${escHtml(name)}</strong></div>
+        <div>🚗 ${escHtml(car)}</div>
         <div style="color:#2563eb">📅 <strong>${fmtDateCZ(state.selDate)} · ${state.selTime}</strong></div>
         <div style="color:#64748b">🔧 Přezutí pneumatik · 1 hod.</div>
         <div style="color:#64748b;margin-top:4px">📍 Dlouhá Loučka, Šumvaldská 59</div>
@@ -548,30 +574,52 @@ function goBack(toStep) {
   if (toStep === 3) { renderTimeSlots(); showView("time"); }
 }
 
+function zobrazChybu(text) {
+  const el = document.getElementById("form-error");
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = text ? 'block' : 'none';
+}
+
 function checkForm() {
   const n = document.getElementById("f-name").value.trim();
   const p = document.getElementById("f-phone").value.trim();
   const e = document.getElementById("f-email").value.trim();
   const c = document.getElementById("f-car").value.trim();
+  state.kontakt = { n: n, p: p, e: e, c: c };
   const btn = document.getElementById("submit-btn");
   const emailError = document.getElementById("email-error");
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
   if (e && !emailValid) {
     emailError.style.display = 'block';
   } else {
     emailError.style.display = 'none';
   }
-  if (n && p && e && emailValid && c) { btn.className = "submit-btn active"; }
+  if (n && p && e && emailValid && c && !odesilani && !zamceno) { btn.className = "submit-btn active"; }
   else { btn.className = "submit-btn inactive"; }
 }
 
+// Výsledky odeslání:
+//   status:'ok'                → hotovo
+//   code:'slot_obsazen'        → zpět na kalendář, údaje zůstanou vyplněné
+//   status:'error' + code      → jistě neuloženo, zákazník může opravit a odeslat znovu
+//   cokoli jiného / síť        → NEJISTÉ: rezervace se mohla uložit.
+//                                Neodesílat znovu (duplicita), nahlásit Tomášovi.
 function submitForm() {
+  if (odesilani || zamceno) return;
+
   const n = document.getElementById("f-name").value.trim();
   const p = document.getElementById("f-phone").value.trim();
   const e = document.getElementById("f-email").value.trim();
   const c = document.getElementById("f-car").value.trim();
-  if (!n || !p || !e || !c) return;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+  if (!n || !p || !e || !emailValid || !c) return;
 
+  const datum = state.selDate;
+  const cas = state.selTime;
+
+  odesilani = true;
+  zobrazChybu('');
   const btn = document.getElementById("submit-btn");
   btn.textContent = "Odesílám...";
   btn.className = "submit-btn inactive";
@@ -588,22 +636,33 @@ function submitForm() {
       telefon: p,
       email: e,
       auto: c,
-      datum: state.selDate,
-      cas: state.selTime,
+      datum: datum,
+      cas: cas,
       sluzby: 'Přezutí pneumatik',
       cena: ''
     })
   })
-  .then(r => r.json())
-  .then(data => {
-    if (data && data.status === 'ok') {
-      if (!window.GAS_BOOKED) window.GAS_BOOKED = {};
-      if (!window.GAS_BOOKED[state.selDate]) window.GAS_BOOKED[state.selDate] = [];
-      window.GAS_BOOKED[state.selDate].push(state.selTime);
+  // Čte se jako text, ne rovnou r.json() — při nečekané odpovědi
+  // se tak dá nahlásit přesně to, co přišlo.
+  .then(r => r.text())
+  .then(text => {
+    let data = null;
+    try { data = JSON.parse(text); } catch (x) {}
+    odesilani = false;
+
+    if (data && (data.status === 'ok' || data.ok)) {
+      try {
+        if (!window.GAS_BOOKED) window.GAS_BOOKED = {};
+        if (!window.GAS_BOOKED[datum]) window.GAS_BOOKED[datum] = [];
+        window.GAS_BOOKED[datum].push(cas);
+      } catch (x) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
       renderConfirm(n, p, e, c);
       showView("confirm");
-    } else if (data && data.code === 'slot_obsazen') {
-      // Vrátit na kalendář, zachovat kontaktní údaje, zobrazit hlášku
+      return;
+    }
+
+    if (data && data.code === 'slot_obsazen') {
+      // Zpět na kalendář — údaje zůstanou v state.kontakt a formulář je znovu vyplní
       state.selDate = null;
       state.selTime = null;
       state.step = 1;
@@ -611,25 +670,52 @@ function submitForm() {
       updateSteps();
       renderCalendar();
       showView("date");
-      btn.textContent = "Potvrdit rezervaci →";
-      btn.className = "submit-btn active";
-    } else {
-      const msg = (data && data.message) || 'Odeslání se nezdařilo. Zavolejte prosím 731 885 825.';
-      alert(msg);
-      btn.textContent = "Potvrdit rezervaci →";
-      btn.className = "submit-btn active";
+      return;
     }
+
+    // Server výslovně říká, že neuložil (chyba s kódem) — opakování je bezpečné.
+    if (data && data.status === 'error' && data.code && data.message) {
+      zobrazChybu(data.message);
+      btn.textContent = "Potvrdit rezervaci →";
+      checkForm();
+      return;
+    }
+
+    nejistyVysledek('neocekavana_odpoved', text);
   })
   .catch(err => {
-    console.error('Chyba odeslání:', err);
-    alert('Odeslání se nezdařilo. Zkontrolujte připojení k internetu nebo zavolejte 731 885 825.');
-    btn.textContent = "Odeslat rezervaci";
-    btn.className = "submit-btn active";
+    odesilani = false;
+    nejistyVysledek('sit', String((err && err.message) || err));
   });
+
+  // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
+  // aby zákazník nevytvořil druhou rezervaci.
+  function nejistyVysledek(typ, detail) {
+    zamceno = true;
+    zamcenoText = 'Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. ' +
+      'Pokud prošla, do několika minut vám přijde potvrzení na ' + e + ' (zkontrolujte i spam). ' +
+      'Pokud neprošla, ozveme se vám e-mailem.';
+    zobrazChybu(zamcenoText);
+    btn.textContent = 'Odesláno, ověřujeme';
+    btn.className = 'submit-btn inactive';
+
+    try {
+      fetch(GAS_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify({
+          akce: 'klient_chyba', zdroj: 'prezuti', typ: typ,
+          detail: String(detail || '').slice(0, 1000),
+          jmeno: n, telefon: p, email: e,
+          vin: '', datum: datum || '', cas: cas || ''
+        })
+      }).catch(function(){});
+    } catch (x) {}
+  }
 }
 
 function resetAll() {
-  state = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null, step: 1 };
+  state = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null, step: 1, kontakt: { n: '', p: '', e: '', c: '' } };
   updateSteps();
   renderCalendar();
   showView("date");
@@ -661,4 +747,8 @@ showView("date");
 
 <div style="text-align:center;padding:16px;border-top:1px solid var(--border);margin-top:8px;font-size:12px;color:#94a3b8">
   Sledujte nás: <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" style="color:#1877f2;font-weight:600;text-decoration:none">M&T Servis na Facebooku</a>
-  &nbsp;·&nbsp; <a href="/cdn-cgi/l/email-protection#573e393138173a36237a243225213e2479342d" style="color:var(--blue);font-weight:600;text-decoration:none"><span
+  &nbsp;·&nbsp; <a href="mailto:info@mat-servis.cz" style="color:var(--blue);font-weight:600;text-decoration:none">info@mat-servis.cz</a>
+</div>
+
+</body>
+</html>
