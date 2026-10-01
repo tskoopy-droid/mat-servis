@@ -149,8 +149,8 @@
 // ══ Konfigurace ══════════════════════════════════════════════
 var VISION_KEY = 'AIzaSyDngFtfxDub3SR5zOrMYYbWw-z7B8lEsCw';
 var MAX_PX     = 1600;   // delší strana fotky před odesláním
-// POZOR: ověř, že jde o aktuální nasazení Apps Scriptu (bráno z oleje.html)
-var GAS_URL    = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
+// Nasazení Apps Scriptu. Při přenasazení se ID mění — nutno přepsat i tady.
+var GAS_URL    = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
 
 // ══ VIN — pravidla formátu (ISO 3779) ════════════════════════
 // Povolené znaky: A-Z bez I, O, Q + 0-9
@@ -386,8 +386,16 @@ function overVin(vin) {
   var muj = ++overToken;
   fetch(GAS_URL + '?vin=' + encodeURIComponent(vin), { redirect: 'follow' })
     .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
+      return r.text().then(function (t) { return { status: r.status, text: t }; });
+    })
+    .then(function (o) {
+      var data = null;
+      try { data = JSON.parse(o.text); } catch (e) {}
+      if (!data) {
+        var uk = (o.text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+        throw new Error('Server nevrátil JSON (HTTP ' + o.status + '). ' + (uk || 'Prázdná odpověď.'));
+      }
+      return data;
     })
     .then(function (data) {
       if (muj !== overToken) return;          // mezitím přišel novější dotaz
@@ -410,11 +418,12 @@ function overVin(vin) {
       overPanel('ok', nazev, d.join('') +
         '<div style="margin-top:5px;">Sedí-li s autem před tebou, je VIN přečtený správně.</div>');
     })
-    .catch(function () {
+    .catch(function (e) {
       if (muj !== overToken) return;
       // NENÍ totéž co nenalezeno — VIN může být v pořádku.
       overPanel('fail', 'Ověření se nepodařilo',
-        'Problém se spojením, ne s VINem. Zkontroluj signál. ' +
+        '<b>' + ((e && e.message) ? e.message : 'Neznámá chyba.') + '</b><br>' +
+        'Problém je na straně ověřování, ne ve VINu. ' +
         '<a href="#" onclick="overPosledni=null;naplanujOvereni(document.getElementById(\'vin\').value);return false;" ' +
         'style="color:inherit;font-weight:700;">Zkusit znovu</a>');
     });
