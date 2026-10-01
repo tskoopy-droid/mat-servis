@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VIN skener</title>
+<link rel="manifest" href="vin.webmanifest">
+<meta name="theme-color" content="#1e4e7c">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-vin-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @keyframes spin{to{transform:rotate(360deg)}}
+  :root{
+    --acc:#1e4e7c;--acc-dark:#163a5c;--acc-light:#f1f6fb;--acc-mid:#bcd4e8;--brand-green:#7cb94a;
+    --text:#1e293b;--text-muted:#64748b;--border:#e2e8f0;
+    --bg:#f8fafc;--white:#fff;--green:#16a34a;--green-light:#f0fdf4;--red:#ef4444;--red-light:#fef2f2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{height:100%;}
+  body{
+    background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;min-height:100%;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  .wrap{max-width:500px;margin:0 auto;padding:16px 16px 40px;}
+
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .top h1{font-size:18px;font-weight:700;letter-spacing:-0.01em;}
+  .top h1 span{color:var(--brand-green);}
+  .reload{background:none;border:1.5px solid var(--border);border-radius:10px;width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .reload svg{width:17px;height:17px;stroke:var(--text-muted);fill:none;stroke-width:2.2;stroke-linecap:round;}
+
+  .scan{
+    width:100%;padding:28px 20px;background:var(--acc);border:none;border-radius:20px;color:#fff;
+    font-family:"Inter",sans-serif;font-weight:700;font-size:19px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    box-shadow:0 4px 14px rgba(30,78,124,0.28);transition:background .15s;
+  }
+  .scan:active{background:var(--acc-dark);}
+  .scan:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed;}
+  .scan svg{width:30px;height:30px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .scan svg.sp{animation:spin .8s linear infinite;stroke-width:2.6;}
+
+  .card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:18px;
+    box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-top:16px;}
+
+  .lbl{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
+
+  .vin-in{
+    width:100%;padding:16px 14px;border:2px solid var(--acc-mid);border-radius:14px;background:var(--acc-light);
+    font-family:"Inter",sans-serif;font-size:21px;font-weight:700;color:var(--text);
+    letter-spacing:0.14em;text-transform:uppercase;outline:none;text-align:center;
+  }
+  .vin-in:focus{border-color:var(--acc);}
+  .vin-in.bad{border-color:var(--red);background:var(--red-light);}
+
+  .groups{display:flex;gap:6px;margin-top:12px;}
+  .grp{flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:7px 2px;min-width:0;}
+  .grp .g-val{font-size:13px;font-weight:700;letter-spacing:0.05em;word-break:break-all;line-height:1.3;}
+  .grp .g-cap{font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-top:3px;}
+  .grp.rok{flex:0 0 46px;background:var(--acc-light);border-color:var(--acc-mid);}
+  .grp.rok .g-val{color:var(--acc);}
+
+  .over{margin-top:12px;border-radius:14px;padding:13px 14px;font-size:13px;line-height:1.5;
+    border:1px solid var(--border);background:var(--bg);color:var(--text-muted);}
+  .over.ok{background:var(--green-light);border-color:#bbf7d0;color:#14532d;}
+  .over.warn{background:#fffbeb;border-color:#fde68a;color:#92400e;}
+  .over.fail{background:#f1f5f9;border-color:#cbd5e1;color:#475569;}
+  .over-h{font-weight:700;display:flex;align-items:center;gap:7px;}
+  .over-h .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .over-h .dot.load{animation:spin 1s linear infinite;border-radius:2px;}
+  .over-d{margin-top:5px;font-size:12px;opacity:.92;}
+  .over-d span{display:inline-block;margin-right:10px;white-space:nowrap;}
+
+  .note{font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.5;}
+  .note b{color:var(--text);font-weight:600;}
+
+  .copy{
+    width:100%;margin-top:14px;padding:18px;background:var(--text);border:none;border-radius:16px;color:#fff;
+    font-family:"Inter",sans-serif;font-weight:700;font-size:17px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s;
+  }
+  .copy:active{background:#0f172a;}
+  .copy.ok{background:var(--green);}
+  .copy.bad{background:#94a3b8;}
+  .copy svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+
+  .err{background:var(--red-light);border:1px solid #fecaca;color:#b91c1c;border-radius:14px;
+    padding:14px;font-size:13px;line-height:1.5;margin-top:16px;}
+  .err b{display:block;margin-bottom:4px;font-weight:700;}
+
+  .hist{margin-top:20px;}
+  .hist-t{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
+  .hist-i{display:flex;align-items:center;gap:10px;width:100%;background:var(--white);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:"Inter",sans-serif;text-align:left;}
+  .hist-i:active{background:var(--bg);}
+  .hist-i .hv{flex:1;min-width:0;font-size:14px;font-weight:700;letter-spacing:0.05em;color:var(--text);word-break:break-all;}
+  .hist-i .hc{font-size:11px;font-weight:600;color:var(--acc);flex-shrink:0;}
+
+  .hidden{display:none!important;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <h1>VIN <span>skener</span></h1>
+    <button class="reload" onclick="location.reload(true)" title="Obnovit">
+      <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>
+    </button>
+  </div>
+
+  <button class="scan" id="btnScan" onclick="document.getElementById('foto').click()">
+    <svg id="icoScan" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span id="txtScan">Vyfotit VIN</span>
+  </button>
+
+  <input type="file" id="foto" accept="image/*" capture="environment" style="display:none" onchange="zpracuj(this)">
+
+  <div class="err hidden" id="err"></div>
+
+  <div class="card hidden" id="vysledek">
+    <div class="lbl">Rozpoznaný VIN — lze přepsat</div>
+    <input type="text" class="vin-in" id="vin" maxlength="17" autocomplete="off" autocorrect="off"
+           autocapitalize="characters" spellcheck="false" oninput="prekresli()">
+    <div class="groups">
+      <div class="grp"><div class="g-val" id="gWmi">—</div><div class="g-cap">WMI</div></div>
+      <div class="grp"><div class="g-val" id="gVds">—</div><div class="g-cap">VDS</div></div>
+      <div class="grp rok"><div class="g-val" id="gRok">—</div><div class="g-cap">Rok</div></div>
+      <div class="grp"><div class="g-val" id="gSer">—</div><div class="g-cap">Sériové</div></div>
+    </div>
+    <div class="over hidden" id="over"></div>
+    <div class="note" id="note"></div>
+    <button class="copy" id="btnCopy" onclick="kopiruj()">
+      <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span id="txtCopy">Kopírovat</span>
+    </button>
+  </div>
+
+  <div class="hist hidden" id="hist">
+    <div class="hist-t">Předchozí skeny</div>
+    <div id="histList"></div>
+  </div>
+
+</div>
+
+<script>
+// ══ Konfigurace ══════════════════════════════════════════════
+var VISION_KEY = 'AIzaSyDngFtfxDub3SR5zOrMYYbWw-z7B8lEsCw';
+var MAX_PX     = 1600;   // delší strana fotky před odesláním
+// POZOR: ověř, že jde o aktuální nasazení Apps Scriptu (bráno z oleje.html)
+var GAS_URL    = 'https://script.google.com/macros/s/AKfycbztDbYh8df3_sE_PLFkg75VCxmw9gaDfraj72ulveGb4StgJO_ZdwHJdK2m6fXvRF5pNg/exec';
+
+// ══ VIN — pravidla formátu (ISO 3779) ════════════════════════
+// Povolené znaky: A-Z bez I, O, Q + 0-9
+var VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+// 10. pozice = modelový rok: A-Y bez I,O,Q,U,Z, pak 1-9. Nikdy nula.
+var ROK_SEQ = 'ABCDEFGHJKLMNPRSTVWXY123456789';
+
+// I, O a Q se ve VINu nevyskytují — každý takový znak z OCR je
+// jednoznačně špatně přečtená 1 nebo 0. Nahrazujeme, nemažeme:
+// smazáním by se VIN zkrátil a posunul.
+function normalizuj(t) {
+  return t.replace(/I/g, '1').replace(/[OQ]/g, '0');
+}
+
+function dekodujRok(vin) {
+  var znak = vin.charAt(9);
+  var i = ROK_SEQ.indexOf(znak);
+  if (i === -1) return null;
+  var ted = new Date().getFullYear();
+  var mozne = [];
+  for (var c = 0; c < 4; c++) { var r = 1980 + i + c * 30; if (r <= ted + 1) mozne.push(r); }
+  return mozne.length ? mozne[mozne.length - 1] : null;
+}
+
+function skore(v) {
+  var cislic = (v.match(/[0-9]/g) || []).length;
+  if (cislic < 4) return -1;          // VIN bez číslic prakticky neexistuje
+  var s = cislic;
+  if (ROK_SEQ.indexOf(v.charAt(9)) !== -1) s += 8;   // platný znak roku
+  if (/^[A-HJ-NPR-Z0-9][A-HJ-NPR-Z]/.test(v)) s += 3; // typický tvar WMI
+  return s;
+}
+
+// Hledání kandidátů. Text se NEslepuje přes mezery — normalizuje se
+// až uvnitř jednotlivých tokenů délky 17, aby ze slepených řádků
+// štítku nevznikali falešní kandidáti.
+function najdiVin(text) {
+  var tokeny = String(text || '').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  var kand = [];
+  function pridej(t, bonus) {
+    if (t.length !== 17) return;
+    var v = normalizuj(t);
+    if (!VIN_RE.test(v)) return;
+    var s = skore(v);
+    if (s < 0) return;
+    kand.push({ vin: v, s: s + (bonus || 0) });
+  }
+
+  // 1) token hned za návěštím (VIN, E, E., č. podvozku)
+  for (var i = 0; i < tokeny.length - 1; i++) {
+    var p = tokeny[i];
+    if (p === 'VIN' || p === 'E' || p === 'PODVOZKU' || p === 'CHASSIS') pridej(tokeny[i + 1], 20);
+  }
+  // 2) samostatné 17znakové tokeny
+  tokeny.forEach(function (t) { pridej(t, 0); });
+  // 3) delší tokeny — návěští slepené s VINem
+  tokeny.forEach(function (t) {
+    if (t.length > 17 && t.length <= 24) { pridej(t.slice(-17), 0); pridej(t.slice(0, 17), 0); }
+  });
+  // 4) poslední možnost: VIN rozlomený OCR na víc částí
+  if (!kand.length) {
+    var vse = tokeny.join('');
+    for (var j = 0; j + 17 <= vse.length; j++) pridej(vse.substr(j, 17), -5);
+  }
+
+  if (!kand.length) return null;
+  var unik = {};
+  kand.forEach(function (k) { if (!unik[k.vin] || unik[k.vin] < k.s) unik[k.vin] = k.s; });
+  var vysl = Object.keys(unik).map(function (v) { return { vin: v, s: unik[v] }; });
+  vysl.sort(function (a, b) { return b.s - a.s; });
+  return { nejlepsi: vysl[0].vin, pocet: vysl.length };
+}
+
+// ══ Zpracování fotky ═════════════════════════════════════════
+var icoCam = '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>';
+var icoSp  = '<path d="M21 12a9 9 0 1 1-6.2-8.6"/>';
+
+function stav(nacita) {
+  var b = document.getElementById('btnScan');
+  var i = document.getElementById('icoScan');
+  b.disabled = nacita;
+  i.innerHTML = nacita ? icoSp : icoCam;
+  i.classList.toggle('sp', nacita);
+  document.getElementById('txtScan').textContent = nacita ? 'Rozpoznávám…' : 'Vyfotit VIN';
+}
+
+function chyba(nadpis, detail) {
+  var e = document.getElementById('err');
+  e.innerHTML = '<b>' + nadpis + '</b>' + (detail ? detail : '');
+  e.classList.remove('hidden');
+}
+function skryjChybu() { document.getElementById('err').classList.add('hidden'); }
+
+function zmensi(file) {
+  return new Promise(function (res, rej) {
+    var r = new FileReader();
+    r.onerror = function () { rej(new Error('Fotku se nepodařilo načíst.')); };
+    r.onload = function (ev) {
+      var img = new Image();
+      img.onerror = function () { rej(new Error('Fotku se nepodařilo otevřít.')); };
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var k = Math.min(1, MAX_PX / Math.max(w, h));
+        if (k === 1) { res(ev.target.result.split(',')[1]); return; }
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', 0.92).split(',')[1]);
+      };
+      img.src = ev.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+function zpracuj(input) {
+  if (!input.files || !input.files[0]) return;
+  var soubor = input.files[0];
+  input.value = '';
+  skryjChybu();
+  stav(true);
+
+  zmensi(soubor).then(function (base64) {
+    return fetch('https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ requests: [{ image: { content: base64 },
+        features: [{ type: 'TEXT_DETECTION', maxResults: 1 }] }] })
+    });
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    stav(false);
+
+    // Vision vrací zamítnutý klíč s HTTP 200 a chybou v těle —
+    // bez téhle větve by to vypadalo jako nenalezený VIN.
+    if (data && data.error) {
+      chyba('Vision API odmítlo požadavek', (data.error.message || '') +
+        '<br><br>Nejčastěji chybí tahle adresa v omezení klíče (HTTP referrer) v Google Cloud.');
+      return;
+    }
+    var chybaOdp = data && data.responses && data.responses[0] && data.responses[0].error;
+    if (chybaOdp) { chyba('Vision API vrátilo chybu', chybaOdp.message || ''); return; }
+
+    var text = '';
+    try { text = data.responses[0].fullTextAnnotation.text || ''; } catch (e) {}
+    if (!text.trim()) { chyba('Na fotce nebyl nalezen žádný text', 'Zkus ostřejší záběr nebo lepší světlo.'); return; }
+
+    var nalez = najdiVin(text);
+    if (!nalez) {
+      chyba('VIN nebyl rozpoznán', 'Text na fotce byl přečten, ale neobsahuje platný 17znakový VIN. Zkus záběr jen na štítek.');
+      return;
+    }
+    ukazVysledek(nalez.nejlepsi, nalez.pocet);
+  })
+  .catch(function (e) {
+    stav(false);
+    chyba('Spojení selhalo', (e && e.message ? e.message + ' ' : '') + 'Zkontroluj připojení a zkus to znovu.');
+  });
+}
+
+// ══ Zobrazení a kopírování ═══════════════════════════════════
+var posledni = null;
+
+function ukazVysledek(vin, pocet) {
+  if (posledni && posledni !== vin) doHistorie(posledni);
+  posledni = vin;
+  document.getElementById('vin').value = vin;
+  document.getElementById('vysledek').classList.remove('hidden');
+  prekresli(pocet);
+  document.getElementById('vysledek').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function prekresli(pocet) {
+  var el = document.getElementById('vin');
+  var v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (el.value !== v) el.value = v;
+
+  var platny = VIN_RE.test(v);
+  el.classList.toggle('bad', v.length > 0 && !platny);
+
+  document.getElementById('gWmi').textContent = v.slice(0, 3) || '—';
+  document.getElementById('gVds').textContent = v.slice(3, 9) || '—';
+  document.getElementById('gRok').textContent = v.charAt(9) || '—';
+  document.getElementById('gSer').textContent = v.slice(10, 17) || '—';
+
+  var zpravy = [];
+  if (!platny) {
+    if (v.length !== 17) zpravy.push('<b>' + v.length + '/17 znaků.</b>');
+    if (/[IOQ]/.test(v)) zpravy.push('VIN nesmí obsahovat I, O ani Q.');
+  } else {
+    var rok = dekodujRok(v);
+    if (rok) zpravy.push('Modelový rok podle 10. znaku: <b>' + rok + '</b>. Nesedí-li s autem, je VIN přečtený špatně.');
+    else zpravy.push('<b>10. znak není platný kód roku</b> — zkontroluj ho se štítkem.');
+    if (pocet > 1) zpravy.push('Na fotce byly i jiné možnosti — porovnej se štítkem.');
+  }
+  zpravy.push('Záměny <b>8/B, 5/S, 2/Z, 6/G</b> rozpoznat nejdou — ty zkontroluj okem.');
+  document.getElementById('note').innerHTML = zpravy.join(' ');
+
+  if (platny) {
+    document.getElementById('over').classList.remove('hidden');
+    naplanujOvereni(v);
+  } else {
+    clearTimeout(overTimer); overToken++;
+    document.getElementById('over').classList.add('hidden');
+  }
+
+  var b = document.getElementById('btnCopy');
+  b.classList.remove('ok');
+  b.classList.toggle('bad', !platny);
+  document.getElementById('txtCopy').textContent = platny ? 'Kopírovat' : 'Zkopírovat i tak';
+}
+
+// ══ Ověření proti registru ═══════════════════════════════════
+// Ověřuje se na pozadí — VIN jde kopírovat hned, bez čekání na signál.
+var overTimer = null, overToken = 0, overPosledni = null;
+
+function overPanel(trida, nadpis, detail, tocit) {
+  var e = document.getElementById('over');
+  e.className = 'over ' + (trida || '');
+  e.innerHTML = '<div class="over-h"><span class="dot' + (tocit ? ' load' : '') + '"></span>' +
+    nadpis + '</div>' + (detail ? '<div class="over-d">' + detail + '</div>' : '');
+}
+
+function naplanujOvereni(vin) {
+  clearTimeout(overTimer);
+  if (vin === overPosledni) return;          // už ověřeno, neposílat znovu
+  overPanel('', 'Ověřuji v registru…', '', true);
+  overTimer = setTimeout(function () { overVin(vin); }, 700);
+}
+
+function overVin(vin) {
+  var muj = ++overToken;
+  fetch(GAS_URL + '?vin=' + encodeURIComponent(vin), { redirect: 'follow' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      if (muj !== overToken) return;          // mezitím přišel novější dotaz
+      overPosledni = vin;
+
+      if (!data || data.error) {
+        overPanel('warn', 'V registru ČR nenalezeno',
+          'Buď je ve VINu špatně přečtený znak, nebo jde o vůz ze zahraničí, ' +
+          'případně o vozidlo neregistrované v ČR. Porovnej znaky se štítkem.');
+        return;
+      }
+      var d = [];
+      if (data.kodMotoru) d.push('<span>Motor: <b>' + data.kodMotoru + '</b></span>');
+      if (data.obsah)     d.push('<span>' + data.obsah + ' cm³</span>');
+      if (data.palivo)    d.push('<span>' + data.palivo + '</span>');
+      var rok = dekodujRok(vin);
+      if (rok) d.push('<span>' + rok + '</span>');
+
+      var nazev = [data.znacka, data.model].filter(Boolean).join(' ') || 'Vozidlo nalezeno';
+      overPanel('ok', nazev, d.join('') +
+        '<div style="margin-top:5px;">Sedí-li s autem před tebou, je VIN přečtený správně.</div>');
+    })
+    .catch(function () {
+      if (muj !== overToken) return;
+      // NENÍ totéž co nenalezeno — VIN může být v pořádku.
+      overPanel('fail', 'Ověření se nepodařilo',
+        'Problém se spojením, ne s VINem. Zkontroluj signál. ' +
+        '<a href="#" onclick="overPosledni=null;naplanujOvereni(document.getElementById(\'vin\').value);return false;" ' +
+        'style="color:inherit;font-weight:700;">Zkusit znovu</a>');
+    });
+  document.getElementById('over').classList.remove('hidden');
+}
+
+function kopiruj() {
+  var v = document.getElementById('vin').value.toUpperCase().trim();
+  if (!v) return;
+  function hotovo() {
+    var b = document.getElementById('btnCopy');
+    b.classList.add('ok'); b.classList.remove('bad');
+    document.getElementById('txtCopy').textContent = 'Zkopírováno ✓';
+    setTimeout(function () { prekresli(); }, 1600);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(v).then(hotovo).catch(function () { zaloha(v, hotovo); });
+  } else { zaloha(v, hotovo); }
+}
+
+function zaloha(v, cb) {
+  var t = document.createElement('textarea');
+  t.value = v;
+  t.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(t);
+  t.select(); t.setSelectionRange(0, 99);
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(t);
+  if (ok) cb();
+  else chyba('Kopírování se nezdařilo', 'Označ VIN v poli a zkopíruj ho ručně.');
+}
+
+// ══ Historie ═════════════════════════════════════════════════
+var historie = [];
+function doHistorie(vin) {
+  historie = historie.filter(function (h) { return h !== vin; });
+  historie.unshift(vin);
+  if (historie.length > 3) historie.length = 3;
+  var box = document.getElementById('histList');
+  box.innerHTML = '';
+  historie.forEach(function (h) {
+    var b = document.createElement('button');
+    b.className = 'hist-i';
+    b.innerHTML = '<span class="hv">' + h + '</span><span class="hc">Kopírovat</span>';
+    b.onclick = function () {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(h).then(function () { b.querySelector('.hc').textContent = 'Hotovo ✓'; })
+          .catch(function () { zaloha(h, function () { b.querySelector('.hc').textContent = 'Hotovo ✓'; }); });
+      } else { zaloha(h, function () { b.querySelector('.hc').textContent = 'Hotovo ✓'; }); }
+    };
+    box.appendChild(b);
+  });
+  document.getElementById('hist').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
