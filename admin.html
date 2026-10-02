@@ -709,13 +709,10 @@
     }).join('\n');
   }
 
-  // Odkaz do Pegasu ze slugu motorizace — stejné pravidlo jako v mailu.
-  //   citroen--c4-ii--1.6-hdi-90-68kw
-  //   → https://pegasdily.cz/autodily/citroen/c4-ii/1.6-hdi-90-68kw
-  function pegasUrl(slug){
-    const s=String(slug||'').trim();
-    return s?('https://pegasdily.cz/autodily/'+s.split('--').join('/')):'';
-  }
+  // Adresy na Pegas se tady neskládají — chodí hotové z GASu (pegas_url
+  // u objednávky, url u kandidátů, dily_odkazy u dílů). Pravidlo je jen
+  // v naceneni_odkazy.gs; dokud bylo na dvou místech, oprava zářijové
+  // změny URL minula odkazy v adminu.
 
   // Čitelný zápis slugu — má informační hodnotu bez klikání na odkaz.
   //   citroen--c4-ii--1.6-hdi-90-68kw  →  citroen c4-ii 1.6-hdi-90-68kw
@@ -759,7 +756,7 @@
         (r.tp_url?('<a href="'+escHtml(r.tp_url)+'" target="_blank">'+vin+'</a>'):vin)+
         '</span></div>';
     }
-    const pu=pegasUrl(r.slug);
+    const pu=r.pegas_url||'';
     if(pu) radky += '<div class="nac-radek nac-radek-blok"><b>Pegas</b>'+
       '<span class="nac-slug"><a href="'+escHtml(pu)+'" target="_blank">'+
       escHtml(pegasPopis(r.slug))+'&nbsp;↗</a></span></div>';
@@ -791,7 +788,7 @@
     const k=nacJson(r.kandidati_json);
     if(!k.length)return'';
     const li=k.map(x=>{
-      const url=pegasUrl(x.slug);
+      const url=x.url||'';
       const odkaz=url?('<span class="nac-slug"><a href="'+escHtml(url)+'" target="_blank">'+escHtml(pegasPopis(x.slug))+'&nbsp;↗</a></span>'):'';
       const popis=escHtml(String(x.popis||'').trim());
       if(x.slouceno){
@@ -807,52 +804,21 @@
       k.length+')</div><ul class="nac-seznam">'+li+'</ul></div>';
   }
 
-  // Odkaz na výpis kategorie u konkrétního vozu, filtrovaný na značku dílu.
-  // Stejné pravidlo jako pegasOdkaz_ v naceneni_odkazy.gs — ID značky je
-  // v odkazu povinné, proto se značka ukládá k objednávce vedle čísla dílu.
-  const PEGAS_BASE='https://pegasdily.cz/autodily-podle-typu/filtr/';
-  const PEGAS_ZN_ID={'BOSCH':2025,'MAHLE':3081,'FEBI BILSTEIN':3063,'FEBI':3063,'BLUE PRINT':3072};
-  const PEGAS_KATEGORIE={
-    olejovy:['Olejový filtr','olejovy-filtr'],
-    vzduchovy:['Vzduchový filtr','vzduchovy-filtr'],
-    kabinovy:['Kabinový filtr','kabinovy-vzduchovy-filtr'],
-    palivovy:['Palivový filtr','palivovy-filtr']
-  };
-  function pegasOdkaz(slug,kategorie,znacka){
-    const id=PEGAS_ZN_ID[String(znacka||'').toUpperCase()]||PEGAS_ZN_ID['BOSCH'];
-    const filtr=btoa('BrandProductFieldsFilter%5B0%5D='+id);
-    const typ=(PEGAS_KATEGORIE[kategorie]||[])[1]||'';
-    return PEGAS_BASE+typ+'?filter='+filtr+'&v='+encodeURIComponent(slug||'');
-  }
-
-  // Objednání dílů — číslo dílu, značka a odkaz na Pegas. Data pocházejí
-  // z dily_json uloženého k objednávce, ne z přepočtu, takže odkazy vedou
-  // na díly platné v době objednání.
+  // Objednání dílů — řádky chodí hotové z GASu (dily_odkazy): název, číslo
+  // dílu, značka a adresa. Stránka jen vykresluje. U objednávek před
+  // 10. 9. 2026 pole chybí a blok se vynechá.
   function nacBlokDily(r){
-    let d={};
-    try{ d=JSON.parse(r.dily_json||'{}')||{}; }catch(e){ return''; }
-    const slug=r.slug||'';
-    let radky='';
-    function radek(kat,nazev,dil,znacka){
-      if(!dil)return'';
-      const url=pegasOdkaz(slug,kat,znacka);
-      return'<li><b>'+escHtml(nazev)+'</b><br><span class="nac-sedy">'+
-        escHtml((znacka||'')+' '+dil)+'</span> · <a href="'+escHtml(url)+
-        '" target="_blank">Objednat ↗</a></li>';
-    }
-    ['olejovy','vzduchovy','kabinovy','palivovy'].forEach(function(kat){
-      const p=d[kat]; if(!p)return;
-      if(kat==='kabinovy'&&Array.isArray(p.varianty)&&p.varianty.length){
-        p.varianty.forEach(function(v){
-          radky+=radek(kat,PEGAS_KATEGORIE[kat][0]+' — '+(v.nazev||''),v.dil,v.znacka);
-        });
-        return;
-      }
-      radky+=radek(kat,PEGAS_KATEGORIE[kat][0],p.dil,p.znacka);
-    });
-    if(!radky)return'';
+    const dily=Array.isArray(r.dily_odkazy)?r.dily_odkazy:[];
+    if(!dily.length)return'';
+    const li=dily.map(function(p){
+      const popis=escHtml(String((p.znacka||'')+' '+(p.dil||'')).trim());
+      const odkaz=p.url
+        ?' · <a href="'+escHtml(p.url)+'" target="_blank">Objednat ↗</a>':'';
+      return'<li><b>'+escHtml(p.nazev||'')+'</b><br>'+
+        '<span class="nac-sedy">'+popis+'</span>'+odkaz+'</li>';
+    }).join('');
     return'<div class="nac-blok"><div class="nac-blok-nadpis">Objednání dílů</div>'+
-      '<ul class="nac-seznam">'+radky+'</ul></div>';
+      '<ul class="nac-seznam">'+li+'</ul></div>';
   }
 
   window.otevriNac=function(id){
