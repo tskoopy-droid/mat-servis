@@ -272,7 +272,7 @@
     </div>
 
     <div class="tabs">
-      <div class="tab tab-wide" id="tab-all" onclick="switchTab('all')">📋 Vše</div>
+      <div class="tab tab-wide active" id="tab-all" onclick="switchTab('all')">📋 Vše</div>
       <div class="tab" id="tab-prezuti" onclick="switchTab('prezuti')">🚙 Přezutí</div>
       <div class="tab" id="tab-oleje" onclick="switchTab('oleje')">🛢️ Oleje</div>
       <div class="tab" id="tab-rozvrh" onclick="switchTab('rozvrh')">📅 Rozvrh</div>
@@ -284,7 +284,7 @@
     </div>
 
     <!-- Rezervace -->
-    <div class="card" id="section-rez" style="display:none">
+    <div class="card" id="section-rez">
       <div id="rez-list"><div class="loading">Načítám rezervace...</div></div>
     </div>
 
@@ -396,9 +396,7 @@
   const SERVIS_ADRESA = 'M&T Servis, Šumvaldská 59, Dlouhá Loučka';
   const SERVIS_TEL    = '731 885 825';
 
-  // Po přihlášení není vybraná žádná záložka — data se stahují na pozadí
-  // a seznam se ukáže až po kliknutí na Vše / Přezutí / Oleje.
-  let allData=[],currentTab='',rozvrhData={},bookedData={};
+  let allData=[],currentTab='all',rozvrhData={},bookedData={};
   let dataNactena=false;
 
   // Načítání: běží nanejvýš jedno naráz (dřív odcházelo při otevření
@@ -438,14 +436,6 @@
   function setToken(t){sessionStorage.setItem('admin_token',t);}
   function clearToken(){sessionStorage.removeItem('admin_token');smazCache();dataNactena=false;}
 
-  // Výchozí pohled po přihlášení: žádná záložka, žádný seznam.
-  function resetPohled(){
-    currentTab='';
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    ['section-rez','section-rozvrh','section-trzba','section-servis'].forEach(id=>
-      document.getElementById(id).style.display='none');
-  }
-
   // ── LOGIN ──────────────────────────────────────────────────
   window.login=async function(){
     const pwd=document.getElementById('pwd-input').value;
@@ -460,7 +450,7 @@
         document.getElementById('screen-login').style.display='none';
         document.getElementById('screen-admin').style.display='block';
         document.getElementById('pwd-input').value='';
-        resetPohled();
+        switchTab('all');
         loadAll();
       }else if(r.error==='rate_limit'){
         errEl.textContent=r.message||'Příliš mnoho pokusů. Zkuste za 15 minut.';errEl.style.display='block';
@@ -537,7 +527,7 @@
     document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
     if(currentTab==='rozvrh'){renderWeekTabs();renderRozvrh();}
     else if(currentTab==='servis'){sSync();}
-    else if(currentTab==='all'||currentTab==='prezuti'||currentTab==='oleje')renderListZachovat();
+    else renderListZachovat();
   }
 
   // Volá se odkudkoli (start, focus, Obnovit, po uložení servisu).
