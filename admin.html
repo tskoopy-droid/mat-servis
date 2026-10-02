@@ -272,7 +272,7 @@
     </div>
 
     <div class="tabs">
-      <div class="tab tab-wide active" id="tab-all" onclick="switchTab('all')">📋 Vše</div>
+      <div class="tab tab-wide" id="tab-all" onclick="switchTab('all')">📋 Vše</div>
       <div class="tab" id="tab-prezuti" onclick="switchTab('prezuti')">🚙 Přezutí</div>
       <div class="tab" id="tab-oleje" onclick="switchTab('oleje')">🛢️ Oleje</div>
       <div class="tab" id="tab-rozvrh" onclick="switchTab('rozvrh')">📅 Rozvrh</div>
@@ -284,7 +284,7 @@
     </div>
 
     <!-- Rezervace -->
-    <div class="card" id="section-rez">
+    <div class="card" id="section-rez" style="display:none">
       <div id="rez-list"><div class="loading">Načítám rezervace...</div></div>
     </div>
 
@@ -396,7 +396,21 @@
   const SERVIS_ADRESA = 'M&T Servis, Šumvaldská 59, Dlouhá Loučka';
   const SERVIS_TEL    = '731 885 825';
 
-  let allData=[],currentTab='all',rozvrhData={},bookedData={};
+  // Po přihlášení není vybraná žádná záložka — data se stahují na pozadí
+  // a seznam se ukáže až po kliknutí na Vše / Přezutí / Oleje.
+  let allData=[],currentTab='',rozvrhData={},bookedData={};
+  let dataNactena=false;
+
+  // Načítání: běží nanejvýš jedno naráz (dřív odcházelo při otevření
+  // stránky dvakrát — DOMContentLoaded + focus — a běhy se brzdily).
+  // Návrat do okna obnovuje jen když od posledního načtení uběhla minuta.
+  // Poslední stav se drží v sessionStorage, takže se po obnovení karty
+  // ukáže hned a čerstvá data se dotáhnou na pozadí.
+  const CACHE_KEY='admin_cache';
+  const FOCUS_MIN_MS=60000;
+  let nacitani=null,posledniNacteni=0;
+  // Neuložené změny v rozvrhu nesmí přepsat obnova na pozadí.
+  let rozvrhUpraven=false;
 
   async function gasPost(payload){
     const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
@@ -422,7 +436,15 @@
     }
   }
   function setToken(t){sessionStorage.setItem('admin_token',t);}
-  function clearToken(){sessionStorage.removeItem('admin_token');}
+  function clearToken(){sessionStorage.removeItem('admin_token');smazCache();dataNactena=false;}
+
+  // Výchozí pohled po přihlášení: žádná záložka, žádný seznam.
+  function resetPohled(){
+    currentTab='';
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    ['section-rez','section-rozvrh','section-trzba','section-servis'].forEach(id=>
+      document.getElementById(id).style.display='none');
+  }
 
   // ── LOGIN ──────────────────────────────────────────────────
   window.login=async function(){
@@ -438,6 +460,7 @@
         document.getElementById('screen-login').style.display='none';
         document.getElementById('screen-admin').style.display='block';
         document.getElementById('pwd-input').value='';
+        resetPohled();
         loadAll();
       }else if(r.error==='rate_limit'){
         errEl.textContent=r.message||'Příliš mnoho pokusů. Zkuste za 15 minut.';errEl.style.display='block';
@@ -463,11 +486,13 @@
     }
   });
   window.addEventListener('focus',function(){
-    if(getToken()&&document.getElementById('screen-admin').style.display!=='none')loadAll();
+    if(!getToken()||document.getElementById('screen-admin').style.display==='none')return;
+    if(Date.now()-posledniNacteni<FOCUS_MIN_MS)return;
+    loadAll();
   });
 
   function handleBadToken(){
-    clearToken();
+    clearToken();allData=[];
     document.getElementById('screen-admin').style.display='none';
     document.getElementById('screen-login').style.display='block';
     const e=document.getElementById('login-error');
@@ -475,28 +500,85 @@
   }
 
   // ── LOAD ALL ───────────────────────────────────────────────
-  window.loadAll=async function(){
+  function ulozCache(){
+    try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({rezervace:allData,rozvrh:rozvrhData,obsazene:bookedData}));}catch(e){}
+  }
+  function nactiCache(){
+    try{
+      const c=JSON.parse(sessionStorage.getItem(CACHE_KEY)||'null');
+      if(c&&Array.isArray(c.rezervace)){
+        allData=c.rezervace;rozvrhData=c.rozvrh||{};bookedData=c.obsazene||{};
+        return true;
+      }
+    }catch(e){}
+    return false;
+  }
+  function smazCache(){try{sessionStorage.removeItem(CACHE_KEY);}catch(e){}}
+
+  // Seznam se při obnově překresluje, zatímco v něm může být rozepsaná
+  // tržba — zapsané hodnoty a kurzor se proto po překreslení vrátí.
+  function renderListZachovat(){
+    const hodnoty={};
+    document.querySelectorAll('.trzba-input').forEach(el=>{if(el.value)hodnoty[el.id]=el.value;});
+    const fokus=document.activeElement&&document.activeElement.id;
+    renderList();
+    Object.keys(hodnoty).forEach(id=>{const el=document.getElementById(id);if(el)el.value=hodnoty[id];});
+    if(fokus){const el=document.getElementById(fokus);if(el)el.focus();}
+  }
+
+  function prekreslit(){
+    allData.sort((a,b)=>{
+      const da=(a.datum||'')+(a.cas||a.bloky?.[0]?.cas||'');
+      const db=(b.datum||'')+(b.cas||b.bloky?.[0]?.cas||'');
+      return da.localeCompare(db);
+    });
+    document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
+    document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
+    document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
+    if(currentTab==='rozvrh'){renderWeekTabs();renderRozvrh();}
+    else if(currentTab==='servis'){sSync();}
+    else if(currentTab==='all'||currentTab==='prezuti'||currentTab==='oleje')renderListZachovat();
+  }
+
+  // Volá se odkudkoli (start, focus, Obnovit, po uložení servisu).
+  // Když už načítání běží, vrátí to rozběhnuté místo druhého dotazu.
+  window.loadAll=function(){
+    if(nacitani)return nacitani;
+    nacitani=nacistZeServeru().finally(()=>{nacitani=null;});
+    return nacitani;
+  }
+
+  async function nacistZeServeru(){
     const token=getToken();if(!token)return;
-    const refreshBtn=document.getElementById('refresh-btn');refreshBtn.disabled=true;
-    document.getElementById('rez-list').innerHTML='<div class="loading">Načítám rezervace...</div>';
+    const refreshBtn=document.getElementById('refresh-btn');
+    refreshBtn.disabled=true;refreshBtn.textContent='Načítám…';
+    // Hláška "Načítám" jen když není co ukázat. Jinak zůstane poslední
+    // známý stav a po příchodu dat se vymění.
+    if(!dataNactena){
+      if(nactiCache()){dataNactena=true;prekreslit();}
+      else document.getElementById('rez-list').innerHTML='<div class="loading">Načítám rezervace...</div>';
+    }
+    let chyba='';
     try{
       const r=await gasPost({akce:'admin_get_all',token});
       if(r.error==='bad_token'){handleBadToken();return;}
-      if(!r.ok){document.getElementById('rez-list').innerHTML='<div class="empty">Chyba. Obnovte stránku.</div>';return;}
-      allData=r.rezervace||[];rozvrhData=r.rozvrh||{};bookedData=r.obsazene||{};
-      allData.sort((a,b)=>{
-        const da=(a.datum||'')+(a.cas||a.bloky?.[0]?.cas||'');
-        const db=(b.datum||'')+(b.cas||b.bloky?.[0]?.cas||'');
-        return da.localeCompare(db);
-      });
-      document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
-      document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
-      document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
-      if(currentTab==='rozvrh'){renderWeekTabs();renderRozvrh();}
-      else if(currentTab==='servis'){sSync();}
-      else renderList();
-    }catch(e){document.getElementById('rez-list').innerHTML='<div class="empty">Chyba připojení.</div>';}
-    finally{refreshBtn.disabled=false;}
+      if(!r.ok){chyba='Chyba. Obnovte stránku.';}
+      else{
+        allData=r.rezervace||[];bookedData=r.obsazene||{};
+        if(!rozvrhUpraven)rozvrhData=r.rozvrh||{};
+        posledniNacteni=Date.now();
+        dataNactena=true;
+        ulozCache();
+        prekreslit();
+      }
+    }catch(e){chyba='Chyba připojení.';}
+    finally{
+      refreshBtn.disabled=false;
+      refreshBtn.textContent=chyba?'Obnovit ⚠':'Obnovit';
+    }
+    // Chyba přepíše seznam jen tehdy, když v něm nic není; jinak zůstane
+    // poslední stav a chybu ukáže tlačítko Obnovit.
+    if(chyba&&!dataNactena)document.getElementById('rez-list').innerHTML='<div class="empty">'+chyba+'</div>';
   }
 
   // ── TABS ───────────────────────────────────────────────────
@@ -509,7 +591,11 @@
     if(tab==='rozvrh'){document.getElementById('section-rozvrh').style.display='block';renderWeekTabs();renderRozvrh();}
     else if(tab==='trzba'){document.getElementById('section-trzba').style.display='block';initTrzbaForm();}
     else if(tab==='servis'){document.getElementById('section-servis').style.display='block';sInit();}
-    else{document.getElementById('section-rez').style.display='block';renderList();}
+    else{
+      document.getElementById('section-rez').style.display='block';
+      if(dataNactena)renderList();
+      else document.getElementById('rez-list').innerHTML='<div class="loading">Načítám rezervace...</div>';
+    }
   }
 
   // ── TRŽBA ──────────────────────────────────────────────────
@@ -602,9 +688,9 @@
       return`<div class="${isPast?'day-block past':'day-block'}"><div class="day-header"><div><div class="day-title">${dayLabel}</div><div class="day-meta">${ah.length} hodin dostupných</div></div>${selBtns}</div><div class="hours-grid" id="grid-${ds}">${hoursHtml}</div></div>`;
     }).join('');
   }
-  window.toggleHour=function(ds,h){if(!rozvrhData[ds])rozvrhData[ds]=[];const i=rozvrhData[ds].indexOf(h);if(i===-1)rozvrhData[ds].push(h);else rozvrhData[ds].splice(i,1);refreshGrid(ds);}
-  window.selectAll=function(ds){rozvrhData[ds]=HOURS.filter(h=>!(bookedData[ds]||[]).includes(fmtHourSlot(h)));refreshGrid(ds);}
-  window.selectNone=function(ds){rozvrhData[ds]=[];refreshGrid(ds);}
+  window.toggleHour=function(ds,h){rozvrhUpraven=true;if(!rozvrhData[ds])rozvrhData[ds]=[];const i=rozvrhData[ds].indexOf(h);if(i===-1)rozvrhData[ds].push(h);else rozvrhData[ds].splice(i,1);refreshGrid(ds);}
+  window.selectAll=function(ds){rozvrhUpraven=true;rozvrhData[ds]=HOURS.filter(h=>!(bookedData[ds]||[]).includes(fmtHourSlot(h)));refreshGrid(ds);}
+  window.selectNone=function(ds){rozvrhUpraven=true;rozvrhData[ds]=[];refreshGrid(ds);}
   function refreshGrid(ds){
     const ah=rozvrhData[ds]||[],booked=bookedData[ds]||[],grid=document.getElementById('grid-'+ds);if(!grid)return;
     grid.innerHTML=HOURS.map(h=>{const slot=fmtHourSlot(h),isB=booked.includes(slot),isA=ah.includes(h);const cls=isB?'hour-btn booked':(isA?'hour-btn active':'hour-btn');const oc=isB?'':`onclick="toggleHour('${ds}',${h})"`;return`<button class="${cls}" ${oc}>${h}:00</button>`;}).join('');
@@ -616,7 +702,7 @@
     try{
       const r=await gasPost({akce:'admin_rozvrh_set',token,rozvrh:rozvrhData});
       if(r.error==='bad_token'){handleBadToken();return;}
-      if(r.ok){const msg=document.getElementById('save-msg');msg.style.display='block';setTimeout(()=>msg.style.display='none',2500);}
+      if(r.ok){rozvrhUpraven=false;ulozCache();const msg=document.getElementById('save-msg');msg.style.display='block';setTimeout(()=>msg.style.display='none',2500);}
       else alert('Chyba: '+(r.message||r.error||'neznámá'));
     }catch(e){alert('Chyba připojení.');}
     finally{btn.disabled=false;btn.textContent='Uložit dostupnost';}
@@ -866,7 +952,7 @@
       const r=await gasPost({akce:'admin_archive',token,id,col,trzba});
       if(r.error==='bad_token'){handleBadToken();return;}
       if(r.ok){
-        allData=allData.filter(x=>x.id!==id);
+        allData=allData.filter(x=>x.id!==id);ulozCache();
         document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
         document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
         document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
@@ -883,7 +969,7 @@
       const r=await gasPost({akce:'admin_delete',token,id,col});
       if(r.error==='bad_token'){handleBadToken();return;}
       if(r.ok){
-        allData=allData.filter(x=>x.id!==id);
+        allData=allData.filter(x=>x.id!==id);ulozCache();
         document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
         document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
         document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
