@@ -78,6 +78,8 @@
   .cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
   .cal-btn { background: var(--blue-light); border: none; color: var(--blue); border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: background 0.15s; }
   .cal-btn:active { background: var(--blue-mid); }
+  .cal-btn:disabled { opacity: 0.3; cursor: default; }
+  .cal-btn:disabled:active { background: var(--blue-light); }
   .cal-title { font-weight: 700; color: var(--text); font-size: 16px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
   .cal-day-name { font-size: 11px; color: var(--text-muted); padding: 6px 0; font-weight: 600; }
@@ -91,6 +93,7 @@
   .cal-day.selected { background: var(--blue) !important; border-color: var(--blue) !important; color: #fff !important; font-weight: 700; }
   .cal-legend { margin-top: 14px; font-size: 11px; color: var(--text-muted); display: flex; gap: 16px; }
   .legend-avail { color: var(--blue); font-weight: 600; }
+  .cal-empty-note { margin-top: 12px; padding: 10px 12px; background: #fef9f0; border: 1px solid #f4d68a; border-radius: 10px; color: #8a6d2f; font-size: 13px; font-weight: 600; text-align: center; line-height: 1.5; }
 
   /* LOADER */
   .cal-loader { text-align: center; padding: 48px 20px; color: var(--text-muted); }
@@ -274,6 +277,11 @@ let state = {
   kontakt: { n: '', p: '', e: '', c: '', o: '' },   // vyplněné údaje — přežijí návrat do kalendáře
 };
 
+// Auto-skip prázdného měsíce se smí provést jen jednou, při prvním vykreslení
+// po načtení rozvrhu. Při ruční navigaci šipkami by jinak zákazníka přehazoval
+// nebo zobrazil hlášku bez šipek (slepá ulička).
+let autoSkipHotovo = false;
+
 // Stav odesílání. Během požadavku a po nejistém výsledku se znovu
 // odeslat nesmí — jinak vznikne druhá rezervace.
 let odesilani = false;
@@ -327,6 +335,19 @@ function getMaxDate() {
   const d = new Date(); d.setHours(0,0,0,0);
   d.setDate(d.getDate() + 35);
   return d;
+}
+
+// Šipka ‹ — nejdál do aktuálního měsíce
+function lzeNaPredchozi(year, month) {
+  const t = new Date();
+  return year > t.getFullYear() || (year === t.getFullYear() && month > t.getMonth());
+}
+
+// Šipka › — jen pokud první den dalšího měsíce spadá do limitu 35 dní
+function lzeNaDalsi(year, month) {
+  let ny = year, nm = month + 1;
+  if (nm === 12) { nm = 0; ny++; }
+  return new Date(ny, nm, 1) <= getMaxDate();
 }
 
 function fmt(y,m,d) { return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`; }
@@ -383,39 +404,43 @@ function renderCalendar() {
   }
 
   const {year, month} = state;
-  const today = new Date();
   const firstDay = new Date(year, month, 1).getDay();
   const totalDays = new Date(year, month+1, 0).getDate();
   const offset = firstDay === 0 ? 6 : firstDay - 1;
+  const volnoVMesici = maMesicVolnyDen(year, month);
 
-  // Auto-skip prázdného měsíce: pokud aktuální měsíc nemá volný den
-  // a první den následujícího měsíce je v rozsahu 5 týdnů, přepnout
-  const maxD = getMaxDate();
-  if (!maMesicVolnyDen(year, month)) {
-    let ny = year, nm = month + 1;
-    if (nm === 12) { nm = 0; ny++; }
-    const prvniDal = new Date(ny, nm, 1); prvniDal.setHours(0,0,0,0);
-    if (prvniDal <= maxD && maMesicVolnyDen(ny, nm)) {
-      state.month = nm;
-      state.year = ny;
-      renderCalendar();
+  // Auto-skip jen při prvním vykreslení po načtení rozvrhu:
+  // pokud aktuální měsíc nemá volný den a následující (v limitu 35 dní) ano, přepnout.
+  if (!autoSkipHotovo) {
+    autoSkipHotovo = true;
+    if (!volnoVMesici) {
+      let ny = year, nm = month + 1;
+      if (nm === 12) { nm = 0; ny++; }
+      if (lzeNaDalsi(year, month) && maMesicVolnyDen(ny, nm)) {
+        state.month = nm;
+        state.year = ny;
+        renderCalendar();
+        return;
+      }
+      // V celém rozsahu není nic volného → hláška (navigace tu nemá smysl)
+      document.getElementById("view-date").innerHTML = `
+        <div class="card" style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">
+          Aktuálně není žádný volný termín.<br>Zkuste to prosím později.
+        </div>`;
       return;
     }
-    // Ani aktuální ani následující v rozsahu nemá volno → hláška
-    document.getElementById("view-date").innerHTML = `
-      <div class="card" style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">
-        Aktuálně není žádný volný termín.<br>Zkuste to prosím později.
-      </div>`;
-    return;
   }
+
+  const predOk = lzeNaPredchozi(year, month);
+  const dalOk = lzeNaDalsi(year, month);
 
   let html = `
     <div id="slot-error-msg" class="slot-error">⚠️ Omlouváme se, tento termín byl právě obsazen. Vyberte prosím jiný čas.</div>
     <div class="card">
       <div class="cal-nav">
-        <button class="cal-btn" onclick="prevMonth()">‹</button>
+        <button class="cal-btn" onclick="prevMonth()" ${predOk ? '' : 'disabled'} aria-label="Předchozí měsíc">‹</button>
         <span class="cal-title">${MONTHS[month]} ${year}</span>
-        <button class="cal-btn" onclick="nextMonth()">›</button>
+        <button class="cal-btn" onclick="nextMonth()" ${dalOk ? '' : 'disabled'} aria-label="Další měsíc">›</button>
       </div>
       <div class="cal-grid">
         ${DAYS_SHORT.map(d=>`<div class="cal-day-name">${d}</div>`).join("")}
@@ -425,7 +450,6 @@ function renderCalendar() {
   for (let d = 1; d <= totalDays; d++) {
     const past = isPast(year, month, d);
     const work = isWorkingDay(year, month, d);
-    const full = !past && work && isFullyBooked(year, month, d);
     const ds = fmt(year, month, d);
     const sel = ds === state.selDate;
     let cls = "cal-day";
@@ -440,6 +464,7 @@ function renderCalendar() {
       <div class="cal-legend">
         <span class="legend-avail">■ Dostupný den</span>
       </div>
+      ${volnoVMesici ? '' : `<div class="cal-empty-note">V tomto měsíci není volný termín.${predOk ? '<br>Zkuste předchozí měsíc.' : ''}</div>`}
     </div>`;
 
   document.getElementById("view-date").innerHTML = html;
@@ -564,12 +589,14 @@ function renderConfirm(name, phone, email, car) {
 }
 
 function prevMonth() {
+  if (!lzeNaPredchozi(state.year, state.month)) return;
   if (state.month === 0) { state.month = 11; state.year--; }
   else state.month--;
   renderCalendar();
 }
 
 function nextMonth() {
+  if (!lzeNaDalsi(state.year, state.month)) return;
   if (state.month === 11) { state.month = 0; state.year++; }
   else state.month++;
   renderCalendar();
