@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
 // ── Rozvrh + obsazené sloty přes GAS ──────────────────────────
+// GAS_ROZVRH: null = načítá se, 'error' = načtení selhalo, objekt = rozvrh.
+// Rozlišení je nutné — jinak by výpadek sítě vypadal jako "není volný termín".
 window.GAS_ROZVRH = null;
 window.GAS_BOOKED = {};
 window.GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
@@ -17,8 +19,8 @@ window.GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK
 function loadRozvrhGAS() {
   return fetch(window.GAS_URL + '?action=get_rozvrh', { method: 'GET', redirect: 'follow' })
     .then(function(r){ return r.json(); })
-    .then(function(data){ if (data && data.ok && data.rozvrh) window.GAS_ROZVRH = data.rozvrh; })
-    .catch(function(){});
+    .then(function(data){ window.GAS_ROZVRH = (data && data.ok && data.rozvrh) ? data.rozvrh : 'error'; })
+    .catch(function(){ window.GAS_ROZVRH = 'error'; });
 }
 function loadObsazeneGAS() {
   return fetch(window.GAS_URL + '?action=get_obsazene_oleje', { method: 'GET', redirect: 'follow' })
@@ -26,7 +28,7 @@ function loadObsazeneGAS() {
     .then(function(data){ if (data && data.ok && data.obsazene) window.GAS_BOOKED = data.obsazene; })
     .catch(function(){});
 }
-Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
+window.GAS_NACTENO = Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
 </script>
 <style>
   @keyframes vinSpin{to{transform:rotate(360deg)}}
@@ -213,6 +215,8 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .cal-nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
   .cal-btn{background:var(--blue-light);border:none;color:var(--blue);border-radius:10px;width:40px;height:40px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;font-weight:bold;}
   .cal-btn:active{background:var(--blue-mid);}
+  .cal-btn:disabled{opacity:0.3;cursor:default;}
+  .cal-btn:disabled:active{background:var(--blue-light);}
   .cal-title{font-weight:700;color:var(--text);font-size:16px;}
   .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;}
   .cal-day-name{font-size:11px;color:var(--text-muted);padding:6px 0;font-weight:600;}
@@ -223,6 +227,7 @@ Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
   .cal-day.available:active{background:var(--blue-mid);}
   .cal-day.selected{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important;font-weight:700;}
   .cal-legend{margin-top:14px;font-size:11px;color:var(--text-muted);}
+  .cal-empty-note{margin-top:12px;padding:10px 12px;background:#fef9f0;border:1px solid #f4d68a;border-radius:10px;color:#8a6d2f;font-size:13px;font-weight:600;text-align:center;line-height:1.5;}
   .time-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px;}
   .time-slot{padding:22px 8px;border-radius:16px;text-align:center;font-weight:700;font-size:22px;border:2px solid var(--border);background:var(--white);color:var(--text);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
   .time-slot:active{border-color:var(--blue);background:var(--blue-light);}
@@ -1387,6 +1392,11 @@ var DAYS_FULL = ['Ne','Po','Út','St','Čt','Pá','So'];
 var MONTHS_FULL = ['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
 var calState = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null };
 
+// Auto-skip prázdného měsíce jen jednou — při prvním vykreslení s načteným
+// rozvrhem. Při ruční navigaci šipkami by jinak zákazníka přehazoval dopředu
+// nebo zobrazil hlášku bez šipek (slepá ulička).
+var calAutoSkipHotovo = false;
+
 function getMinDate() {
   var minDni = (stav.cenik && stav.cenik.minDniRezervace) ? stav.cenik.minDniRezervace : 3;
   var d = new Date(); d.setHours(0,0,0,0);
@@ -1405,9 +1415,22 @@ function maMesicVolnyDen(y, m) {
   return false;
 }
 
+// Šipka ‹ — nejdál do aktuálního měsíce
+function calLzePred(y, m) {
+  var t = new Date();
+  return y > t.getFullYear() || (y === t.getFullYear() && m > t.getMonth());
+}
+
+// Šipka › — jen pokud první den dalšího měsíce spadá do limitu 35 dní
+function calLzeDal(y, m) {
+  var ny = y, nm = m + 1;
+  if (nm === 12) { nm = 0; ny++; }
+  return new Date(ny, nm, 1) <= getMaxDate();
+}
+
 function getSlotsForDate(ds) {
   var r = window.GAS_ROZVRH;
-  if (!r || !r[ds]) return [];
+  if (!r || typeof r !== 'object' || !r[ds]) return [];
   return r[ds].map(function(h){ return String(h).padStart(2,'0')+':00'; });
 }
 function getBooked(ds) { return (window.GAS_BOOKED && window.GAS_BOOKED[ds]) || []; }
@@ -1426,19 +1449,69 @@ function isAvailable(y,m,d) {
   return slots.some(function(t){ return !booked.includes(t); });
 }
 
+/** Znovu načte rozvrh po chybě (tlačítko "Zkusit znovu"). */
+function znovuNactiRozvrh() {
+  window.GAS_ROZVRH = null;
+  window.GAS_NACTENO = Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
+  renderCalendar();
+}
+
 function renderCalendar() {
-  var maxD = getMaxDate();
-  if (!maMesicVolnyDen(calState.year, calState.month)) {
-    var ny=calState.year, nm=calState.month+1;
-    if (nm===12){nm=0;ny++;}
-    var prvni=new Date(ny,nm,1); prvni.setHours(0,0,0,0);
-    if (prvni<=maxD && maMesicVolnyDen(ny,nm)) { calState.month=nm; calState.year=ny; }
+  var box = document.getElementById('calendarContainer');
+  document.getElementById('timeSlotsContainer').style.display = 'none';
+
+  // Rozvrh se ještě načítá — loader a po dokončení překreslit,
+  // pokud je zákazník pořád na kartě termínu.
+  if (window.GAS_ROZVRH === null) {
+    box.innerHTML = '<div style="text-align:center;padding:40px 16px;color:var(--text-muted);font-size:14px;">' +
+      '<svg viewBox="0 0 24 24" style="width:32px;height:32px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite;display:block;margin:0 auto 12px;"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>' +
+      'Načítá se kalendář…</div>';
+    if (window.GAS_NACTENO) {
+      window.GAS_NACTENO.then(function() {
+        if (!document.getElementById('cardTermin').classList.contains('hidden')) renderCalendar();
+      });
+    }
+    return;
+  }
+
+  // Načtení selhalo — nesmí to vypadat jako "žádný volný termín".
+  if (window.GAS_ROZVRH === 'error') {
+    box.innerHTML = '<div style="text-align:center;padding:24px 16px;">' +
+      '<div style="font-size:32px;margin-bottom:12px;">📡</div>' +
+      '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;">Nepodařilo se načíst termíny</div>' +
+      '<div style="font-size:13px;color:var(--text-muted);margin-bottom:18px;line-height:1.5;">Zkontrolujte připojení k internetu a zkuste to znovu.</div>' +
+      '<button onclick="znovuNactiRozvrh()" style="padding:12px 24px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-family:Inter,sans-serif;font-size:15px;font-weight:700;cursor:pointer;">Zkusit znovu</button>' +
+      '</div>';
+    return;
+  }
+
+  var volno = maMesicVolnyDen(calState.year, calState.month);
+
+  // Auto-skip jen při prvním vykreslení s načteným rozvrhem
+  if (!calAutoSkipHotovo) {
+    calAutoSkipHotovo = true;
+    if (!volno) {
+      var ny=calState.year, nm=calState.month+1;
+      if (nm===12){nm=0;ny++;}
+      if (calLzeDal(calState.year, calState.month) && maMesicVolnyDen(ny,nm)) {
+        calState.month=nm; calState.year=ny;
+        renderCalendar();
+        return;
+      }
+      // V celém rozsahu není nic volného → hláška (navigace tu nemá smysl)
+      box.innerHTML='<div style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;border-radius:12px;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">Aktuálně není žádný volný termín.<br>Zkuste to prosím později.</div>';
+      return;
+    }
   }
 
   var y=calState.year, m=calState.month;
+  var predOk=calLzePred(y,m), dalOk=calLzeDal(y,m);
   var first=new Date(y,m,1).getDay(); var total=new Date(y,m+1,0).getDate();
   var offset=first===0?6:first-1;
-  var html='<div class="cal-nav"><button class="cal-btn" onclick="calPrev()">‹</button><span class="cal-title">'+MONTHS_CZ[m]+' '+y+'</span><button class="cal-btn" onclick="calNext()">›</button></div>';
+  var html='<div class="cal-nav">' +
+    '<button class="cal-btn" onclick="calPrev()"'+(predOk?'':' disabled')+' aria-label="Předchozí měsíc">‹</button>' +
+    '<span class="cal-title">'+MONTHS_CZ[m]+' '+y+'</span>' +
+    '<button class="cal-btn" onclick="calNext()"'+(dalOk?'':' disabled')+' aria-label="Další měsíc">›</button></div>';
   html+='<div class="cal-grid">';
   DAYS_CZ.forEach(function(d){ html+='<div class="cal-day-name">'+d+'</div>'; });
   for (var i=0;i<offset;i++) html+='<div class="cal-day empty">.</div>';
@@ -1449,21 +1522,24 @@ function renderCalendar() {
     html+='<div class="'+cls+'"'+oc+'>'+d2+'</div>';
   }
   html+='</div><div class="cal-legend"><span style="color:var(--blue);font-weight:600">■ Dostupný den</span></div>';
-
-  if (!maMesicVolnyDen(y,m)) {
-    var ny2=y,nm2=m+1; if(nm2===12){nm2=0;ny2++;} var p2=new Date(ny2,nm2,1); p2.setHours(0,0,0,0);
-    if (p2>maxD || !maMesicVolnyDen(ny2,nm2)) {
-      html='<div style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;border-radius:12px;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">Aktuálně není žádný volný termín.<br>Zkuste to prosím později.</div>';
-    }
+  if (!volno) {
+    html+='<div class="cal-empty-note">V tomto měsíci není volný termín.'+(predOk?'<br>Zkuste předchozí měsíc.':'')+'</div>';
   }
 
-  document.getElementById('calendarContainer').innerHTML = html;
-  document.getElementById('timeSlotsContainer').style.display = 'none';
+  box.innerHTML = html;
   if (window._slotError) { var el=document.getElementById('slot-error-msg'); if(el) el.style.display='block'; window._slotError=false; }
 }
 
-function calPrev() { if(calState.month===0){calState.month=11;calState.year--;}else calState.month--; renderCalendar(); }
-function calNext() { if(calState.month===11){calState.month=0;calState.year++;}else calState.month++; renderCalendar(); }
+function calPrev() {
+  if (!calLzePred(calState.year, calState.month)) return;
+  if(calState.month===0){calState.month=11;calState.year--;}else calState.month--;
+  renderCalendar();
+}
+function calNext() {
+  if (!calLzeDal(calState.year, calState.month)) return;
+  if(calState.month===11){calState.month=0;calState.year++;}else calState.month++;
+  renderCalendar();
+}
 
 function selectCalDate(ds) { calState.selDate=ds; renderCalendar(); renderTimeSlots(ds); }
 
