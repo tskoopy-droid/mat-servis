@@ -538,7 +538,8 @@ window.GAS_NACTENO.then(function() {
 // ── Konfigurace ──────────────────────────────────────────────
 var VIN_PROXY  = window.GAS_URL;
 var OLEJE_API  = window.GAS_URL;
-var VISION_KEY = 'AIzaSyDngFtfxDub3SR5zOrMYYbWw-z7B8lEsCw';
+// Rozpoznání VIN z fotky jde přes GAS (akce vin_ocr) — klíč k Vision je ve Vlastnostech skriptu.
+var FOTO_MAX_PX = 1600;   // delší strana fotky před odesláním
 
 // ── Kamera / Vision API ────────────────────────────────────────
 function otevriVyberFotky() {
@@ -560,18 +561,22 @@ function zpracujFotku(input) {
   var svgSpin = '<svg viewBox="0 0 24 24" style="width:22px;height:22px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
   btn.innerHTML = svgSpin + ' Rozpoznávám…';
   btn.disabled = true;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    var base64 = e.target.result.split(',')[1];
-    fetch('https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY, {
+  zmensiFotku(input.files[0]).then(function(base64) {
+    return fetch(window.GAS_URL, {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ requests: [{ image: {content: base64}, features: [{type:'TEXT_DETECTION',maxResults:1}] }] })
+      redirect: 'follow',
+      body: JSON.stringify({ akce: 'vin_ocr', obrazek: base64 })
     })
     .then(function(r){ return r.json(); })
     .then(function(data) {
       btn.innerHTML = svgCam + ' Skenovat VIN';
       btn.disabled = false;
+      if (data && data.error) {
+        document.getElementById('vinError').textContent = (data.error.message || 'Rozpoznání se nepodařilo.') + ' VIN můžete zadat ručně.';
+        document.getElementById('vinError').classList.add('visible');
+        input.value = '';
+        return;
+      }
       var text = '';
       try { text = data.responses[0].fullTextAnnotation.text || ''; } catch(e){}
       var vinMatch = text.match(/VIN\)[^\w]*([A-HJ-NPR-Z0-9]{17})/i);
@@ -603,8 +608,30 @@ function zpracujFotku(input) {
       document.getElementById('vinError').classList.add('visible');
       input.value = '';
     });
-  };
-  reader.readAsDataURL(input.files[0]);
+  });
+}
+
+// Zmenší fotku na FOTO_MAX_PX (delší strana) a vrátí ji jako base64 JPEG.
+// Fotka z mobilu má i několik MB — přes GAS by se nahrávala zbytečně dlouho.
+function zmensiFotku(soubor) {
+  return new Promise(function(hotovo) {
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var img = new Image();
+      img.onload = function() {
+        var k = Math.min(1, FOTO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
+        if (k === 1) { hotovo(ev.target.result.split(',')[1]); return; }
+        var c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        hotovo(c.toDataURL('image/jpeg', 0.92).split(',')[1]);
+      };
+      // Formát, který prohlížeč neumí vykreslit (např. HEIC), se pošle beze změny.
+      img.onerror = function() { hotovo(ev.target.result.split(',')[1]); };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(soubor);
+  });
 }
 
 // ── Stav ─────────────────────────────────────────────────────
