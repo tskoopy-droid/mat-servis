@@ -14,21 +14,48 @@
 // Rozlišení je nutné — jinak by výpadek sítě vypadal jako "není volný termín".
 window.GAS_ROZVRH = null;
 window.GAS_BOOKED = {};
+// Měření rychlosti načtení kalendáře (časy v ms od otevření stránky)
+var MERENI = { rozvrh_ms: null, obsazene_ms: null };
 window.GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
 
 function loadRozvrhGAS() {
   return fetch(window.GAS_URL + '?action=get_rozvrh', { method: 'GET', redirect: 'follow' })
     .then(function(r){ return r.json(); })
     .then(function(data){ window.GAS_ROZVRH = (data && data.ok && data.rozvrh) ? data.rozvrh : 'error'; })
-    .catch(function(){ window.GAS_ROZVRH = 'error'; });
+    .catch(function(){ window.GAS_ROZVRH = 'error'; })
+    .then(function(){ MERENI.rozvrh_ms = Math.round(performance.now()); });
 }
 function loadObsazeneGAS() {
   return fetch(window.GAS_URL + '?action=get_obsazene_oleje', { method: 'GET', redirect: 'follow' })
     .then(function(r){ return r.json(); })
     .then(function(data){ if (data && data.ok && data.obsazene) window.GAS_BOOKED = data.obsazene; })
-    .catch(function(){});
+    .catch(function(){})
+    .then(function(){ MERENI.obsazene_ms = Math.round(performance.now()); });
 }
 window.GAS_NACTENO = Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
+
+// Po prvním načtení pošle GAS řádek do listu "Měření". Při matdev se nic neposílá.
+window.GAS_NACTENO.then(function() {
+  try {
+    if (localStorage.getItem('matdev') === '1') return;
+  } catch (x) {}
+  try {
+    var data = JSON.stringify({
+      akce: 'mereni_kalendar',
+      stranka: 'oleje',
+      celkem_ms: Math.round(performance.now()),
+      rozvrh_ms: MERENI.rozvrh_ms,
+      obsazene_ms: MERENI.obsazene_ms,
+      chyba: window.GAS_ROZVRH === 'error',
+      mobil: /Mobi|Android|iPhone/i.test(navigator.userAgent),
+      sit: (navigator.connection && navigator.connection.effectiveType) || '',
+      z_reklamy: /utm_source=facebook|fbclid=/.test(location.search)
+    });
+    if (!(navigator.sendBeacon && navigator.sendBeacon(window.GAS_URL, data))) {
+      fetch(window.GAS_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: data }).catch(function(){});
+    }
+  } catch (x) {}   // měření nesmí nikdy rozbít stránku
+});
 </script>
 <style>
   @keyframes vinSpin{to{transform:rotate(360deg)}}
@@ -708,6 +735,7 @@ function zobrazAuto() {
   document.getElementById('cardAuto').classList.remove('hidden');
   document.getElementById('cardVin').classList.add('hidden');
   updateSteps(1);
+  try { if (typeof gtag === 'function') gtag('event', 'rezervace_krok_vin'); } catch (x) {}
 }
 
 function resetVin() {
@@ -1561,6 +1589,7 @@ function renderTimeSlots(ds) {
 function selectCalTime(t) {
   calState.selTime=t; stav.selDate=calState.selDate; stav.selTime=calState.selTime;
   zobrazKartu('cardKontakt'); updateSteps(5);
+  try { if (typeof gtag === 'function') gtag('event', 'rezervace_krok_termin'); } catch (x) {}
 }
 
 // ── Odeslání rezervace ────────────────────────────────────────
@@ -1623,6 +1652,12 @@ function odeslat() {
         if (window.GAS_BOOKED[stav.selDate].indexOf(stav.selTime)<0) window.GAS_BOOKED[stav.selDate].push(stav.selTime);
       } catch(e) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
       zobrazKartu('cardHotovo'); updateSteps(5);
+      // Měření dokončené rezervace v GA (při matdev je gtag vypnutý)
+      try {
+        if (typeof gtag === 'function') {
+          gtag('event', 'rezervace_dokoncena', { sluzba: 'olej', value: stav.cenaCelkem, currency: 'CZK', datum_terminu: stav.selDate });
+        }
+      } catch (x) {}
       return;
     }
 
