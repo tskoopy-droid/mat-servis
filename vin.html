@@ -41,6 +41,14 @@
   .scan:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed;}
   .scan svg{width:30px;height:30px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
   .scan svg.sp{animation:spin .8s linear infinite;stroke-width:2.6;}
+  .galerie{
+    width:100%;margin-top:10px;padding:14px 20px;background:var(--acc-light);border:2px solid var(--acc-mid);
+    border-radius:16px;color:var(--acc);font-family:"Inter",sans-serif;font-weight:700;font-size:15px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .galerie:active{background:var(--acc-mid);}
+  .galerie:disabled{opacity:.45;cursor:not-allowed;}
+  .galerie svg{width:20px;height:20px;stroke:var(--acc);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
   .card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:18px;
     box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-top:16px;}
@@ -116,7 +124,13 @@
     <span id="txtScan">Vyfotit VIN</span>
   </button>
 
+  <button class="galerie" id="btnGalerie" onclick="document.getElementById('fotoGalerie').click()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <span>Vybrat z galerie</span>
+  </button>
+
   <input type="file" id="foto" accept="image/*" capture="environment" style="display:none" onchange="zpracuj(this)">
+  <input type="file" id="fotoGalerie" accept="image/*" style="display:none" onchange="zpracuj(this)">
 
   <div class="err hidden" id="err"></div>
 
@@ -147,7 +161,7 @@
 
 <script>
 // ══ Konfigurace ══════════════════════════════════════════════
-var VISION_KEY = 'AIzaSyDngFtfxDub3SR5zOrMYYbWw-z7B8lEsCw';
+// Rozpoznání textu jde přes GAS (akce vin_ocr) — klíč k Vision je ve Vlastnostech skriptu.
 var MAX_PX     = 1600;   // delší strana fotky před odesláním
 // Nasazení Apps Scriptu. Při přenasazení se ID mění — nutno přepsat i tady.
 var GAS_URL    = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
@@ -232,6 +246,7 @@ function stav(nacita) {
   var b = document.getElementById('btnScan');
   var i = document.getElementById('icoScan');
   b.disabled = nacita;
+  document.getElementById('btnGalerie').disabled = nacita;
   i.innerHTML = nacita ? icoSp : icoCam;
   i.classList.toggle('sp', nacita);
   document.getElementById('txtScan').textContent = nacita ? 'Rozpoznávám…' : 'Vyfotit VIN';
@@ -274,11 +289,10 @@ function zpracuj(input) {
   stav(true);
 
   zmensi(soubor).then(function (base64) {
-    return fetch('https://vision.googleapis.com/v1/images:annotate?key=' + VISION_KEY, {
+    return fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ requests: [{ image: { content: base64 },
-        features: [{ type: 'TEXT_DETECTION', maxResults: 1 }] }] })
+      redirect: 'follow',
+      body: JSON.stringify({ akce: 'vin_ocr', obrazek: base64 })
     });
   })
   .then(function (r) { return r.json(); })
@@ -289,7 +303,7 @@ function zpracuj(input) {
     // bez téhle větve by to vypadalo jako nenalezený VIN.
     if (data && data.error) {
       chyba('Vision API odmítlo požadavek', (data.error.message || '') +
-        '<br><br>Nejčastěji chybí tahle adresa v omezení klíče (HTTP referrer) v Google Cloud.');
+        '<br><br>Zkontroluj VISION_API_KEY ve Vlastnostech skriptu GAS a list errors_log.');
       return;
     }
     var chybaOdp = data && data.responses && data.responses[0] && data.responses[0].error;
