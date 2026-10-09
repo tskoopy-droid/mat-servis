@@ -18,16 +18,44 @@
   window.GAS_BOOKED = {};
   window.GAS_ROZVRH = null;
 
+  // Měření rychlosti načtení kalendáře → GAS zapíše řádek do listu "Měření".
+  // Časy v ms od otevření stránky. Při matdev se nic neposílá.
+  const mereni = { rozvrh_ms: null, obsazene_ms: null, chyba_rozvrh: false, chyba_obsazene: false };
+
+  function odesliMereni() {
+    try {
+      if (localStorage.getItem('matdev') === '1') return;
+    } catch (x) {}
+    try {
+      const data = JSON.stringify({
+        akce: 'mereni_kalendar',
+        stranka: 'prezuti',
+        celkem_ms: Math.round(performance.now()),
+        rozvrh_ms: mereni.rozvrh_ms,
+        obsazene_ms: mereni.obsazene_ms,
+        chyba: mereni.chyba_rozvrh || mereni.chyba_obsazene,
+        mobil: /Mobi|Android|iPhone/i.test(navigator.userAgent),
+        sit: (navigator.connection && navigator.connection.effectiveType) || '',
+        z_reklamy: /utm_source=facebook|fbclid=/.test(location.search)
+      });
+      if (!(navigator.sendBeacon && navigator.sendBeacon(GAS_URL, data))) {
+        fetch(GAS_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: data }).catch(function(){});
+      }
+    } catch (x) {}   // měření nesmí nikdy rozbít kalendář
+  }
+
   function loadGasData() {
     const pRozvrh = fetch(GAS_URL + '?action=get_rozvrh', { redirect: 'follow' })
       .then(r => r.json())
       .then(d => { if (d && d.ok) window.GAS_ROZVRH = d.rozvrh || {}; else window.GAS_ROZVRH = {}; })
-      .catch(e => { console.error('Chyba nacitani rozvrhu:', e); window.GAS_ROZVRH = 'error'; });
+      .catch(e => { console.error('Chyba nacitani rozvrhu:', e); window.GAS_ROZVRH = 'error'; mereni.chyba_rozvrh = true; })
+      .finally(() => { mereni.rozvrh_ms = Math.round(performance.now()); });
 
     const pObsazene = fetch(GAS_URL + '?action=get_obsazene_prezuti', { redirect: 'follow' })
       .then(r => r.json())
       .then(d => { if (d && d.ok) window.GAS_BOOKED = d.obsazene || {}; else window.GAS_BOOKED = {}; })
-      .catch(e => { console.error('Chyba nacitani obsazenych:', e); window.GAS_BOOKED = {}; });
+      .catch(e => { console.error('Chyba nacitani obsazenych:', e); window.GAS_BOOKED = {}; mereni.chyba_obsazene = true; })
+      .finally(() => { mereni.obsazene_ms = Math.round(performance.now()); });
 
     Promise.all([pRozvrh, pObsazene]).then(() => {
       if (typeof renderCalendar === 'function') renderCalendar();
@@ -35,6 +63,7 @@
       if (typeof state !== 'undefined' && state.step === 2 && state.selDate && typeof renderTimeSlots === 'function') {
         renderTimeSlots();
       }
+      odesliMereni();
     });
   }
   loadGasData();
@@ -608,6 +637,7 @@ function selectDate(ds) {
   updateSteps();
   renderTimeSlots();
   showView("time");
+  try { if (typeof gtag === 'function') gtag('event', 'rezervace_krok_datum'); } catch (x) {}
 }
 
 function selectTime(t) {
@@ -616,6 +646,7 @@ function selectTime(t) {
   updateSteps();
   renderForm();
   showView("form");
+  try { if (typeof gtag === 'function') gtag('event', 'rezervace_krok_cas'); } catch (x) {}
 }
 
 function goBack(toStep) {
@@ -712,6 +743,12 @@ function submitForm() {
       } catch (x) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
       renderConfirm(n, p, e, c);
       showView("confirm");
+      // Měření dokončené rezervace v GA (při matdev je gtag vypnutý)
+      try {
+        if (typeof gtag === 'function') {
+          gtag('event', 'rezervace_dokoncena', { sluzba: 'prezuti', datum_terminu: datum });
+        }
+      } catch (x) {}
       return;
     }
 
