@@ -158,6 +158,19 @@
   .field textarea::placeholder { color: #cbd5e1; }
   .field .nepovinne { text-transform: none; font-weight: 400; }
 
+  /* Zaškrtávátka uskladnění — velká plocha pro prst na mobilu */
+  /* .field .volba přebíjí obecné .field label (velká písmena, display:block) */
+  .field .volba { display: flex; align-items: flex-start; gap: 12px; background: var(--white); border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 14px; color: var(--text); }
+  .field .volba:has(input:checked) { border-color: var(--blue); background: var(--blue-light); }
+  .field .volba input { width: 22px; height: 22px; padding: 0; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--blue); cursor: pointer; }
+  .volba-text { font-size: 14px; color: var(--text); line-height: 1.4; }
+  .volba-text small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .volba-zdarma { color: #16a34a; font-weight: 700; }
+
+  /* Nabídka opravy překlepu v e-mailu */
+  .email-navrh { display: none; margin-top: 6px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; font-size: 13px; color: #92400e; line-height: 1.5; }
+  .email-navrh-btn { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--blue); text-decoration: underline; cursor: pointer; }
+
   /* Upozornění na bezpečnostní šrouby na potvrzení */
   .srouby-info { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.5; text-align: left; margin: 0 auto 14px; max-width: 360px; }
 
@@ -232,10 +245,20 @@
     <span style="font-size:14px;color:#1e293b">Komplet přezutí – sundání a nasazení pneu na disky, vyvážení, montáž na vůz</span>
     <span style="text-align:right;flex-shrink:0"><span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap">600 Kč</span><br><span style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap">za 4 kola</span></span>
   </div>
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0">
+  <!-- Přirážka patří jen ke kompletu (sundání/nasazení pneu na disk), proto je jako podřádek pod ním -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:6px 0 8px 14px;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:13px;color:#475569">↳ Přirážka za pneu RunFlat nebo nízkoprofilové (profil 45 a nižší, např. 225/<strong>40</strong> R18) – jen při přezouvání pneu na disk</span>
+    <span style="font-size:14px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
     <span style="font-size:14px;color:#1e293b">Výměna bezdušového ventilku (na požádání)</span>
     <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
   </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0">
+    <span style="font-size:14px;color:#1e293b">Uskladnění pneumatik (při přezutí u nás)</span>
+    <span style="font-size:15px;font-weight:700;color:#16a34a;white-space:nowrap;flex-shrink:0">zdarma</span>
+  </div>
+  <div style="margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:10px;font-size:13px;color:#475569;line-height:1.5">ℹ️ Přezouváme kola do velikosti <strong>20″ včetně</strong>.</div>
 </div>
 
 <div class="steps" id="steps">
@@ -303,7 +326,7 @@ let state = {
   selDate: null,
   selTime: null,
   step: 1,
-  kontakt: { n: '', p: '', e: '', c: '', o: '' },   // vyplněné údaje — přežijí návrat do kalendáře
+  kontakt: { n: '', p: '', e: '', c: '', o: '', u1: false, u2: false },   // vyplněné údaje — přežijí návrat do kalendáře
 };
 
 // Auto-skip prázdného měsíce se smí provést jen jednou, při prvním vykreslení
@@ -316,6 +339,91 @@ let autoSkipHotovo = false;
 let odesilani = false;
 let zamceno = false;
 let zamcenoText = '';
+
+// ── Měření cesty zákazníka (GA) ──────────────────────────────
+// Každá událost se pošle nejvýš jednou za načtení stránky — čísla v reportu
+// (list GA_prezuti) pak odpovídají počtu zákazníků, ne počtu kliknutí.
+// Při matdev gtag neexistuje a nic se neposílá.
+const MERENO_PREZUTI = {};
+function merPrezuti(nazev) {
+  if (MERENO_PREZUTI[nazev]) return;
+  MERENO_PREZUTI[nazev] = true;
+  try { if (typeof gtag === 'function') gtag('event', nazev); } catch (x) {}
+}
+
+// ── Kontrola překlepu v e-mailu ──────────────────────────────
+// Při překlepu v doméně (seznam.ct, gmaiil.com…) zákazníkovi nepřijde potvrzení
+// ani odkaz na zrušení. Stránka nabídne opravu; e-mail nikdy nemění sama.
+// Nabídka se ukáže až při kliknutí na Potvrdit, ne při opuštění pole — jinak by
+// posunula tlačítko pod prstem a první ťuknutí by se ztratilo.
+const EMAIL_DOMENY = ['seznam.cz', 'email.cz', 'centrum.cz', 'atlas.cz', 'volny.cz', 'post.cz',
+  'tiscali.cz', 'quick.cz', 'gmail.com', 'icloud.com', 'outlook.com', 'outlook.cz',
+  'hotmail.com', 'yahoo.com', 'live.com'];
+// Skutečné domény podobné těm výše — pro ně se oprava nenabízí
+const EMAIL_DOMENY_OK = ['mail.com', 'email.com', 'gmx.com', 'gmx.net', 'gmx.de', 'proton.me',
+  'protonmail.com', 'centrum.sk', 'atlas.sk', 'azet.sk', 'zoznam.sk', 'post.sk', 'live.cz', 'me.com', 'mac.com'];
+// Správná koncovka u schránek, které jinou nemají (gmail.cz → gmail.com)
+const EMAIL_KONCOVKA = { gmail: 'gmail.com', seznam: 'seznam.cz', centrum: 'centrum.cz', icloud: 'icloud.com' };
+
+function vzdalenostTextu(a, b) {   // počet překlepů (vynechané, přidané, záměna, prohození)
+  const d = [];
+  for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+  for (let j = 0; j <= b.length; j++) { d[0][j] = j; }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const c = a[i-1] === b[j-1] ? 0 : 1;
+      d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + c);
+      if (i > 1 && j > 1 && a[i-1] === b[j-2] && a[i-2] === b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+
+// Vrátí opravený e-mail, nebo '' když je v pořádku / nic podobného nezná.
+function navrhniEmail(email) {
+  const at = email.lastIndexOf('@');
+  if (at < 1) return '';
+  const jmeno = email.slice(0, at);
+  const domena = email.slice(at + 1).toLowerCase().replace(/[.,]+$/, '').replace(/,/g, '.');
+  if (!domena) return '';
+  if (EMAIL_DOMENY.includes(domena) || EMAIL_DOMENY_OK.includes(domena)) {
+    return domena === email.slice(at + 1) ? '' : jmeno + '@' + domena;   // jen tečka/čárka navíc na konci
+  }
+  const prvni = domena.split('.')[0];
+  if (EMAIL_KONCOVKA[prvni]) return jmeno + '@' + EMAIL_KONCOVKA[prvni];
+  let nejlepsi = '', min = 99;
+  for (const d of EMAIL_DOMENY) {
+    const v = vzdalenostTextu(domena, d);
+    if (v < min) { min = v; nejlepsi = d; }
+  }
+  const limit = domena.length >= 9 ? 2 : 1;   // u krátkých domén jen jeden překlep, ať se netrefí do cizí firmy
+  return min <= limit ? jmeno + '@' + nejlepsi : '';
+}
+
+// Ukáže / schová nabídku opravy pod polem e-mailu. Vrací navržený e-mail.
+function ukazNavrhEmailu() {
+  const pole = document.getElementById("f-email");
+  const el = document.getElementById("email-navrh");
+  if (!pole || !el) return '';
+  const navrh = navrhniEmail(pole.value.trim());
+  if (!navrh) { el.style.display = 'none'; return ''; }
+  el.innerHTML = 'Nemáte v e-mailu překlep? Myslíte <button type="button" class="email-navrh-btn" onclick="pouzijNavrhEmailu()">' + escHtml(navrh) + '</button>?';
+  el.dataset.navrh = navrh;
+  el.style.display = 'block';
+  merPrezuti('prezuti_email_preklep');
+  return navrh;
+}
+
+function pouzijNavrhEmailu() {
+  const el = document.getElementById("email-navrh");
+  document.getElementById("f-email").value = el.dataset.navrh || '';
+  el.style.display = 'none';
+  merPrezuti('prezuti_email_opraven');
+  checkForm();
+}
+
+// E-mail, u kterého zákazník nabídku opravy viděl a přesto odeslal — podruhé se nebrzdí
+let emailNavrhVidel = '';
 
 function escHtml(t) {
   return String(t == null ? '' : t).replace(/[&<>"]/g, function(c) {
@@ -452,6 +560,7 @@ function renderCalendar() {
         return;
       }
       // V celém rozsahu není nic volného → hláška (navigace tu nemá smysl)
+      merPrezuti('prezuti_zadny_termin');
       document.getElementById("view-date").innerHTML = `
         <div class="card" style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">
           Aktuálně není žádný volný termín.<br>Zkuste to prosím později.
@@ -462,6 +571,8 @@ function renderCalendar() {
 
   const predOk = lzeNaPredchozi(year, month);
   const dalOk = lzeNaDalsi(year, month);
+  merPrezuti('prezuti_kalendar');
+  if (!volnoVMesici) merPrezuti('prezuti_mesic_bez_terminu');
 
   let html = `
     <div id="slot-error-msg" class="slot-error">⚠️ Omlouváme se, tento termín byl právě obsazen. Vyberte prosím jiný čas.</div>
@@ -571,10 +682,22 @@ function renderForm() {
       <label>E-mail *</label>
       <input type="email" id="f-email" placeholder="jan@email.cz" value="${escHtml(k.e)}" autocomplete="email" inputmode="email" oninput="checkForm()">
       <div id="email-error" style="color:#dc2626;font-size:12px;margin-top:4px;display:none">Zadejte platný e-mail (např. jan@email.cz)</div>
+      <div id="email-navrh" class="email-navrh"></div>
     </div>
     <div class="field">
       <label>Vozidlo *</label>
       <input type="text" id="f-car" placeholder="Škoda Octavia" value="${escHtml(k.c)}" oninput="checkForm()">
+    </div>
+    <div class="field">
+      <label>Uskladnění pneumatik <span class="nepovinne">(nepovinné)</span></label>
+      <label class="volba">
+        <input type="checkbox" id="f-mam-ulozene" ${k.u1 ? 'checked' : ''} onchange="checkForm()">
+        <span class="volba-text">Mám u vás uskladněné pneumatiky<small>Připravíme je předem.</small></span>
+      </label>
+      <label class="volba">
+        <input type="checkbox" id="f-chci-ulozit" ${k.u2 ? 'checked' : ''} onchange="checkForm()">
+        <span class="volba-text">Chci u vás uskladnit sundané pneumatiky – <span class="volba-zdarma">zdarma</span></span>
+      </label>
     </div>
     <div class="field">
       <label>Poznámka <span class="nepovinne">(nepovinné)</span></label>
@@ -593,7 +716,7 @@ function renderForm() {
   checkForm();
 }
 
-function renderConfirm(name, phone, email, car) {
+function renderConfirm(name, phone, email, car, mamUlozene, chciUlozit) {
   document.getElementById("view-confirm").innerHTML = `
     <div class="confirm">
       <div class="confirm-icon">✅</div>
@@ -604,6 +727,8 @@ function renderConfirm(name, phone, email, car) {
         <div>🚗 ${escHtml(car)}</div>
         <div style="color:#2563eb">📅 <strong>${fmtDateCZ(state.selDate)} · ${state.selTime}</strong></div>
         <div style="color:#64748b">🔧 Přezutí pneumatik · 1 hod.</div>
+        ${mamUlozene ? '<div style="color:#64748b">🛞 Uskladněné pneu připravíme</div>' : ''}
+        ${chciUlozit ? '<div style="color:#64748b">🛞 Uskladnění pneumatik (zdarma)</div>' : ''}
         <div style="color:#64748b;margin-top:4px">📍 Dlouhá Loučka, Šumvaldská 59</div>
       </div>
 
@@ -628,6 +753,7 @@ function nextMonth() {
   if (!lzeNaDalsi(state.year, state.month)) return;
   if (state.month === 11) { state.month = 0; state.year++; }
   else state.month++;
+  merPrezuti('prezuti_dalsi_mesic');
   renderCalendar();
 }
 
@@ -637,7 +763,7 @@ function selectDate(ds) {
   updateSteps();
   renderTimeSlots();
   showView("time");
-  try { if (typeof gtag === 'function') gtag('event', 'rezervace_krok_datum'); } catch (x) {}
+  merPrezuti('rezervace_krok_datum');
 }
 
 function selectTime(t) {
@@ -646,10 +772,12 @@ function selectTime(t) {
   updateSteps();
   renderForm();
   showView("form");
-  try { if (typeof gtag === 'function') gtag('event', 'rezervace_krok_cas'); } catch (x) {}
+  merPrezuti('rezervace_krok_cas');
 }
 
 function goBack(toStep) {
+  // Zpět z výběru času = vybral den, ale žádný čas mu nevyhovoval
+  merPrezuti(toStep === 2 ? 'prezuti_zpet_z_casu' : 'prezuti_zpet_z_formulare');
   state.step = toStep - 1;
   updateSteps();
   if (toStep === 2) { renderCalendar(); showView("date"); }
@@ -669,10 +797,14 @@ function checkForm() {
   const e = document.getElementById("f-email").value.trim();
   const c = document.getElementById("f-car").value.trim();
   const o = document.getElementById("f-note").value.trim();
-  state.kontakt = { n: n, p: p, e: e, c: c, o: o };
+  const u1 = document.getElementById("f-mam-ulozene").checked;
+  const u2 = document.getElementById("f-chci-ulozit").checked;
+  state.kontakt = { n: n, p: p, e: e, c: c, o: o, u1: u1, u2: u2 };
   const btn = document.getElementById("submit-btn");
   const emailError = document.getElementById("email-error");
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+  const navrhEl = document.getElementById("email-navrh");
+  if (navrhEl && navrhEl.style.display === 'block' && navrhniEmail(e) !== navrhEl.dataset.navrh) navrhEl.style.display = 'none';
   if (e && !emailValid) {
     emailError.style.display = 'block';
   } else {
@@ -696,8 +828,18 @@ function submitForm() {
   const e = document.getElementById("f-email").value.trim();
   const c = document.getElementById("f-car").value.trim();
   const o = document.getElementById("f-note").value.trim();
+  const u1 = document.getElementById("f-mam-ulozene").checked;
+  const u2 = document.getElementById("f-chci-ulozit").checked;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
   if (!n || !p || !e || !emailValid || !c) return;
+  // Překlep v doméně → poprvé zastavit a ukázat nabídku opravy. Když zákazník
+  // e-mail nechá a klikne znovu, odešle se (může mít firemní doménu).
+  if (navrhniEmail(e) && emailNavrhVidel !== e) {
+    emailNavrhVidel = e;
+    ukazNavrhEmailu();
+    document.getElementById("f-email").scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
 
   const datum = state.selDate;
   const cas = state.selTime;
@@ -721,6 +863,8 @@ function submitForm() {
       email: e,
       auto: c,
       poznamka: o,
+      mam_uskladnene: u1,
+      chci_uskladnit: u2,
       datum: datum,
       cas: cas,
       sluzby: 'Přezutí pneumatik',
@@ -741,7 +885,7 @@ function submitForm() {
         if (!window.GAS_BOOKED[datum]) window.GAS_BOOKED[datum] = [];
         window.GAS_BOOKED[datum].push(cas);
       } catch (x) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
-      renderConfirm(n, p, e, c);
+      renderConfirm(n, p, e, c, u1, u2);
       showView("confirm");
       // Měření dokončené rezervace v GA (při matdev je gtag vypnutý)
       try {
@@ -753,6 +897,7 @@ function submitForm() {
     }
 
     if (data && data.code === 'slot_obsazen') {
+      merPrezuti('prezuti_termin_obsazen');
       // Zpět na kalendář — údaje zůstanou v state.kontakt a formulář je znovu vyplní
       state.selDate = null;
       state.selTime = null;
@@ -806,7 +951,7 @@ function submitForm() {
 }
 
 function resetAll() {
-  state = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null, step: 1, kontakt: { n: '', p: '', e: '', c: '', o: '' } };
+  state = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null, step: 1, kontakt: { n: '', p: '', e: '', c: '', o: '', u1: false, u2: false } };
   updateSteps();
   renderCalendar();
   showView("date");
