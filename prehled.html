@@ -197,7 +197,9 @@ function render() {
   document.getElementById('prev-btn').disabled = weekOffset <= -1;
   document.getElementById('next-btn').disabled = weekOffset >= 4;
 
-  var dnes = data.dnes;
+  // Dnešek podle hodin zařízení. data.dnes z GAS je o den pozadu
+  // (půlnoc českého času převedená do UTC = 22:00 předchozího dne).
+  var dnes = fmtDS(new Date());
   var html = '';
   for (var i = 0; i < 7; i++) {
     var den = new Date(pondeli);
