@@ -142,6 +142,15 @@
   .time-slot:active { border-color: var(--blue); background: var(--blue-light); }
   .time-slot.booked { background: var(--bg); border-color: var(--border); color: #cbd5e1; cursor: not-allowed; box-shadow: none; }
   .time-slot.booked .booked-label { font-size: 10px; color: #cbd5e1; margin-top: 4px; letter-spacing: 0.5px; display: block; font-weight: 500; }
+  /* Termíny aut, která si zákazník už v této návštěvě objednal („Přidat další auto“) */
+  .cal-day.moje { border-color: #16a34a !important; box-shadow: inset 0 0 0 1px #16a34a; }
+  .cal-day.moje.unavailable { background: #dcfce7; color: #166534; font-weight: 600; }
+  .legend-moje { color: #16a34a; font-weight: 600; }
+  .time-slot.moje { background: #dcfce7; border-color: #16a34a; color: #166534; }
+  .time-slot.moje .booked-label { color: #16a34a; font-weight: 700; }
+  .dalsi-auto-btn { display: block; width: 100%; max-width: 360px; margin: 0 auto 12px; background: var(--blue); color: #fff; border: none; border-radius: 12px; padding: 14px 18px; font-size: 15px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
+  .dalsi-auto-btn:active { background: var(--blue-dark); }
+  .objednana-auta { max-width: 360px; margin: 0 auto 14px; text-align: left; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
   .time-slot.selected { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
 
   /* SUMMARY BAR */
@@ -245,20 +254,22 @@
     <span style="font-size:14px;color:#1e293b">Komplet přezutí – sundání a nasazení pneu na disky, vyvážení, montáž na vůz</span>
     <span style="text-align:right;flex-shrink:0"><span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap">600 Kč</span><br><span style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap">za 4 kola</span></span>
   </div>
-  <!-- Přirážka patří jen ke kompletu (sundání/nasazení pneu na disk), proto je jako podřádek pod ním -->
-  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:6px 0 8px 14px;border-bottom:1px solid #f1f5f9">
-    <span style="font-size:13px;color:#475569">↳ Přirážka za pneu RunFlat nebo nízkoprofilové (profil 45 a nižší, např. 225/<strong>40</strong> R18) – jen při přezouvání pneu na disk</span>
-    <span style="font-size:14px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
-  </div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
     <span style="font-size:14px;color:#1e293b">Výměna bezdušového ventilku (na požádání)</span>
+    <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:14px;color:#1e293b">RunFlat a nízkoprofilové pneu</span>
     <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0">
     <span style="font-size:14px;color:#1e293b">Uskladnění pneumatik (při přezutí u nás)</span>
     <span style="font-size:15px;font-weight:700;color:#16a34a;white-space:nowrap;flex-shrink:0">zdarma</span>
   </div>
-  <div style="margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:10px;font-size:13px;color:#475569;line-height:1.5">ℹ️ Přezouváme kola do velikosti <strong>20″ včetně</strong>.</div>
+  <div style="margin-top:8px;padding:10px 12px;background:#f8fafc;border-radius:10px;font-size:13px;color:#475569;line-height:1.6">
+    ✓ <strong>Vyvažovací závaží jsou v ceně</strong> – nic za ně nedoplácíte.<br>
+    ✓ <strong>Stejná cena pro všechny velikosti disků</strong> až do 20″ včetně. Větší kola nepřezouváme.
+  </div>
 </div>
 
 <div class="steps" id="steps">
@@ -339,6 +350,16 @@ let autoSkipHotovo = false;
 let odesilani = false;
 let zamceno = false;
 let zamcenoText = '';
+
+// Auta objednaná v této návštěvě: [{datum, cas, auto}]. Slouží k vyznačení
+// v kalendáři při „Přidat další auto“. Po obnovení stránky se zapomenou.
+let objednanaAuta = [];
+function mojeAuto(ds, cas) {
+  for (let i = 0; i < objednanaAuta.length; i++) {
+    if (objednanaAuta[i].datum === ds && (!cas || objednanaAuta[i].cas === cas)) return i + 1;
+  }
+  return 0;
+}
 
 // ── Měření cesty zákazníka (GA) ──────────────────────────────
 // Každá událost se pošle nejvýš jednou za načtení stránky — čísla v reportu
@@ -596,6 +617,7 @@ function renderCalendar() {
     if (past || !work || isFullyBooked(year, month, d)) cls += " unavailable";
     else cls += " available";
     if (sel) cls += " selected";
+    if (mojeAuto(ds)) cls += " moje";
     const onclick = (!past && work && !isFullyBooked(year, month, d)) ? `onclick="selectDate('${ds}')"` : "";
     html += `<div class="${cls}" ${onclick}>${d}</div>`;
   }
@@ -603,6 +625,7 @@ function renderCalendar() {
   html += `</div>
       <div class="cal-legend">
         <span class="legend-avail">■ Dostupný den</span>
+        ${objednanaAuta.length ? '<span class="legend-moje">■ Vaše objednávka</span>' : ''}
       </div>
       ${volnoVMesici ? '' : `<div class="cal-empty-note">V tomto měsíci není volný termín.${predOk ? '<br>Zkuste předchozí měsíc.' : ''}</div>`}
     </div>`;
@@ -645,9 +668,12 @@ function renderTimeSlots() {
     let cls = "time-slot";
     if (isUnavailable) cls += " booked";
     if (isSel) cls += " selected";
+    const mojeCislo = mojeAuto(state.selDate, t);
+    if (mojeCislo) cls += " moje";
     const onclick = !isUnavailable ? `onclick="selectTime('${t}')"` : "";
     let label = "";
-    if (isBooked) label = '<span class="booked-label">OBSAZENO</span>';
+    if (mojeCislo) label = '<span class="booked-label">' + mojeCislo + '. AUTO</span>';
+    else if (isBooked) label = '<span class="booked-label">OBSAZENO</span>';
     else if (isTooSoon) label = '<span class="booked-label">NELZE</span>';
     html += `<div class="${cls}" ${onclick}>${t}${label}</div>`;
   }
@@ -670,23 +696,26 @@ function renderForm() {
       &nbsp;·&nbsp;
       Přezutí (1 hod.)
     </div>
+    <!-- Skutečný <form> s name/for — Chrome na Androidu podle toho spolehlivěji nabídne
+         uložené jméno, telefon a e-mail. Neodesílá se: odeslání řeší submitForm(). -->
+    <form id="f-rezervace" autocomplete="on" onsubmit="event.preventDefault(); return false;">
     <div class="field">
-      <label>Jméno a příjmení *</label>
-      <input type="text" id="f-name" placeholder="Jan Novák" value="${escHtml(k.n)}" autocomplete="name" oninput="checkForm()">
+      <label for="f-name">Jméno a příjmení *</label>
+      <input type="text" id="f-name" name="name" placeholder="Jan Novák" value="${escHtml(k.n)}" autocomplete="name" oninput="checkForm()">
     </div>
     <div class="field">
-      <label>Telefon *</label>
-      <input type="tel" id="f-phone" placeholder="777 000 000" value="${escHtml(k.p)}" autocomplete="tel" oninput="checkForm()">
+      <label for="f-phone">Telefon *</label>
+      <input type="tel" id="f-phone" name="tel" placeholder="777 000 000" value="${escHtml(k.p)}" autocomplete="tel" oninput="checkForm()">
     </div>
     <div class="field">
-      <label>E-mail *</label>
-      <input type="email" id="f-email" placeholder="jan@email.cz" value="${escHtml(k.e)}" autocomplete="email" inputmode="email" oninput="checkForm()">
+      <label for="f-email">E-mail *</label>
+      <input type="email" id="f-email" name="email" placeholder="jan@email.cz" value="${escHtml(k.e)}" autocomplete="email" inputmode="email" oninput="checkForm()">
       <div id="email-error" style="color:#dc2626;font-size:12px;margin-top:4px;display:none">Zadejte platný e-mail (např. jan@email.cz)</div>
       <div id="email-navrh" class="email-navrh"></div>
     </div>
     <div class="field">
-      <label>Vozidlo *</label>
-      <input type="text" id="f-car" placeholder="Škoda Octavia" value="${escHtml(k.c)}" oninput="checkForm()">
+      <label for="f-car">Vozidlo *</label>
+      <input type="text" id="f-car" name="vozidlo" placeholder="Škoda Octavia" value="${escHtml(k.c)}" autocomplete="off" oninput="checkForm()">
     </div>
     <div class="field">
       <label>Uskladnění pneumatik <span class="nepovinne">(nepovinné)</span></label>
@@ -700,11 +729,12 @@ function renderForm() {
       </label>
     </div>
     <div class="field">
-      <label>Poznámka <span class="nepovinne">(nepovinné)</span></label>
-      <textarea id="f-note" maxlength="500" placeholder="Např. 19&quot; disky, RunFlat, přivezu i rezervu…" oninput="checkForm()">${escHtml(k.o)}</textarea>
+      <label for="f-note">Poznámka <span class="nepovinne">(nepovinné)</span></label>
+      <textarea id="f-note" name="poznamka" maxlength="500" placeholder="Např. 19&quot; disky, RunFlat, přivezu i rezervu…" oninput="checkForm()">${escHtml(k.o)}</textarea>
     </div>
     <div class="form-error" id="form-error"></div>
-    <button class="submit-btn inactive" id="submit-btn" onclick="submitForm()">Potvrdit rezervaci →</button>
+    <button type="button" class="submit-btn inactive" id="submit-btn" onclick="submitForm()">Potvrdit rezervaci →</button>
+    </form>
   `;
 
   // Po nejistém výsledku zůstává hláška i zamčené tlačítko,
@@ -731,6 +761,10 @@ function renderConfirm(name, phone, email, car, mamUlozene, chciUlozit) {
         ${chciUlozit ? '<div style="color:#64748b">🛞 Uskladnění pneumatik (zdarma)</div>' : ''}
         <div style="color:#64748b;margin-top:4px">📍 Dlouhá Loučka, Šumvaldská 59</div>
       </div>
+
+      ${objednanaAuta.length > 1 ? '<div class="objednana-auta"><strong>Objednaná auta:</strong><br>' + objednanaAuta.map(function(a, i) { return (i + 1) + '. ' + escHtml(a.auto) + ' – ' + fmtDateCZ(a.datum) + ' · ' + a.cas; }).join('<br>') + '</div>' : ''}
+
+      <button class="dalsi-auto-btn" onclick="pridatDalsiAuto()">+ Přidat další auto</button>
 
       <div class="srouby-info">🔩 Máte-li na kolech bezpečnostní šrouby, nezapomeňte prosím adaptér (klíč) k nim.</div>
 
@@ -885,6 +919,7 @@ function submitForm() {
         if (!window.GAS_BOOKED[datum]) window.GAS_BOOKED[datum] = [];
         window.GAS_BOOKED[datum].push(cas);
       } catch (x) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
+      objednanaAuta.push({ datum: datum, cas: cas, auto: c });
       renderConfirm(n, p, e, c, u1, u2);
       showView("confirm");
       // Měření dokončené rezervace v GA (při matdev je gtag vypnutý)
@@ -948,6 +983,22 @@ function submitForm() {
       }).catch(function(){});
     } catch (x) {}
   }
+}
+
+// Další auto: kalendář od začátku, kontakt předvyplněný, vozidlo/uskladnění/poznámka prázdné.
+// Objednané termíny zůstanou vyznačené (objednanaAuta).
+function pridatDalsiAuto() {
+  const k = state.kontakt || {};
+  const posledni = objednanaAuta[objednanaAuta.length - 1];
+  const d = posledni ? new Date(posledni.datum + 'T00:00:00') : new Date();
+  state = { month: d.getMonth(), year: d.getFullYear(), selDate: null, selTime: null, step: 1,
+            kontakt: { n: k.n || '', p: k.p || '', e: k.e || '', c: '', o: '', u1: false, u2: false } };
+  emailNavrhVidel = '';
+  merPrezuti('prezuti_dalsi_auto');
+  updateSteps();
+  renderCalendar();
+  showView("date");
+  window.scrollTo(0, 0);
 }
 
 function resetAll() {
