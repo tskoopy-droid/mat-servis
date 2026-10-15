@@ -382,7 +382,7 @@ window.GAS_NACTENO.then(function() {
     <div class="naceneni-section" id="naceneniSection">
       <div class="naceneni-title">Odeslat k nacenění</div>
       <div class="naceneni-sub">Zadejte email a my vám pošleme cenovou nabídku přímo pro vaše vozidlo.</div>
-      <div class="field"><label>Váš email</label><input type="email" id="naceneniEmail" placeholder="vas@email.cz"></div>
+      <div class="field"><label for="naceneniEmail">Váš email</label><input type="email" id="naceneniEmail" name="email" placeholder="vas@email.cz" autocomplete="email" inputmode="email"></div>
       <button onclick="odeslaPoptavku()" style="width:100%;padding:13px;background:var(--blue);border:none;border-radius:12px;font-family:Inter,sans-serif;font-weight:700;font-size:14px;color:#fff;cursor:pointer;">Odeslat poptávku</button>
     </div>
     <div id="olejContinueWrap" style="margin-top:16px;display:none;">
@@ -514,12 +514,16 @@ window.GAS_NACTENO.then(function() {
   <div class="card hidden" id="cardKontakt">
     <div class="section-title">Kontaktní údaje</div>
     <div class="section-sub">Vyplňte prosím své údaje pro potvrzení rezervace.</div>
-    <div class="field"><label>Jméno a příjmení *</label><input type="text" id="fJmeno" placeholder="Jan Novák"></div>
-    <div class="field"><label>Telefon *</label><input type="tel" id="fTelefon" placeholder="+420 777 123 456"></div>
-    <div class="field"><label>E-mail * <span style="text-transform:none;font-weight:400;">(přijde vám potvrzení a odkaz na zrušení)</span></label><input type="email" id="fEmail" placeholder="jan@email.cz" autocomplete="email" inputmode="email"></div>
-    <div class="field"><label>Poznámka</label><textarea id="fPoznamka" placeholder="Dotazy, speciální požadavky..."></textarea></div>
+    <!-- Skutečný <form> s name/for — Chrome na Androidu podle toho spolehlivěji nabídne
+         uložené jméno, telefon a e-mail. Neodesílá se: odeslání řeší odeslat(). -->
+    <form id="f-kontakt" autocomplete="on" onsubmit="event.preventDefault(); return false;">
+    <div class="field"><label for="fJmeno">Jméno a příjmení *</label><input type="text" id="fJmeno" name="name" placeholder="Jan Novák" autocomplete="name"></div>
+    <div class="field"><label for="fTelefon">Telefon *</label><input type="tel" id="fTelefon" name="tel" placeholder="+420 777 123 456" autocomplete="tel"></div>
+    <div class="field"><label for="fEmail">E-mail * <span style="text-transform:none;font-weight:400;">(přijde vám potvrzení a odkaz na zrušení)</span></label><input type="email" id="fEmail" name="email" placeholder="jan@email.cz" autocomplete="email" inputmode="email"></div>
+    <div class="field"><label for="fPoznamka">Poznámka</label><textarea id="fPoznamka" name="poznamka" placeholder="Dotazy, speciální požadavky..."></textarea></div>
     <div class="error-box" id="kontaktError"></div>
-    <button class="submit-btn" onclick="odeslat()">Odeslat rezervaci</button>
+    <button type="button" class="submit-btn" onclick="odeslat()">Odeslat rezervaci</button>
+    </form>
   </div>
 
   <!-- Hotovo -->
@@ -540,6 +544,22 @@ var VIN_PROXY  = window.GAS_URL;
 var OLEJE_API  = window.GAS_URL;
 // Rozpoznání VIN z fotky jde přes GAS (akce vin_ocr) — klíč k Vision je ve Vlastnostech skriptu.
 var FOTO_MAX_PX = 1600;   // delší strana fotky před odesláním
+
+// ── Měření cesty zákazníka (GA) ──────────────────────────────
+// Každá událost se pošle nejvýš jednou za načtení stránky — čísla v reportu
+// pak odpovídají počtu zákazníků, ne počtu kliknutí (návrat zpět se nepočítá znovu).
+// Při matdev gtag neexistuje a nic se neposílá.
+var MERENO_OLEJ = {};
+function merOlej(nazev, parametry) {
+  if (MERENO_OLEJ[nazev]) return;
+  MERENO_OLEJ[nazev] = true;
+  try { if (typeof gtag === 'function') gtag('event', nazev, parametry || {}); } catch (x) {}
+}
+var KROKY_OLEJ = {
+  cardOlej: 'olej_krok_olej', cardZaklad: 'olej_krok_cena', cardVzduch: 'olej_krok_vzduch',
+  cardKabina: 'olej_krok_kabina', cardPalivo: 'olej_krok_palivo', cardSouhrn: 'olej_krok_souhrn',
+  cardTermin: 'olej_krok_kalendar'
+};
 
 // ── Kamera / Vision API ────────────────────────────────────────
 function otevriVyberFotky() {
@@ -572,6 +592,7 @@ function zpracujFotku(input) {
       btn.innerHTML = svgCam + ' Skenovat VIN';
       btn.disabled = false;
       if (data && data.error) {
+        merOlej('olej_sken_neuspech');
         document.getElementById('vinError').textContent = (data.error.message || 'Rozpoznání se nepodařilo.') + ' VIN můžete zadat ručně.';
         document.getElementById('vinError').classList.add('visible');
         input.value = '';
@@ -592,10 +613,12 @@ function zpracujFotku(input) {
       }
       var vin = vinMatch ? (vinMatch[1] || vinMatch[0]) : null;
       if (vin) {
+        merOlej('olej_sken_ok');
         document.getElementById('vinInput').value = vin;
         document.getElementById('vinError').textContent = '';
         document.getElementById('vinError').classList.remove('visible');
       } else {
+        merOlej('olej_sken_neuspech');
         document.getElementById('vinError').textContent = 'VIN nebyl na fotografii nalezen. Zkuste znovu s ostřejším záběrem.';
         document.getElementById('vinError').classList.add('visible');
       }
@@ -604,6 +627,7 @@ function zpracujFotku(input) {
     .catch(function() {
       btn.innerHTML = svgCam + ' Skenovat VIN';
       btn.disabled = false;
+      merOlej('olej_sken_neuspech');
       document.getElementById('vinError').textContent = 'Chyba při rozpoznávání textu. Zkuste to znovu.';
       document.getElementById('vinError').classList.add('visible');
       input.value = '';
@@ -691,7 +715,7 @@ function nactiVin() {
     .then(function(data) {
       btn.innerHTML = 'Načíst ' + svgArrow;
       btn.disabled = false;
-      if (data.error) { err.textContent = data.error; err.classList.add('visible'); return; }
+      if (data.error) { merOlej('olej_vin_nenalezen'); err.textContent = data.error; err.classList.add('visible'); return; }
 
       stav.vin          = vin;
       stav.znacka       = data.znacka;
@@ -728,6 +752,7 @@ function nactiVin() {
     .catch(function() {
       btn.innerHTML = 'Načíst ' + svgArrow;
       btn.disabled = false;
+      merOlej('olej_vin_chyba_spojeni');
       err.textContent = 'Nepodařilo se připojit. Zkuste znovu.';
       err.classList.add('visible');
     });
@@ -1036,6 +1061,7 @@ function zpetZVymeny() {
 
 /** Přechod z výběru intervalu na kartu se základní cenou. */
 function naZakladniCenu() {
+  if (stav.olejVybrany) merOlej((stav.olejVybrany.km || 0) > 20000 ? 'olej_vyber_ll' : 'olej_vyber_standard');
   zobrazZaklad();
   zobrazKartu('cardZaklad');
   updateSteps(2);
@@ -1228,6 +1254,7 @@ var NACENENI_DUVODY = {
 
 function zobrazNaceneni(duvod) {
   stav.naceneniDuvod = NACENENI_DUVODY[duvod] ? duvod : 'olej_chybi';
+  merOlej('olej_naceneni_' + stav.naceneniDuvod);
   var d = NACENENI_DUVODY[stav.naceneniDuvod];
   var info = document.getElementById('infoNaceneni');
   if (info) info.textContent = d.info;
@@ -1330,6 +1357,7 @@ function uplatnitKod() {
       status.style.display='block';
       status.style.color='var(--green)';
       status.textContent='✓ Kód uplatněn (sleva ' + stav.slevaProcent + ' %)';
+      merOlej('olej_sleva_kod');
       document.getElementById('fSlevaKod').disabled = true;
       btn.textContent = 'Uplatněno';
       aktualizujSouhrn();
@@ -1364,6 +1392,7 @@ function odeslaPoptavku() {
       return;
     }
     document.getElementById('infoNaceneni').classList.remove('visible');
+    merOlej('olej_poptavka_odeslana', { duvod: stav.naceneniDuvod || '' });
     document.getElementById('naceneniSection').innerHTML = '<div style="text-align:center;padding:12px;color:var(--green);font-weight:600;">✓ Poptávka odeslána! Brzy vás kontaktujeme.</div>';
   })
   .catch(function() { alert('Chyba při odesílání. Zkuste znovu.'); });
@@ -1375,6 +1404,7 @@ var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardZaklad','cardVzduch','
 function zobrazKartu(id) {
   VSECHNY_KARTY.forEach(function(k) { document.getElementById(k).classList.add('hidden'); });
   document.getElementById(id).classList.remove('hidden');
+  if (KROKY_OLEJ[id]) merOlej(KROKY_OLEJ[id]);
   nastavProgress(id);
   window.scrollTo(0, 0);
 }
@@ -1683,12 +1713,17 @@ function odeslat() {
       try {
         if (typeof gtag === 'function') {
           gtag('event', 'rezervace_dokoncena', { sluzba: 'olej', value: stav.cenaCelkem, currency: 'CZK', datum_terminu: stav.selDate });
+          var pol = (stav.naceneni && stav.naceneni.polozky) || {};
+          if (stav.sluzby.vzduch && pol.vzduchovy) merOlej('olej_obj_vzduch');
+          if (pol.kabinovy && stav.kabinaVarianta >= 0) merOlej('olej_obj_kabina');
+          if (stav.sluzby.palivo && pol.palivovy) merOlej('olej_obj_palivo');
         }
       } catch (x) {}
       return;
     }
 
     if (resp&&resp.code==='slot_obsazen') {
+      merOlej('olej_termin_obsazen');
       calState.selDate=null; calState.selTime=null; window._slotError=true;
       zobrazKartu('cardTermin'); updateSteps(4); renderCalendar();
       btn.textContent='Odeslat rezervaci'; btn.disabled=false;
@@ -1711,6 +1746,7 @@ function odeslat() {
   // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
   // aby zákazník nevytvořil druhou rezervaci.
   function nejistyVysledek(typ, detail) {
+    merOlej('olej_odeslani_nejiste');
     err.textContent='Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. '+
       'Pokud prošla, do několika minut vám přijde potvrzení na '+email+' (zkontrolujte i spam). '+
       'Pokud neprošla, ozveme se vám e-mailem.';
