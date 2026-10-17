@@ -98,6 +98,16 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   .save-status { font-size:13px; font-weight:600; }
   .save-status.ok { color:var(--green); }
   .save-status.err { color:var(--red); }
+  .platba-tiles { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .platba-tile { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:12px 6px; border:2px solid var(--border); border-radius:12px; background:var(--white); font-family:'Inter',sans-serif; font-size:13px; font-weight:700; color:var(--text); cursor:pointer; transition:all 0.15s; }
+  .platba-tile .ico { font-size:22px; line-height:1; }
+  .platba-tile:hover { border-color:var(--blue-mid); }
+  .platba-tile.active { border-color:var(--blue); background:var(--blue-light); color:var(--blue-dark); }
+  .platba-tile:disabled { cursor:not-allowed; opacity:0.55; }
+  .platba-tile.active:disabled { opacity:1; }
+  .platba-tiles.chyba .platba-tile { border-color:var(--red); }
+  .platba-hint { font-size:12px; color:var(--red); font-weight:600; margin-top:6px; display:none; }
+  .platba-tiles.chyba + .platba-hint { display:block; }
   .eet-check { display:flex; align-items:center; gap:8px; margin-top:12px; margin-bottom:0; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer; }
   .eet-check input { width:18px; height:18px; margin:0; accent-color:var(--blue); flex-shrink:0; }
   .eet-check input:disabled + span { color:var(--text-muted); }
@@ -182,13 +192,20 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <label>Datum splatnosti</label>
         <input type="date" id="splatnost">
         <label>Forma úhrady</label>
-        <select id="forma" onchange="syncEet()">
-          <option value="Hotově" selected>Hotově</option>
+        <select id="forma" onchange="syncEet()" style="display:none">
+          <option value="" selected></option>
+          <option value="Hotově">Hotově</option>
           <option value="Převodem">Převodem</option>
           <option value="Kartou">Kartou</option>
         </select>
+        <div class="platba-tiles" id="platba-tiles">
+          <button type="button" class="platba-tile" data-forma="Hotově" onclick="vyberFormu('Hotově')"><span class="ico">💵</span>Hotově</button>
+          <button type="button" class="platba-tile" data-forma="Kartou" onclick="vyberFormu('Kartou')"><span class="ico">💳</span>Kartou</button>
+          <button type="button" class="platba-tile" data-forma="Převodem" onclick="vyberFormu('Převodem')"><span class="ico">🏦</span>Převodem</button>
+        </div>
+        <div class="platba-hint">Vyber formu úhrady.</div>
         <label class="eet-check" title="Hotovost a karta se platí vždy na místě. U převodu zaškrtni, jen když zákazník zaplatil QR kódem přímo u tebe.">
-          <input type="checkbox" id="eet_na_miste" checked disabled>
+          <input type="checkbox" id="eet_na_miste" disabled>
           <span>Zaplaceno na místě <span class="opt">(eviduje se do EET)</span></span>
         </label>
       </div>
@@ -280,10 +297,34 @@ let sumupCastka  = 0;      // částka, která se na terminálu zaplatila
 let sumupBezi    = false;
 
 // Hotově a kartou = vždy na místě (EET). Převodem jen když zaplatil QR u pultu.
+// Dlaždice formy úhrady — žádná není vybraná předem
+function vyberFormu(f) {
+  const sel = document.getElementById('forma');
+  if (sel.disabled) return;
+  sel.value = f;
+  document.getElementById('platba-tiles').classList.remove('chyba');
+  syncEet();
+}
+
+function maFormu() {
+  if (document.getElementById('forma').value) return true;
+  document.getElementById('platba-tiles').classList.add('chyba');
+  document.getElementById('platba-tiles').scrollIntoView({ behavior:'smooth', block:'center' });
+  return false;
+}
+
 function syncEet() {
-  const forma = document.getElementById('forma').value;
+  const sel = document.getElementById('forma');
+  const forma = sel.value;
   const cb = document.getElementById('eet_na_miste');
-  if (forma === 'Převodem') {
+  document.querySelectorAll('.platba-tile').forEach(t => {
+    t.classList.toggle('active', t.dataset.forma === forma);
+    t.disabled = sel.disabled;
+  });
+  if (!forma) {
+    cb.checked = false;
+    cb.disabled = true;
+  } else if (forma === 'Převodem') {
     if (cb.disabled) cb.checked = false;
     cb.disabled = false;
   } else {
@@ -296,6 +337,7 @@ function syncEet() {
 // ── Platba kartou na terminálu SumUp Solo ──
 async function zaplatitKartou() {
   if (sumupBezi || sumupKod) return;
+  if (!maFormu()) return;
   const cislo = document.getElementById('cislo').value.trim();
   if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
   const castka = celkem();
@@ -598,6 +640,8 @@ function resetForm() {
   polozky = []; ulozeno = false; posledniEet = null;
   sumupKod = ''; sumupCastka = 0;
   document.getElementById('forma').disabled = false;
+  document.getElementById('forma').value = '';
+  document.getElementById('platba-tiles').classList.remove('chyba');
   setStatus('');
   document.getElementById('save-btn').disabled = false;
   document.getElementById('cislo').value = dalsiCislo || '';
@@ -606,6 +650,7 @@ function resetForm() {
 
 // ── Náhled a tisk ──
 function zobrazNahled() {
+  if (!maFormu()) return;
   const cislo = document.getElementById('cislo').value.trim();
   if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
   if (celkem() <= 0) { alert('Faktura nemá žádné položky s cenou.'); return; }
@@ -615,6 +660,7 @@ function zobrazNahled() {
 
 // ── Uložení do evidence + tisk ──
 async function ulozAVytiskni() {
+  if (!maFormu()) return;
   const cislo = document.getElementById('cislo').value.trim();
   if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
   const cisteP = polozky.map(p => ({ popis:p.popis, jednotka:p.jednotka, mnozstvi: qOf(p), cena: unitPrice(p) }));
