@@ -45,6 +45,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   .btn-save { background:var(--green); color:#fff; }
   .btn-light { background:var(--blue-light); color:var(--blue); }
   .btn-ghost { background:var(--bg); color:var(--text-muted); }
+  .btn-karta { background:var(--text); color:#fff; }
+  .sumup-box { display:none; margin-bottom:12px; padding:14px 16px; border-radius:14px; background:var(--blue-light); border:1px solid var(--blue-mid); color:var(--blue-dark); font-size:14px; font-weight:600; align-items:center; gap:12px; flex-wrap:wrap; }
+  .sumup-box .spinner { border-color:rgba(29,78,216,0.25); border-top-color:var(--blue-dark); }
+  .sumup-box span { flex:1; min-width:180px; }
   .btn-sm { padding:8px 12px; font-size:12px; }
 
   .card { background:var(--white); border-radius:20px; padding:22px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
@@ -94,6 +98,9 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   .save-status { font-size:13px; font-weight:600; }
   .save-status.ok { color:var(--green); }
   .save-status.err { color:var(--red); }
+  .eet-check { display:flex; align-items:center; gap:8px; margin-top:12px; margin-bottom:0; text-transform:none; letter-spacing:0; font-size:13px; color:var(--text); cursor:pointer; }
+  .eet-check input { width:18px; height:18px; margin:0; accent-color:var(--blue); flex-shrink:0; }
+  .eet-check input:disabled + span { color:var(--text-muted); }
 
   .spinner { display:inline-block; width:13px; height:13px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:6px; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -134,6 +141,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   .print-platba-row .lb { color:#475569; display:inline-block; width:90px; font-size:8pt; }
   .print-poznamka { margin-top:14px; padding:8px 10px; border:1px solid #94a3b8; border-left:3px solid #1e293b; font-size:8pt; color:#475569; }
   .print-dph-note { margin-top:10px; font-size:8pt; font-style:italic; color:#475569; }
+  .print-eet { margin-top:10px; font-size:8pt; color:#475569; word-break:break-all; }
   #print-qr svg { width:150px !important; height:150px !important; display:block; }
 </style>
 </head>
@@ -174,11 +182,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <label>Datum splatnosti</label>
         <input type="date" id="splatnost">
         <label>Forma úhrady</label>
-        <select id="forma">
+        <select id="forma" onchange="syncEet()">
           <option value="Hotově" selected>Hotově</option>
           <option value="Převodem">Převodem</option>
           <option value="Kartou">Kartou</option>
         </select>
+        <label class="eet-check" title="Hotovost a karta se platí vždy na místě. U převodu zaškrtni, jen když zákazník zaplatil QR kódem přímo u tebe.">
+          <input type="checkbox" id="eet_na_miste" checked disabled>
+          <span>Zaplaceno na místě <span class="opt">(eviduje se do EET)</span></span>
+        </label>
       </div>
 
       <div class="card">
@@ -224,10 +236,17 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       <textarea id="poznamka" placeholder="Volitelná poznámka na faktuře..."></textarea>
     </div>
 
+    <div class="sumup-box" id="sumup-box">
+      <div class="spinner"></div>
+      <span id="sumup-text">Posílám částku na terminál…</span>
+      <button class="btn btn-light" id="sumup-zrusit" onclick="zrusitKartu()">Zrušit platbu</button>
+    </div>
+
     <div class="bottom-actions">
       <span class="save-status" id="save-status"></span>
       <button class="btn btn-light" onclick="resetForm()">Vymazat formulář</button>
       <button class="btn btn-light" onclick="zobrazNahled()">Náhled (bez uložení)</button>
+      <button class="btn btn-karta" id="karta-btn" onclick="zaplatitKartou()" style="display:none">💳 Zaplatit na terminálu</button>
       <button class="btn btn-save" id="save-btn" onclick="ulozAVytiskni()">💾 Uložit a vytisknout</button>
     </div>
 
@@ -255,6 +274,110 @@ let dalsiCislo = '';
 let ulozeno = false;
 let rezervaceId  = '';
 let rezervaceCol = '';
+let posledniEet  = null;   // odpověď EET z posledního uložení (pro tisk)
+let sumupKod     = '';     // kód transakce SumUp po úspěšné platbě na terminálu
+let sumupCastka  = 0;      // částka, která se na terminálu zaplatila
+let sumupBezi    = false;
+
+// Hotově a kartou = vždy na místě (EET). Převodem jen když zaplatil QR u pultu.
+function syncEet() {
+  const forma = document.getElementById('forma').value;
+  const cb = document.getElementById('eet_na_miste');
+  if (forma === 'Převodem') {
+    if (cb.disabled) cb.checked = false;
+    cb.disabled = false;
+  } else {
+    cb.checked = true;
+    cb.disabled = true;
+  }
+  document.getElementById('karta-btn').style.display = (forma === 'Kartou' && !sumupKod && !ulozeno) ? '' : 'none';
+}
+
+// ── Platba kartou na terminálu SumUp Solo ──
+async function zaplatitKartou() {
+  if (sumupBezi || sumupKod) return;
+  const cislo = document.getElementById('cislo').value.trim();
+  if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
+  const castka = celkem();
+  if (castka <= 0) { alert('Faktura nemá žádné položky s cenou.'); return; }
+
+  sumupBezi = true;
+  const kbtn = document.getElementById('karta-btn');
+  const sbtn = document.getElementById('save-btn');
+  kbtn.disabled = true; sbtn.disabled = true;
+  setStatus('');
+  sumupBox('Posílám ' + fmtKc(castka) + ' na terminál…', false);
+  try {
+    const r = await gasPost({ akce:'sumup_platba', token:getToken(), cislo, castka });
+    if (r.error === 'bad_token') { handleBadToken(); return; }
+    if (!r.ok) throw new Error(r.message || 'Platbu se nepodařilo poslat na terminál.');
+    sumupBox('Terminál: zákazník platí ' + fmtKc(castka) + '…', true);
+    const v = await cekejNaPlatbu(r.checkout_id, r.client_transaction_id, cislo);
+    if (v.stav === 'zaplaceno') {
+      sumupKod = v.kod; sumupCastka = castka;
+      document.getElementById('forma').disabled = true;
+      sumupBox('', false, true);
+      setStatus('✓ Zaplaceno kartou (kód ' + sumupKod + '). Ukládám fakturu…', 'ok');
+      sumupBezi = false;
+      syncEet();
+      await ulozAVytiskni();
+      return;
+    }
+    if (v.stav === 'timeout') throw new Error('Výsledek platby nepřišel. Podívej se na terminál / do aplikace SumUp — pokud platba prošla, ulož fakturu tlačítkem Uložit.');
+    throw new Error(v.stav === 'zruseno' ? 'Platba byla zrušena.' : 'Platba neproběhla' + (v.duvod ? ' (' + v.duvod + ')' : '') + '. Můžeš to zkusit znovu.');
+  } catch (e) {
+    setStatus(e.message || 'Chyba platby.', 'err');
+  } finally {
+    if (sumupBezi) {
+      sumupBezi = false;
+      sumupBox('', false, true);
+      kbtn.disabled = false; sbtn.disabled = false;
+    }
+  }
+}
+
+function platbaPozn() {
+  return sumupKod ? ' Platba kartou UŽ PROBĚHLA (kód ' + sumupKod + ') — po opravě jen ulož, znovu neplať.' : '';
+}
+
+// Ptá se GAS každé 2 s, max. 3 minuty
+async function cekejNaPlatbu(checkoutId, clientId, cislo) {
+  const konec = Date.now() + 180000;
+  while (Date.now() < konec) {
+    await new Promise(res => setTimeout(res, 2000));
+    try {
+      const r = await gasPost({ akce:'sumup_stav', token:getToken(), checkout_id:checkoutId, client_transaction_id:clientId, cislo });
+      if (r.error === 'bad_token') { handleBadToken(); return { stav:'chyba' }; }
+      if (r.ok && r.stav && r.stav !== 'ceka') return r;
+    } catch (e) { /* výpadek spojení — zkusí se znovu */ }
+  }
+  return { stav:'timeout' };
+}
+
+async function zrusitKartu() {
+  document.getElementById('sumup-zrusit').disabled = true;
+  sumupBox('Ruším platbu na terminálu…', false);
+  try { await gasPost({ akce:'sumup_zrusit', token:getToken() }); } catch (e) {}
+  // výsledek (zrušeno / zaplaceno) přijde dalším dotazem na stav
+}
+
+function sumupBox(text, lzeZrusit, skryt) {
+  const box = document.getElementById('sumup-box');
+  box.style.display = skryt ? 'none' : 'flex';
+  if (text) document.getElementById('sumup-text').textContent = text;
+  const z = document.getElementById('sumup-zrusit');
+  z.style.display = lzeZrusit ? '' : 'none';
+  z.disabled = false;
+}
+
+function eetText(eet) {
+  if (!eet) return '';
+  if (eet.stav === 'POK')   return ' · EET: zaevidováno.';
+  if (eet.stav === 'TEST')  return ' · EET (testovací prostředí): odesláno.';
+  if (eet.stav === 'ČEKÁ')  return ' · EET: bez spojení, odešle se automaticky.';
+  if (eet.stav === 'CHYBA') return ' · EET CHYBA: ' + (eet.zprava || 'neznámá') + ' (zpráva šla na Telegram).';
+  return '';
+}
 
 // ── Token / brána ──
 function getToken() { return sessionStorage.getItem('admin_token') || ''; }
@@ -422,6 +545,7 @@ function init() {
   document.getElementById('splatnost').value = fmtIn(spl);
   if (!polozky.length) pridatPolozku();
   else renderPolozky();
+  syncEet();
 }
 function fmtIn(d) { return d.toISOString().split('T')[0]; }
 function fmtCZ(s) { if (!s) return ''; const [y,m,d]=s.split('-'); return `${d}. ${m}. ${y}`; }
@@ -471,7 +595,9 @@ function setStatus(msg, type) {
 function resetForm() {
   if (!confirm('Vymazat celý formulář?')) return;
   ['odberatel_nazev','odberatel_ico','odberatel_adresa','poznamka','zakazka-cislo'].forEach(id => document.getElementById(id).value = '');
-  polozky = []; ulozeno = false;
+  polozky = []; ulozeno = false; posledniEet = null;
+  sumupKod = ''; sumupCastka = 0;
+  document.getElementById('forma').disabled = false;
   setStatus('');
   document.getElementById('save-btn').disabled = false;
   document.getElementById('cislo').value = dalsiCislo || '';
@@ -494,6 +620,10 @@ async function ulozAVytiskni() {
   const cisteP = polozky.map(p => ({ popis:p.popis, jednotka:p.jednotka, mnozstvi: qOf(p), cena: unitPrice(p) }));
   const platne = cisteP.filter(p => p.popis || p.cena > 0);
   if (!platne.length || celkem() <= 0) { alert('Faktura nemá žádné položky s cenou.'); return; }
+  if (sumupKod && Math.abs(celkem() - sumupCastka) > 0.001) {
+    alert('Kartou se zaplatilo ' + fmtKc(sumupCastka) + ', ale faktura je teď na ' + fmtKc(celkem()) + '. Vrať položky tak, aby částka seděla.');
+    return;
+  }
 
   const btn = document.getElementById('save-btn');
   btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Ukládám…';
@@ -509,7 +639,9 @@ async function ulozAVytiskni() {
     forma_uhrady: document.getElementById('forma').value,
     poznamka: document.getElementById('poznamka').value.trim(),
     cislo_zakazky: document.getElementById('zakazka-cislo').value.trim(),
-    z_rezervace: !!(rezervaceId && rezervaceCol)
+    z_rezervace: !!(rezervaceId && rezervaceCol),
+    eet_na_miste: document.getElementById('eet_na_miste').checked,
+    sumup_kod: sumupKod
   };
 
   try {
@@ -517,10 +649,13 @@ async function ulozAVytiskni() {
     if (r.error === 'bad_token') { handleBadToken(); return; }
     if (r.ok) {
       ulozeno = true;
-      setStatus('✓ Faktura ' + r.cislo + ' uložena. Pro návrat použij tlačítko Admin nahoře.', 'ok');
+      posledniEet = r.eet || null;
+      setStatus('✓ Faktura ' + r.cislo + ' uložena.' + eetText(posledniEet) + ' Pro návrat použij tlačítko Admin nahoře.',
+                posledniEet && posledniEet.stav === 'CHYBA' ? 'err' : 'ok');
       btn.innerHTML = '✓ Uloženo — tisknout znovu';
       btn.disabled = false;
       btn.onclick = function() { generujPrint(); setTimeout(function(){ window.print(); }, 150); };
+      syncEet();
       // automatická archivace rezervace pokud faktura vznikla z rezervace
       if (rezervaceId && rezervaceCol) {
         try {
@@ -531,14 +666,14 @@ async function ulozAVytiskni() {
       generujPrint();
       setTimeout(function(){ window.print(); }, 150);
     } else if (r.error === 'duplicate') {
-      setStatus('Faktura ' + cislo + ' už v evidenci je. Změň číslo (nebo použij Náhled bez uložení pro přetisk).', 'err');
+      setStatus('Faktura ' + cislo + ' už v evidenci je. Změň číslo (nebo použij Náhled bez uložení pro přetisk).' + platbaPozn(), 'err');
       btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
     } else {
-      setStatus('Chyba: ' + (r.message || r.error || 'neznámá'), 'err');
+      setStatus('Chyba: ' + (r.message || r.error || 'neznámá') + platbaPozn(), 'err');
       btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
     }
   } catch (e) {
-    setStatus('Chyba připojení k serveru.', 'err');
+    setStatus('Chyba připojení k serveru.' + platbaPozn(), 'err');
     btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
   }
 }
@@ -555,6 +690,7 @@ function generujPrint() {
   const poznamka = document.getElementById('poznamka').value.trim();
   const total = celkem();
   const vs = cislo.replace(/\D/g,'');
+  const eet = (ulozeno && posledniEet && posledniEet.pok) ? posledniEet : null;
   const qrString = `SPD*1.0*ACC:${DODAVATEL.iban}*AM:${total.toFixed(2)}*CC:CZK*VS:${vs}*MSG:Faktura ${cislo}`;
 
   // QR jako SVG — synchronně, bez CDN a bez canvasu
@@ -638,6 +774,8 @@ function generujPrint() {
       </div>
     </div>`}
     ${poznamka ? `<div class="print-poznamka">${esc(poznamka)}</div>` : ''}
+    ${sumupKod ? `<div class="print-eet">Platba kartou (SumUp) — kód transakce: ${esc(sumupKod)}</div>` : ''}
+    ${eet ? `<div class="print-eet">EET${eet.stav === 'TEST' ? ' (test)' : ''} — POK: ${esc(eet.pok)}</div>` : ''}
     <div class="print-dph-note">Nejsem plátce DPH.</div>
   `;
 }
