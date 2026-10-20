@@ -315,7 +315,7 @@ function renderFindM() {
   const quick = () => `<div class="quick"><span class="label">Časté velikosti</span><div class="chips">${
     QUICK.map(d => `<button class="chip" data-d="${d}" aria-pressed="${!!q && q.d === d}">M${d}</button>`).join('')}</div></div>`;
   if (!q) {
-    box.innerHTML = `<div class="empty">Zadejte průměr závitu v mm, třeba <b>12</b> nebo <b>2,5</b>. Zobrazí se všechna stoupání, která pro něj tabulka má.</div>` + quick();
+    box.innerHTML = quick() + `<div class="empty">Zadejte průměr závitu v mm, třeba <b>12</b> nebo <b>2,5</b>. Zobrazí se všechna stoupání, která pro něj tabulka má.</div>`;
     return;
   }
   const list = byD.get(q.d);
@@ -324,7 +324,7 @@ function renderFindM() {
     box.innerHTML = `<div class="empty">Průměr <b>${cz(q.d)} mm</b> v tabulce není. Nejbližší průměry:
       <div class="chips" style="margin-top:10px">${near.map(d => `<button class="chip" data-d="${d}">M${cz(d)}</button>`).join('')}</div></div>`;
     current = null;
-    box.innerHTML += quick();
+    box.innerHTML = quick() + box.innerHTML;
     return;
   }
   const ordered = list.slice().sort((a, b) => b.coarse - a.coarse || b.P - a.P);
@@ -336,7 +336,7 @@ function renderFindM() {
     t = current;
   }
   current = t;
-  box.innerHTML = variants(q.d, ordered, t) + (t ? sheet(t, missingP) : '') + quick();
+  box.innerHTML = quick() + variants(q.d, ordered, t) + (t ? sheet(t, missingP) : '');
 }
 
 function renderFindG() {
