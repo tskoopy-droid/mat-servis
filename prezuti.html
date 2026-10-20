@@ -901,6 +901,24 @@ function checkForm() {
 //   status:'error' + code      → jistě neuloženo, zákazník může opravit a odeslat znovu
 //   cokoli jiného / síť        → NEJISTÉ: rezervace se mohla uložit.
 //                                Neodesílat znovu (duplicita), nahlásit Tomášovi.
+// Odkud zákazník přišel – posílá se s rezervací do sloupce Zdroj v logu rezervací.
+// Žádné osobní údaje: jen UTM z odkazu (kampaň reklamy), nebo doména, ze které přišel.
+// Zjišťuje se při načtení stránky, ať ho nepřepíše návrat z formuláře do kalendáře.
+const ZDROJ_NAVSTEVY = (function () {
+  try {
+    const q = new URLSearchParams(location.search);
+    const utm = ['utm_source', 'utm_medium', 'utm_campaign'].map(k => q.get(k) || '').filter(Boolean);
+    if (utm.length) return utm.join(' / ');
+    if (q.has('fbclid')) return 'facebook (bez UTM)';
+    if (document.referrer) {
+      const host = new URL(document.referrer).hostname.replace(/^www\./, '');
+      if (host === location.hostname.replace(/^www\./, '')) return 'web mat-servis.cz';
+      return 'odkaz z ' + host;
+    }
+  } catch (x) {}
+  return 'přímo / neznámý';
+})();
+
 function submitForm() {
   if (odesilani || zamceno) return;
 
@@ -949,7 +967,8 @@ function submitForm() {
       datum: datum,
       cas: cas,
       sluzby: 'Přezutí pneumatik',
-      cena: ''
+      cena: '',
+      zdroj: ZDROJ_NAVSTEVY
     })
   })
   // Čte se jako text, ne rovnou r.json() — při nečekané odpovědi
