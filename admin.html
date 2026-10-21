@@ -341,6 +341,25 @@
       <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Nová servisní zakázka</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Ruční zadání — sloty se zablokují pro online rezervace.</div>
 
+      <!-- Vozidlo je nahoře: VIN se skenuje hned u auta, zbytek se doplní potom.
+           Z galerie jde nahrát i fotka TP, kterou zákazník poslal předem. -->
+      <div class="servis-section-title">Vozidlo</div>
+      <div class="s-field">
+        <label>VIN <span style="text-transform:none;font-weight:500;color:#94a3b8">— nepovinné</span></label>
+        <input type="text" id="s-vin" maxlength="17" placeholder="Vyfoť, nahraj fotku nebo napiš" autocomplete="off" autocorrect="off"
+               autocapitalize="characters" spellcheck="false" name="x-vin-x" data-lpignore="true" data-1p-ignore oninput="sVinZmena()"
+               style="text-transform:uppercase;letter-spacing:0.08em;font-weight:700" />
+        <div class="s-vin-row" style="margin-top:8px">
+          <button type="button" class="s-vin-btn" style="flex:1;padding:10px" onclick="document.getElementById('s-vin-foto').click()">📷 Vyfotit</button>
+          <button type="button" class="s-vin-btn" style="flex:1;padding:10px" onclick="document.getElementById('s-vin-galerie').click()">🖼️ Z galerie / TP</button>
+        </div>
+        <input type="file" id="s-vin-foto" accept="image/*" capture="environment" style="display:none" onchange="sVinFoto(this)">
+        <input type="file" id="s-vin-galerie" accept="image/*" style="display:none" onchange="sVinFoto(this)">
+        <div class="s-vin-stav" id="s-vin-stav"></div>
+      </div>
+      <div id="s-vin-zdroje"></div>
+      <div class="s-field"><label>Vozidlo / SPZ</label><input type="text" id="s-auto" placeholder="např. Škoda Octavia / 1A2 3456" autocomplete="off" name="x-auto-x" data-lpignore="true" data-1p-ignore /></div>
+
       <div class="servis-section-title">Úkon</div>
       <div class="s-field">
         <label>Typ úkonu <span class="req">*</span></label>
@@ -355,19 +374,6 @@
       <div class="s-field"><label>Telefon</label><input type="tel" id="s-telefon" placeholder="Nepovinné" autocomplete="off" name="x-telefon-x" data-lpignore="true" data-1p-ignore /></div>
       <div class="s-field"><label>E-mail</label><input type="text" id="s-email" placeholder="Nepovinné" autocomplete="off" name="x-email-x" data-lpignore="true" data-1p-ignore /></div>
 
-      <div class="servis-section-title">Vozidlo</div>
-      <div class="s-field">
-        <label>VIN <span style="text-transform:none;font-weight:500;color:#94a3b8">— nepovinné</span></label>
-        <div class="s-vin-row">
-          <input type="text" id="s-vin" maxlength="17" placeholder="Vyfoť nebo napiš" autocomplete="off" autocorrect="off"
-                 autocapitalize="characters" spellcheck="false" name="x-vin-x" data-lpignore="true" data-1p-ignore oninput="sVinZmena()" />
-          <button type="button" class="s-vin-btn" id="s-vin-foto-btn" onclick="document.getElementById('s-vin-foto').click()">📷 Vyfotit</button>
-        </div>
-        <input type="file" id="s-vin-foto" accept="image/*" capture="environment" style="display:none" onchange="sVinFoto(this)">
-        <div class="s-vin-stav" id="s-vin-stav"></div>
-      </div>
-      <div id="s-vin-zdroje"></div>
-      <div class="s-field"><label>Vozidlo / SPZ</label><input type="text" id="s-auto" placeholder="např. Škoda Octavia / 1A2 3456" autocomplete="off" name="x-auto-x" data-lpignore="true" data-1p-ignore /></div>
 
       <div class="servis-section-title">Termín — klikněte na den, vyberte hodiny</div>
       <div class="s-cal-header">
@@ -1302,7 +1308,7 @@ function sBuildMailText(){
   window.sVinFoto=async function(input){
     if(!input.files||!input.files[0])return;
     const soubor=input.files[0]; input.value='';
-    const btn=document.getElementById('s-vin-foto-btn'); btn.disabled=true;
+    const btny=document.querySelectorAll('.s-vin-btn'); btny.forEach(b=>b.disabled=true);
     sVinStav('Rozpoznávám…');
     try{
       const base64=await sZmensi(soubor);
@@ -1315,12 +1321,12 @@ function sBuildMailText(){
       let text='';
       try{text=data.responses[0].fullTextAnnotation.text||'';}catch(e){}
       const vin=sNajdiVin(text);
-      if(!vin){sVinStav(text.trim()?'Na fotce nebyl nalezen platný VIN — zkus záběr jen na štítek, nebo ho napiš.':'Na fotce nebyl nalezen žádný text.',true);return;}
+      if(!vin){sVinStav(text.trim()?'Na fotce nebyl nalezen platný VIN — zkus ostřejší fotku štítku nebo TP, nebo ho napiš.':'Na fotce nebyl nalezen žádný text.',true);return;}
       document.getElementById('s-vin').value=vin;
       sVinZmena();
     }catch(e){
       sVinStav('Spojení selhalo — zkus to znovu, nebo VIN napiš.',true);
-    }finally{btn.disabled=false;}
+    }finally{btny.forEach(b=>b.disabled=false);}
   }
 
   window.sVinZmena=function(){
