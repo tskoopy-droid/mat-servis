@@ -2,1484 +2,618 @@
 <html lang="cs">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
-<link rel="apple-touch-icon" href="favicon-192.png">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin – M&T Servis</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>VIN skener</title>
+<link rel="manifest" href="vin.webmanifest">
+<meta name="theme-color" content="#1e4e7c">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-vin-192.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#f1f5f9; font-family:'Inter',sans-serif; min-height:100vh; padding:20px; }
-  :root {
-    --blue:#2563eb; --blue-light:#eff6ff; --blue-mid:#bfdbfe;
-    --border:#e2e8f0; --text:#1e293b; --text-muted:#64748b; --white:#ffffff;
-    --red:#dc2626; --red-light:#fee2e2;
-    --green:#15803d; --green-light:#dcfce7; --green-mid:#86efac;
-    --servis:#166534; --servis-badge-bg:#dcfce7;
+  @keyframes spin{to{transform:rotate(360deg)}}
+  :root{
+    --acc:#1e4e7c;--acc-dark:#163a5c;--acc-light:#f1f6fb;--acc-mid:#bcd4e8;--brand-green:#7cb94a;
+    --text:#1e293b;--text-muted:#64748b;--border:#e2e8f0;
+    --bg:#f8fafc;--white:#fff;--green:#16a34a;--green-light:#f0fdf4;--red:#ef4444;--red-light:#fef2f2;
   }
-  .login-wrap { max-width:360px; margin:80px auto; background:var(--white); border-radius:24px; padding:32px; box-shadow:0 4px 24px rgba(0,0,0,0.08); text-align:center; }
-  .login-wrap h2 { font-size:22px; color:var(--text); margin-bottom:6px; }
-  .login-wrap p { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
-  input[type=password] { width:100%; padding:14px 16px; border:2px solid var(--border); border-radius:12px; font-size:16px; font-family:'Inter',sans-serif; color:var(--text); margin-bottom:12px; }
-  .btn { width:100%; padding:15px; background:var(--blue); color:#fff; border:none; border-radius:14px; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; }
-  .btn:hover { background:#1d4ed8; }
-  .btn:disabled { opacity:0.6; cursor:not-allowed; }
-  .error { color:var(--red); font-size:13px; margin-top:8px; }
-
-  .admin-wrap { max-width:700px; margin:0 auto; }
-  .header { background:var(--white); border-radius:20px; padding:20px 24px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-  .logout-btn { background:var(--blue-light); border:none; color:var(--blue); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif; font-weight:600; }
-  .refresh-btn { background:#f1f5f9; border:none; color:var(--text-muted); border-radius:10px; padding:8px 14px; cursor:pointer; font-size:13px; font-family:'Inter',sans-serif; font-weight:600; }
-  .refresh-btn:disabled { opacity:0.5; cursor:not-allowed; }
-
-  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
-  .tab { padding:12px 14px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:2px solid transparent; background:var(--white); color:var(--text-muted); text-align:center; }
-  .tab.active { background:var(--blue); color:#fff; }
-  .tab-wide { grid-column:1/-1; }
-
-  .stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
-  .stat { background:var(--white); border-radius:16px; padding:16px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-  .stat-num { font-size:28px; font-weight:700; color:var(--blue); }
-  .stat-label { font-size:12px; color:var(--text-muted); margin-top:4px; }
-
-  .card { background:var(--white); border-radius:20px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:12px; }
-  .rez-item { border:2px solid var(--border); border-radius:14px; padding:14px; margin-bottom:10px; position:relative; }
-  .rez-item:last-child { margin-bottom:0; }
-  .rez-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
-  .rez-name { font-weight:700; font-size:15px; color:var(--text); }
-  .rez-badge { font-size:11px; font-weight:600; padding:3px 8px; border-radius:20px; flex-shrink:0; }
-  .badge-prezuti { background:#dbeafe; color:#1d4ed8; }
-  .badge-oleje { background:#fef9c3; color:#854d0e; }
-  .badge-servis { background:var(--servis-badge-bg); color:var(--servis); }
-  .rez-info { font-size:13px; color:var(--text-muted); line-height:1.8; }
-  .rez-datetime { font-size:14px; font-weight:600; color:var(--blue); margin-bottom:4px; }
-  /* vícedenní bloky */
-  .rez-bloky { font-size:13px; font-weight:600; color:var(--blue); margin-bottom:4px; }
-  .rez-bloky-row { display:flex; gap:8px; line-height:1.7; }
-  .rez-bloky-date { min-width:48px; font-family:'Courier New',monospace; }
-  .rez-bloky-times { font-family:'Courier New',monospace; }
-  .zrusit-btn { background:var(--red-light); color:var(--red); border:1.5px solid #fecaca; border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
-  .archiv-row { display:flex; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border); align-items:center; flex-wrap:wrap; }
-  .trzba-input { flex:1; padding:10px 12px; border:2px solid var(--border); border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; color:var(--text); outline:none; -moz-appearance:textfield; }
-  .trzba-input:focus { border-color:var(--blue); }
-  .trzba-input::-webkit-outer-spin-button,.trzba-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  #s-trzba { -moz-appearance:textfield; }
-  #s-trzba::-webkit-outer-spin-button,#s-trzba::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
-  .trzba-suffix { color:var(--text-muted); font-size:14px; font-weight:600; padding:0 4px; }
-  .archiv-btn { background:var(--green-light); color:var(--green); border:2px solid var(--green-mid); border-radius:10px; padding:10px 14px; font-size:13px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; white-space:nowrap; }
-  .archiv-btn:active { background:#bbf7d0; }
-  .archiv-btn:disabled { opacity:0.5; cursor:not-allowed; }
-  .archived-msg { background:var(--green-light); border:2px solid var(--green-mid); color:var(--green); text-align:center; padding:12px; border-radius:10px; font-weight:700; font-size:14px; }
-
-  /* Detail nacenění */
-  .nac-toggle { background:#f1f5f9; border:1.5px solid var(--border); color:var(--text-muted);
-    border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600;
-    font-family:'Inter',sans-serif; cursor:pointer; margin-top:10px; }
-  .nac-toggle:hover { background:#e2e8f0; }
-
-  /* Modál přes celou obrazovku — na mobilu je detail dlouhý a v seznamu
-     by se lámal na úzké řádky. Zpětné tlačítko telefonu ho zavře. */
-  .nac-modal { position:fixed; inset:0; background:rgba(15,23,42,0.55);
-    z-index:1000; display:none; padding:16px; overflow-y:auto;
-    -webkit-overflow-scrolling:touch; }
-  .nac-modal.open { display:block; }
-  .nac-modal-box { background:var(--white); border-radius:18px; max-width:700px;
-    margin:0 auto; box-shadow:0 8px 40px rgba(0,0,0,0.25); overflow:hidden; }
-  .nac-modal-bar { padding:14px 16px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between; gap:12px;
-    position:sticky; top:0; background:var(--white); }
-  .nac-modal-title { font-size:14px; font-weight:700; color:var(--text); line-height:1.3; }
-  .nac-modal-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
-  .nac-modal-close { background:#f1f5f9; border:none; border-radius:10px;
-    width:34px; height:34px; font-size:19px; line-height:1; color:var(--text-muted);
-    cursor:pointer; flex-shrink:0; font-family:'Inter',sans-serif; }
-  .nac-modal-close:active { background:#e2e8f0; }
-  .nac-detail { padding:16px; font-family:'Courier New',monospace;
-    font-size:14px; line-height:1.8; color:var(--text); white-space:pre-wrap;
-    word-break:break-word; }
-  .nac-detail .nac-warn { color:#b45309; font-weight:700; }
-  /* Bloky nad textovým detailem — vozidlo, varianty Castrol, spárované
-     vozy. Nejsou monospace jako detail, jsou to čitelné údaje. */
-  .nac-blok { padding:14px 16px; border-bottom:1px solid var(--border);
-    font-family:'Inter',sans-serif; font-size:13.5px; line-height:1.7; }
-  .nac-blok:last-child { border-bottom:none; }
-  .nac-blok-nadpis { font-size:11px; font-weight:700; color:var(--text-muted);
-    text-transform:uppercase; letter-spacing:0.06em; margin-bottom:8px; }
-  .nac-radek { display:flex; gap:10px; align-items:baseline; }
-  .nac-radek b { flex:0 1 44%; min-width:0; font-weight:400; color:var(--text-muted); }
-  .nac-radek span { flex:1 1 auto; min-width:0; font-weight:600; color:var(--text);
-    overflow-wrap:break-word; }
-  .nac-seznam { list-style:none; margin:0; padding:0; }
-  .nac-seznam li { margin-bottom:8px; }
-  .nac-seznam li:last-child { margin-bottom:0; }
-  .nac-vybran { color:var(--green); font-weight:700; }
-  .nac-sedy { color:var(--text-muted); }
-  /* Dřív break-all kvůli dlouhým URL. Odkazy jsou teď čitelný text,
-     takže se láme jen mezi slovy a až když je to nutné. */
-  .nac-blok a { color:var(--blue); word-break:normal; overflow-wrap:break-word; }
-  /* Slug má být na jednom řádku i za cenu vlastního řádku pod popiskem.
-     Když se přesto nevejde, dá se posunout do strany. */
-  .nac-radek-blok { display:block; }
-  .nac-radek-blok b { display:block; margin-bottom:2px; }
-  .nac-slug { display:block; white-space:nowrap; overflow-x:auto; }
-  .nac-detail .nac-odhad { color:var(--text-muted); }
-
-  .empty { text-align:center; padding:40px; color:var(--text-muted); font-size:14px; }
-  .loading { text-align:center; padding:40px; color:var(--text-muted); }
-
-  /* Rozvrh */
-  .day-block { margin-bottom:16px; border:2px solid var(--border); border-radius:16px; overflow:hidden; }
-  .day-header { padding:12px 16px; background:#f8fafc; display:flex; align-items:center; justify-content:space-between; }
-  .day-title { font-weight:700; font-size:14px; color:var(--text); }
-  .day-meta { font-size:12px; color:var(--text-muted); }
-  .day-select-btns { display:flex; gap:6px; }
-  .sel-btn { font-size:11px; font-weight:600; padding:4px 8px; border-radius:8px; border:none; cursor:pointer; font-family:'Inter',sans-serif; }
-  .sel-all { background:#dbeafe; color:#1d4ed8; }
-  .sel-none { background:#fee2e2; color:#dc2626; }
-  .hours-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:12px 16px; }
-  .hour-btn { padding:10px 4px; border-radius:10px; border:2px solid var(--border); background:var(--white); color:var(--text-muted); font-size:13px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; text-align:center; transition:all 0.15s; }
-  .hour-btn.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-  .hour-btn.booked { background:#f1f5f9; border-color:#e2e8f0; color:#cbd5e1; cursor:default; }
-  .save-btn { width:100%; padding:14px; background:var(--blue); color:#fff; border:none; border-radius:12px; font-size:15px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; margin-top:4px; }
-  .save-btn:active { background:#1d4ed8; }
-  .save-btn:disabled { opacity:0.6; cursor:not-allowed; }
-  .save-msg { text-align:center; font-size:13px; color:var(--green); font-weight:600; margin-top:8px; display:none; }
-  .week-tabs { display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
-  .week-tab { padding:10px 14px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; border:2px solid var(--border); background:var(--white); color:var(--text-muted); text-align:left; font-family:'Inter',sans-serif; }
-  .week-tab.active { background:var(--blue); border-color:var(--blue); color:#fff; }
-  .week-tab-parita { float:right; font-weight:700; opacity:0.75; }
-  .day-block.past { opacity:0.45; }
-  .day-block.past .hour-btn { cursor:not-allowed; background:#f8fafc; color:#cbd5e1; border-color:#e2e8f0; }
-  .day-block.past .sel-btn { opacity:0.6; cursor:not-allowed; }
-
-  /* Tržba */
-  .trzba-form { display:flex; flex-direction:column; gap:4px; }
-  .trzba-label { font-size:12px; font-weight:600; color:var(--text-muted); margin-top:10px; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.3px; }
-  .trzba-label .req { color:var(--red); margin-left:2px; }
-  .trzba-label .opt { color:#94a3b8; font-weight:500; text-transform:none; letter-spacing:0; }
-  .trzba-field { padding:12px 14px; border:2px solid var(--border); border-radius:10px; font-size:15px; font-family:'Inter',sans-serif; color:var(--text); outline:none; }
-  .trzba-field:focus { border-color:var(--blue); }
-  .trzba-field.err { border-color:var(--red); }
-  .trzba-err { color:var(--red); font-size:13px; margin-top:8px; text-align:center; display:none; }
-
-  /* ── Servis ─────────────────────────────────────────────── */
-  .servis-section-title { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.08em; margin:18px 0 10px; border-bottom:1px solid var(--border); padding-bottom:6px; }
-  .servis-section-title:first-child { margin-top:0; }
-  .s-field { margin-bottom:12px; }
-  .s-field label { display:block; font-size:12px; font-weight:600; color:var(--text-muted); margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em; }
-  .s-field label .req { color:var(--red); }
-  .s-field input[type=text],.s-field input[type=tel],.s-field input[type=email],
-  .s-field input[type=number],.s-field textarea {
-    width:100%; padding:11px 13px; border:2px solid var(--border); border-radius:10px;
-    font-size:15px; font-family:'Inter',sans-serif; color:var(--text); background:#fafafa;
-    outline:none; resize:vertical; transition:border-color 0.15s;
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{height:100%;}
+  body{
+    background:var(--bg);color:var(--text);font-family:"Inter",sans-serif;min-height:100%;
+    padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
   }
-  .s-field input:focus,.s-field textarea:focus { border-color:var(--blue); background:#fff; }
-  .s-field input.s-err { border-color:var(--red); }
+  .wrap{max-width:500px;margin:0 auto;padding:16px 16px 40px;}
 
-  /* Kalendář servis */
-  .s-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-  .s-cal-header button { background:none; border:2px solid var(--border); border-radius:8px; padding:5px 12px; cursor:pointer; font-size:15px; color:var(--text); font-family:'Inter',sans-serif; font-weight:700; }
-  .s-cal-header button:hover { background:#f1f5f9; }
-  .s-cal-header span { font-weight:700; font-size:15px; color:var(--text); }
-  .s-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:10px; }
-  .s-cal-dayname { text-align:center; font-size:11px; font-weight:700; color:var(--text-muted); padding:4px 0; text-transform:uppercase; }
-  .s-cal-day { text-align:center; padding:9px 4px; border-radius:8px; cursor:pointer; font-size:14px; border:2px solid transparent; transition:background 0.1s; }
-  .s-cal-day:hover:not(.s-disabled):not(.s-empty) { background:#f1f5f9; border-color:var(--border); }
-  .s-cal-day.s-empty { cursor:default; }
-  .s-cal-day.s-disabled { color:#cbd5e1; cursor:default; }
-  .s-cal-day.s-today { border-color:var(--blue); }
-  /* otevřený den — sloty viditelné */
-  .s-cal-day.s-open { background:#eff6ff; border-color:var(--blue); font-weight:700; color:var(--blue); }
-  /* den s vybranými sloty */
-  .s-cal-day.s-has-slots { background:#1e293b; color:#fff; font-weight:700; border-color:#1e293b; }
+  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+  .top h1{font-size:18px;font-weight:700;letter-spacing:-0.01em;}
+  .top h1 span{color:var(--brand-green);}
+  .reload{background:none;border:1.5px solid var(--border);border-radius:10px;width:36px;height:36px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+  .reload svg{width:17px;height:17px;stroke:var(--text-muted);fill:none;stroke-width:2.2;stroke-linecap:round;}
 
-  /* Panel slotů pod kalendářem */
-  .s-slots-panel { border:2px solid var(--blue-mid); border-radius:12px; overflow:hidden; margin-bottom:12px; background:var(--blue-light); }
-  .s-slots-panel-bar { padding:8px 12px; background:#dbeafe; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--blue-mid); }
-  .s-slots-panel-label { font-size:13px; font-weight:700; color:#1d4ed8; }
-  .s-slots-panel-clear { font-size:12px; color:var(--red); cursor:pointer; font-weight:600; border:none; background:none; font-family:'Inter',sans-serif; padding:0; }
-  .s-slots-grid { display:flex; flex-wrap:wrap; gap:6px; padding:10px 12px; }
-  .s-slot { padding:8px 13px; border-radius:8px; border:2px solid var(--border); background:var(--white); font-size:13px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; color:var(--text-muted); transition:all 0.12s; }
-  .s-slot:hover:not(.s-slot-obs) { border-color:var(--green); color:var(--green); }
-  .s-slot.s-slot-sel { background:var(--green); color:#fff; border-color:var(--green); }
-  .s-slot.s-slot-obs { background:#f1f5f9; color:#cbd5e1; cursor:not-allowed; text-decoration:line-through; }
+  .scan{
+    width:100%;padding:28px 20px;background:var(--acc);border:none;border-radius:20px;color:#fff;
+    font-family:"Inter",sans-serif;font-weight:700;font-size:19px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:12px;
+    box-shadow:0 4px 14px rgba(30,78,124,0.28);transition:background .15s;
+  }
+  .scan:active{background:var(--acc-dark);}
+  .scan:disabled{background:#cbd5e1;box-shadow:none;cursor:not-allowed;}
+  .scan svg{width:30px;height:30px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
+  .scan svg.sp{animation:spin .8s linear infinite;stroke-width:2.6;}
+  .galerie{
+    width:100%;margin-top:10px;padding:14px 20px;background:var(--acc-light);border:2px solid var(--acc-mid);
+    border-radius:16px;color:var(--acc);font-family:"Inter",sans-serif;font-weight:700;font-size:15px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .galerie:active{background:var(--acc-mid);}
+  .galerie:disabled{opacity:.45;cursor:not-allowed;}
+  .galerie svg{width:20px;height:20px;stroke:var(--acc);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
-  /* Přehled vybraných */
-  #s-vybrano-wrap { margin-bottom:12px; }
-  .s-vybrano-title { font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
-  .s-vybrano-table { border-collapse:collapse; font-size:13px; }
-  .s-vybrano-table td { padding:2px 0; vertical-align:top; }
-  .s-vybrano-date { font-weight:700; color:var(--text); width:52px; padding-right:12px; font-family:'Courier New',monospace; }
-  .s-vybrano-times { color:var(--green); font-family:'Courier New',monospace; font-weight:600; }
-  #s-vybrano-empty { font-size:13px; color:var(--text-muted); font-style:italic; }
+  .card{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:18px;
+    box-shadow:0 1px 6px rgba(0,0,0,0.06);margin-top:16px;}
 
-  /* Mail */
-  #s-mail-section { margin-top:10px; display:none; }
-  .s-dirty-warn { background:#fef9c3; border:1.5px solid #fbbf24; border-radius:8px; padding:8px 12px; font-size:12px; color:#78350f; margin-bottom:8px; display:none; }
-  #s-mail-preview { width:100%; min-height:150px; font-family:monospace; font-size:13px; border:2px solid var(--border); border-radius:10px; padding:10px 12px; background:#fafafa; resize:vertical; color:var(--text); }
-  #s-mail-preview:focus { border-color:var(--blue); outline:none; }
+  .lbl{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
 
-  .check-row { display:flex; align-items:center; gap:10px; cursor:pointer; margin-bottom:4px; }
-  .check-row input[type=checkbox] { width:18px; height:18px; cursor:pointer; accent-color:#1e293b; }
-  .check-row span { font-size:14px; color:var(--text); }
+  .vin-in{
+    width:100%;padding:16px 14px;border:2px solid var(--acc-mid);border-radius:14px;background:var(--acc-light);
+    font-family:"Inter",sans-serif;font-size:21px;font-weight:700;color:var(--text);
+    letter-spacing:0.14em;text-transform:uppercase;outline:none;text-align:center;
+  }
+  .vin-in:focus{border-color:var(--acc);}
+  .vin-in.bad{border-color:var(--red);background:var(--red-light);}
 
-  .s-submit-btn { width:100%; padding:15px; background:var(--red); color:#fff; border:none; border-radius:12px; font-size:16px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; margin-top:4px; transition:opacity 0.15s; }
-  .s-submit-btn:hover { opacity:0.9; }
-  .s-submit-btn:disabled { opacity:0.5; cursor:not-allowed; }
-  /* VIN v novém servisu */
-  .s-vin-row { display:flex; gap:8px; }
-  .s-vin-row input { flex:1; min-width:0; text-transform:uppercase; letter-spacing:0.08em; font-weight:700; }
-  .s-vin-btn { flex-shrink:0; padding:0 14px; border:2px solid var(--border); border-radius:10px; background:#fafafa;
-    font-size:14px; font-weight:700; font-family:'Inter',sans-serif; color:var(--text); cursor:pointer; white-space:nowrap; }
-  .s-vin-btn:disabled { opacity:.5; cursor:not-allowed; }
-  .s-vin-stav { font-size:12px; color:var(--text-muted); margin-top:6px; }
-  .s-vin-stav.err { color:var(--red); }
-  .s-zdroj { border:1px solid var(--border); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13px; line-height:1.45; background:#fafafa; }
-  .s-zdroj .z-n { font-size:11px; font-weight:700; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; }
-  .s-zdroj.ok { background:#fff; }
-  .s-zdroj.warn { background:#fffbeb; border-color:#fde68a; color:#92400e; }
-  .s-zdroj.none .z-t, .s-zdroj.load .z-t { color:var(--text-muted); }
-  .s-zdroj hr { border:none; border-top:1px solid var(--border); margin:5px 0; }
+  .groups{display:flex;gap:6px;margin-top:12px;}
+  .grp{flex:1;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:7px 2px;min-width:0;}
+  .grp .g-val{font-size:13px;font-weight:700;letter-spacing:0.05em;word-break:break-all;line-height:1.3;}
+  .grp .g-cap{font-size:9px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;margin-top:3px;}
+  .grp.rok{flex:0 0 46px;background:var(--acc-light);border-color:var(--acc-mid);}
+  .grp.rok .g-val{color:var(--acc);}
 
-  .s-status { margin-top:10px; padding:12px; border-radius:10px; font-size:14px; font-weight:600; display:none; }
-  .s-status.ok { background:var(--green-light); color:var(--green); border:1.5px solid var(--green-mid); }
-  .s-status.err { background:var(--red-light); color:var(--red); border:1.5px solid #fecaca; }
+  .over{margin-top:12px;border-radius:14px;padding:13px 14px;font-size:13px;line-height:1.5;
+    border:1px solid var(--border);background:var(--bg);color:var(--text-muted);}
+  .over.ok{background:var(--green-light);border-color:#bbf7d0;color:#14532d;}
+  .over.warn{background:#fffbeb;border-color:#fde68a;color:#92400e;}
+  .over.fail{background:#f1f5f9;border-color:#cbd5e1;color:#475569;}
+  .over-h{font-weight:700;display:flex;align-items:center;gap:7px;}
+  .over-h .dot{width:9px;height:9px;border-radius:50%;background:currentColor;flex-shrink:0;}
+  .over-h .dot.load{animation:spin 1s linear infinite;border-radius:2px;}
+  .over-d{margin-top:5px;font-size:12px;opacity:.92;}
+  .over-d span{display:inline-block;margin-right:10px;white-space:nowrap;}
 
-  .spinner { display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:6px; }
-  @keyframes spin { to { transform:rotate(360deg); } }
+  .zdroje{margin-top:12px;}
+  .zdroj{border:1px solid var(--border);border-radius:14px;padding:11px 14px;margin-bottom:8px;background:var(--bg);}
+  .zdroj .z-n{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;}
+  .zdroj .z-t{margin-top:4px;font-size:13px;line-height:1.45;color:var(--text);}
+  .zdroj .z-t hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
+  .zdroj.load .z-t,.zdroj.none .z-t{color:var(--text-muted);}
+  .zdroj.ok{background:var(--white);}
+  .zdroj.warn{background:#fffbeb;border-color:#fde68a;}
+  .zdroj.warn .z-t{color:#92400e;}
+  .zdroj.fail{background:#f1f5f9;border-color:#cbd5e1;}
+  .zdroj.fail .z-t{color:#475569;}
+
+  .note{font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.5;}
+  .note b{color:var(--text);font-weight:600;}
+
+  .copy{
+    width:100%;margin-top:14px;padding:18px;background:var(--text);border:none;border-radius:16px;color:#fff;
+    font-family:"Inter",sans-serif;font-weight:700;font-size:17px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s;
+  }
+  .copy:active{background:#0f172a;}
+  .copy.ok{background:var(--green);}
+  .copy.bad{background:#94a3b8;}
+  .copy svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+
+  .err{background:var(--red-light);border:1px solid #fecaca;color:#b91c1c;border-radius:14px;
+    padding:14px;font-size:13px;line-height:1.5;margin-top:16px;}
+  .err b{display:block;margin-bottom:4px;font-weight:700;}
+
+  .hist{margin-top:20px;}
+  .hist-t{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;}
+  .hist-i{display:flex;align-items:center;gap:10px;width:100%;background:var(--white);border:1px solid var(--border);
+    border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer;font-family:"Inter",sans-serif;text-align:left;}
+  .hist-i:active{background:var(--bg);}
+  .hist-i .hv{flex:1;min-width:0;font-size:14px;font-weight:700;letter-spacing:0.05em;color:var(--text);word-break:break-all;}
+  .hist-i .hc{font-size:11px;font-weight:600;color:var(--acc);flex-shrink:0;}
+
+  .hidden{display:none!important;}
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<!-- LOGIN -->
-<div id="screen-login">
-  <div class="login-wrap">
-    <div style="font-size:48px;margin-bottom:12px">🔧</div>
-    <h2>M&T Servis Admin</h2>
-    <p>Přihlaste se pro správu rezervací</p>
-    <input type="password" id="pwd-input" placeholder="Heslo" onkeydown="if(event.key==='Enter')login()">
-    <button class="btn" id="login-btn" onclick="login()">Přihlásit se</button>
-    <div class="error" id="login-error" style="display:none"></div>
+  <div class="top">
+    <h1>VIN <span>skener</span></h1>
+    <button class="reload" onclick="location.reload(true)" title="Obnovit">
+      <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10"/></svg>
+    </button>
   </div>
-</div>
 
-<!-- ADMIN -->
-<div id="screen-admin" style="display:none">
-  <div class="admin-wrap">
+  <button class="scan" id="btnScan" onclick="document.getElementById('foto').click()">
+    <svg id="icoScan" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span id="txtScan">Vyfotit VIN</span>
+  </button>
 
-    <div class="header">
-      <div style="display:flex;flex-direction:column;justify-content:center">
-        <h1 style="font-size:17px;font-weight:700;color:var(--text);line-height:1.3">M&amp;T Servis Admin</h1>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Správa rezervací</div>
-      </div>
-      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0">
-        <button class="logout-btn" onclick="logout()">Odhlásit</button>
-        <button class="refresh-btn" id="refresh-btn" onclick="loadAll()">Obnovit</button>
-      </div>
+  <button class="galerie" id="btnGalerie" onclick="document.getElementById('fotoGalerie').click()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    <span>Vybrat z galerie</span>
+  </button>
+
+  <button class="galerie" id="btnRucne" onclick="zadatRucne()">
+    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="7" y1="14" x2="17" y2="14"/></svg>
+    <span>Zadat VIN ručně</span>
+  </button>
+
+  <input type="file" id="foto" accept="image/*" capture="environment" style="display:none" onchange="zpracuj(this)">
+  <input type="file" id="fotoGalerie" accept="image/*" style="display:none" onchange="zpracuj(this)">
+
+  <div class="err hidden" id="err"></div>
+
+  <div class="card hidden" id="vysledek">
+    <div class="lbl" id="vinLbl">Rozpoznaný VIN — lze přepsat</div>
+    <input type="text" class="vin-in" id="vin" maxlength="17" autocomplete="off" autocorrect="off"
+           autocapitalize="characters" spellcheck="false" oninput="prekresli()">
+    <div class="groups">
+      <div class="grp"><div class="g-val" id="gWmi">—</div><div class="g-cap">WMI</div></div>
+      <div class="grp"><div class="g-val" id="gVds">—</div><div class="g-cap">VDS</div></div>
+      <div class="grp rok"><div class="g-val" id="gRok">—</div><div class="g-cap">Rok</div></div>
+      <div class="grp"><div class="g-val" id="gSer">—</div><div class="g-cap">Sériové</div></div>
     </div>
-
-    <div class="stats">
-      <div class="stat"><div class="stat-num" id="stat-prezuti">—</div><div class="stat-label">Přezutí</div></div>
-      <div class="stat"><div class="stat-num" id="stat-oleje">—</div><div class="stat-label">Oleje</div></div>
-      <div class="stat"><div class="stat-num" id="stat-servis">—</div><div class="stat-label">Servis</div></div>
-    </div>
-
-    <div class="tabs">
-      <div class="tab tab-wide active" id="tab-all" onclick="switchTab('all')">📋 Vše</div>
-      <div class="tab" id="tab-prezuti" onclick="switchTab('prezuti')">🚙 Přezutí</div>
-      <div class="tab" id="tab-oleje" onclick="switchTab('oleje')">🛢️ Oleje</div>
-      <div class="tab" id="tab-rozvrh" onclick="switchTab('rozvrh')">📅 Rozvrh</div>
-      <div class="tab" onclick="otevritPrehled()">📋 Přehled</div>
-      <div class="tab" onclick="location.href='faktura.html'">📄 Faktura</div>
-      <div class="tab" onclick="window.open('uctenka.html?t=AKstNCKhxcTsh1NrtciIfc0HtcSFYyw6','_blank')">🧾 Účtenka</div>
-      <div class="tab" id="tab-servis" onclick="switchTab('servis')">🔧 Nový servis</div>
-      <div class="tab" id="tab-trzba" onclick="switchTab('trzba')">💰 Přímá tržba</div>
-    </div>
-
-    <!-- Rezervace -->
-    <div class="card" id="section-rez">
-      <div id="rez-list"><div class="loading">Načítám rezervace...</div></div>
-    </div>
-
-    <!-- Rozvrh -->
-    <div class="card" id="section-rozvrh" style="display:none">
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Dostupné termíny</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Zaškrtni hodiny kdy přijímáš zákazníky. Šedé = již obsazeno rezervací.</div>
-      <div class="week-tabs" id="week-tabs"></div>
-      <div id="rozvrh-rows"><div class="loading">Načítám...</div></div>
-      <button class="save-btn" id="save-rozvrh-btn" onclick="saveRozvrh()">Uložit dostupnost</button>
-      <div class="save-msg" id="save-msg">Uloženo!</div>
-    </div>
-
-    <!-- Tržba -->
-    <div class="card" id="section-trzba" style="display:none">
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Zápis přímé tržby</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Pro walk-in zákazníky bez online rezervace. Zapisuje se do samostatné tabulky Trzby_primo.</div>
-      <div class="trzba-form">
-        <label class="trzba-label">Popis práce <span class="req">*</span></label>
-        <input type="text" id="trzba-popis" class="trzba-field" placeholder="např. Brzdová hadice, Výměna žárovky">
-        <label class="trzba-label">Tržba (Kč) <span class="req">*</span></label>
-        <input type="number" id="trzba-castka" class="trzba-field" placeholder="0 – 30 000" min="0" max="30000" step="1" inputmode="numeric">
-        <label class="trzba-label">Datum</label>
-        <input type="date" id="trzba-datum" class="trzba-field">
-        <label class="trzba-label">Jméno <span class="opt">(volitelné)</span></label>
-        <input type="text" id="trzba-jmeno" class="trzba-field" placeholder="—">
-        <label class="trzba-label">Telefon <span class="opt">(volitelné)</span></label>
-        <input type="tel" id="trzba-telefon" class="trzba-field" placeholder="—">
-        <label class="trzba-label">Vozidlo / SPZ <span class="opt">(volitelné)</span></label>
-        <input type="text" id="trzba-vozidlo" class="trzba-field" placeholder="—">
-        <button class="save-btn" id="trzba-save-btn" onclick="saveTrzba()" style="margin-top:12px">Zapsat tržbu</button>
-        <div class="save-msg" id="trzba-msg">Zapsáno!</div>
-        <div class="trzba-err" id="trzba-err"></div>
-      </div>
-    </div>
-
-    <!-- Servis -->
-    <div class="card" id="section-servis" style="display:none">
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Nová servisní zakázka</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Ruční zadání — sloty se zablokují pro online rezervace.</div>
-
-      <!-- Vozidlo je nahoře: VIN se skenuje hned u auta, zbytek se doplní potom.
-           Z galerie jde nahrát i fotka TP, kterou zákazník poslal předem. -->
-      <div class="servis-section-title">Vozidlo</div>
-      <div class="s-field">
-        <label>VIN <span style="text-transform:none;font-weight:500;color:#94a3b8">— nepovinné</span></label>
-        <input type="text" id="s-vin" maxlength="17" placeholder="Vyfoť, nahraj fotku nebo napiš" autocomplete="off" autocorrect="off"
-               autocapitalize="characters" spellcheck="false" name="x-vin-x" data-lpignore="true" data-1p-ignore oninput="sVinZmena()"
-               style="text-transform:uppercase;letter-spacing:0.08em;font-weight:700" />
-        <div class="s-vin-row" style="margin-top:8px">
-          <button type="button" class="s-vin-btn" style="flex:1;padding:10px" onclick="document.getElementById('s-vin-foto').click()">📷 Vyfotit</button>
-          <button type="button" class="s-vin-btn" style="flex:1;padding:10px" onclick="document.getElementById('s-vin-galerie').click()">🖼️ Z galerie / TP</button>
-        </div>
-        <input type="file" id="s-vin-foto" accept="image/*" capture="environment" style="display:none" onchange="sVinFoto(this)">
-        <input type="file" id="s-vin-galerie" accept="image/*" style="display:none" onchange="sVinFoto(this)">
-        <div class="s-vin-stav" id="s-vin-stav"></div>
-      </div>
-      <div id="s-vin-zdroje"></div>
-      <div class="s-field"><label>Vozidlo / SPZ</label><input type="text" id="s-auto" placeholder="např. Škoda Octavia / 1A2 3456" autocomplete="off" name="x-auto-x" data-lpignore="true" data-1p-ignore /></div>
-
-      <div class="servis-section-title">Úkon</div>
-      <div class="s-field">
-        <label>Typ úkonu <span class="req">*</span></label>
-        <input type="text" id="s-ukon" placeholder="např. Diagnostika OBD, Brzdy zadní, Seřízení geometrie…" />
-      </div>
-
-      <div class="servis-section-title">Zákazník</div>
-      <!-- Dummy inputy proti Chrome password manageru -->
-      <input type="text" style="display:none" name="fakeusernameremembered" autocomplete="username">
-      <input type="password" style="display:none" name="fakepasswordremembered" autocomplete="new-password">
-      <div class="s-field"><label>Jméno</label><input type="text" id="s-jmeno" placeholder="Nepovinné" autocomplete="off" name="x-jmeno-x" data-lpignore="true" data-1p-ignore /></div>
-      <div class="s-field"><label>Telefon</label><input type="tel" id="s-telefon" placeholder="Nepovinné" autocomplete="off" name="x-telefon-x" data-lpignore="true" data-1p-ignore /></div>
-      <div class="s-field"><label>E-mail</label><input type="text" id="s-email" placeholder="Nepovinné" autocomplete="off" name="x-email-x" data-lpignore="true" data-1p-ignore /></div>
-
-
-      <div class="servis-section-title">Termín — klikněte na den, vyberte hodiny</div>
-      <div class="s-cal-header">
-        <button onclick="sKalMesic(-1)">&#8249;</button>
-        <span id="s-kal-label"></span>
-        <button onclick="sKalMesic(+1)">&#8250;</button>
-      </div>
-      <div class="s-cal-grid" id="s-kal-grid"></div>
-
-      <!-- Sloty otevřeného dne -->
-      <div id="s-open-slots"></div>
-
-      <!-- Přehled všech vybraných -->
-      <div id="s-vybrano-wrap">
-        <div id="s-vybrano-empty" style="font-size:13px;color:var(--text-muted);font-style:italic;margin-bottom:12px">Žádné sloty vybrány.</div>
-        <div id="s-vybrano-box" style="display:none;margin-bottom:12px">
-          <div class="s-vybrano-title">Vybrané termíny</div>
-          <table class="s-vybrano-table" id="s-vybrano-table"></table>
-        </div>
-      </div>
-
-      <div class="servis-section-title">Doplňující info</div>
-      <div class="s-field"><label>Odhadovaná tržba (Kč)</label><input type="number" id="s-trzba" placeholder="Nepovinné" min="0" step="10" inputmode="numeric" /></div>
-      <div class="s-field"><label>Poznámka</label><textarea id="s-poznamka" rows="3" placeholder="Interní poznámka"></textarea></div>
-
-      <div class="servis-section-title">Potvrzovací e-mail</div>
-      <label class="check-row">
-        <input type="checkbox" id="s-poslat-mail" onchange="sPoslatMailToggle()" />
-        <span>Poslat zákazníkovi potvrzovací e-mail</span>
-      </label>
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Odešle se jen pokud je vyplněn e-mail zákazníka.</div>
-      <div id="s-mail-section">
-        <div class="s-dirty-warn" id="s-dirty-warn">
-          ⚠ Text byl ručně upraven.
-          <span style="cursor:pointer;text-decoration:underline;margin-left:8px;font-weight:700" onclick="sResetDirty()">Přegenerovat</span>
-        </div>
-        <div class="s-field" style="margin-bottom:0">
-          <label>Náhled / text e-mailu (lze upravit)</label>
-          <textarea id="s-mail-preview" rows="10" oninput="sOnMailEdit()"></textarea>
-        </div>
-      </div>
-
-      <div style="margin-top:18px">
-        <button class="s-submit-btn" id="s-submit-btn" onclick="sSubmit()">Uložit zakázku</button>
-        <div class="s-status" id="s-status"></div>
-      </div>
-    </div>
-
+    <div class="over hidden" id="over"></div>
+    <div class="zdroje hidden" id="zdroje"></div>
+    <div class="note" id="note"></div>
+    <button class="copy" id="btnCopy" onclick="kopiruj()">
+      <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      <span id="txtCopy">Kopírovat</span>
+    </button>
   </div>
+
+  <div class="hist hidden" id="hist">
+    <div class="hist-t">Předchozí skeny</div>
+    <div id="histList"></div>
+  </div>
+
 </div>
 
 <script>
-  const GAS_URL       = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
-  const SERVIS_ADRESA = 'M&T Servis, Šumvaldská 59, Dlouhá Loučka';
-  const SERVIS_TEL    = '731 885 825';
+// ══ Konfigurace ══════════════════════════════════════════════
+// Rozpoznání textu jde přes GAS (akce vin_ocr) — klíč k Vision je ve Vlastnostech skriptu.
+var MAX_PX     = 1600;   // delší strana fotky před odesláním
+// Nasazení Apps Scriptu. Při přenasazení se ID mění — nutno přepsat i tady.
+var GAS_URL    = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
 
-  let allData=[],currentTab='all',rozvrhData={},bookedData={};
-  let dataNactena=false;
+// ══ VIN — pravidla formátu (ISO 3779) ════════════════════════
+// Povolené znaky: A-Z bez I, O, Q + 0-9
+var VIN_RE = /^[A-HJ-NPR-Z0-9]{17}$/;
+// 10. pozice = modelový rok: A-Y bez I,O,Q,U,Z, pak 1-9. Nikdy nula.
+var ROK_SEQ = 'ABCDEFGHJKLMNPRSTVWXY123456789';
 
-  // Načítání: běží nanejvýš jedno naráz (dřív odcházelo při otevření
-  // stránky dvakrát — DOMContentLoaded + focus — a běhy se brzdily).
-  // Návrat do okna obnovuje jen když od posledního načtení uběhla minuta.
-  // Poslední stav se drží v sessionStorage, takže se po obnovení karty
-  // ukáže hned a čerstvá data se dotáhnou na pozadí.
-  const CACHE_KEY='admin_cache';
-  const FOCUS_MIN_MS=60000;
-  let nacitani=null,posledniNacteni=0;
-  // Neuložené změny v rozvrhu nesmí přepsat obnova na pozadí.
-  let rozvrhUpraven=false;
-
-  async function gasPost(payload){
-    const res=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify(payload)});
-    return res.json();
-  }
-  function getToken(){return sessionStorage.getItem('admin_token')||'';}
-
-  // Kolegův token se v kódu nedrží (repozitář je veřejný) — vyžádá se
-  // od backendu až po přihlášení.
-  async function otevritPrehled(){
-    const token=getToken();
-    if(!token){handleBadToken();return;}
-    const okno=window.open('','_blank');
-    try{
-      const r=await gasPost({akce:'admin_kolega_odkaz',token});
-      if(r.error==='bad_token'){if(okno)okno.close();handleBadToken();return;}
-      if(!r.ok||!r.token){if(okno)okno.close();alert(r.chyba||'Odkaz na přehled se nepodařilo získat.');return;}
-      const url='prehled.html?t='+encodeURIComponent(r.token);
-      if(okno){okno.location.href=url;}else{window.open(url,'_blank');}
-    }catch(e){
-      if(okno)okno.close();
-      alert('Chyba připojení.');
-    }
-  }
-  function setToken(t){sessionStorage.setItem('admin_token',t);}
-  function clearToken(){sessionStorage.removeItem('admin_token');smazCache();dataNactena=false;}
-
-  // ── LOGIN ──────────────────────────────────────────────────
-  window.login=async function(){
-    const pwd=document.getElementById('pwd-input').value;
-    const errEl=document.getElementById('login-error'),btn=document.getElementById('login-btn');
-    errEl.style.display='none';
-    if(!pwd){errEl.textContent='Zadejte heslo';errEl.style.display='block';return;}
-    btn.disabled=true;btn.textContent='Přihlašuji...';
-    try{
-      const r=await gasPost({akce:'admin_login',heslo:pwd});
-      if(r.ok&&r.token){
-        setToken(r.token);
-        document.getElementById('screen-login').style.display='none';
-        document.getElementById('screen-admin').style.display='block';
-        document.getElementById('pwd-input').value='';
-        switchTab('all');
-        loadAll();
-      }else if(r.error==='rate_limit'){
-        errEl.textContent=r.message||'Příliš mnoho pokusů. Zkuste za 15 minut.';errEl.style.display='block';
-      }else{errEl.textContent='Špatné heslo';errEl.style.display='block';}
-    }catch(e){errEl.textContent='Chyba připojení.';errEl.style.display='block';}
-    finally{btn.disabled=false;btn.textContent='Přihlásit se';}
-  }
-
-  window.logout=async function(){
-    const token=getToken();
-    if(token){try{await gasPost({akce:'admin_logout',token});}catch(e){}}
-    clearToken();
-    document.getElementById('screen-admin').style.display='none';
-    document.getElementById('screen-login').style.display='block';
-    document.getElementById('pwd-input').value='';allData=[];
-  }
-
-  window.addEventListener('DOMContentLoaded',function(){
-    if(getToken()){
-      document.getElementById('screen-login').style.display='none';
-      document.getElementById('screen-admin').style.display='block';
-      loadAll();
-    }
-  });
-  window.addEventListener('focus',function(){
-    if(!getToken()||document.getElementById('screen-admin').style.display==='none')return;
-    if(Date.now()-posledniNacteni<FOCUS_MIN_MS)return;
-    loadAll();
-  });
-
-  function handleBadToken(){
-    clearToken();allData=[];
-    document.getElementById('screen-admin').style.display='none';
-    document.getElementById('screen-login').style.display='block';
-    const e=document.getElementById('login-error');
-    e.textContent='Relace vypršela, přihlaste se znovu.';e.style.display='block';
-  }
-
-  // ── LOAD ALL ───────────────────────────────────────────────
-  function ulozCache(){
-    try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({rezervace:allData,rozvrh:rozvrhData,obsazene:bookedData}));}catch(e){}
-  }
-  function nactiCache(){
-    try{
-      const c=JSON.parse(sessionStorage.getItem(CACHE_KEY)||'null');
-      if(c&&Array.isArray(c.rezervace)){
-        allData=c.rezervace;rozvrhData=c.rozvrh||{};bookedData=c.obsazene||{};
-        return true;
-      }
-    }catch(e){}
-    return false;
-  }
-  function smazCache(){try{sessionStorage.removeItem(CACHE_KEY);}catch(e){}}
-
-  // Seznam se při obnově překresluje, zatímco v něm může být rozepsaná
-  // tržba — zapsané hodnoty a kurzor se proto po překreslení vrátí.
-  function renderListZachovat(){
-    const hodnoty={};
-    document.querySelectorAll('.trzba-input').forEach(el=>{if(el.value)hodnoty[el.id]=el.value;});
-    const fokus=document.activeElement&&document.activeElement.id;
-    renderList();
-    Object.keys(hodnoty).forEach(id=>{const el=document.getElementById(id);if(el)el.value=hodnoty[id];});
-    if(fokus){const el=document.getElementById(fokus);if(el)el.focus();}
-  }
-
-  function prekreslit(){
-    allData.sort((a,b)=>{
-      const da=(a.datum||'')+(a.cas||a.bloky?.[0]?.cas||'');
-      const db=(b.datum||'')+(b.cas||b.bloky?.[0]?.cas||'');
-      return da.localeCompare(db);
-    });
-    document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
-    document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
-    document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
-    if(currentTab==='rozvrh'){renderWeekTabs();renderRozvrh();}
-    else if(currentTab==='servis'){sSync();}
-    else renderListZachovat();
-  }
-
-  // Volá se odkudkoli (start, focus, Obnovit, po uložení servisu).
-  // Když už načítání běží, vrátí to rozběhnuté místo druhého dotazu.
-  window.loadAll=function(){
-    if(nacitani)return nacitani;
-    nacitani=nacistZeServeru().finally(()=>{nacitani=null;});
-    return nacitani;
-  }
-
-  async function nacistZeServeru(){
-    const token=getToken();if(!token)return;
-    const refreshBtn=document.getElementById('refresh-btn');
-    refreshBtn.disabled=true;refreshBtn.textContent='Načítám…';
-    // Hláška "Načítám" jen když není co ukázat. Jinak zůstane poslední
-    // známý stav a po příchodu dat se vymění.
-    if(!dataNactena){
-      if(nactiCache()){dataNactena=true;prekreslit();}
-      else document.getElementById('rez-list').innerHTML='<div class="loading">Načítám rezervace...</div>';
-    }
-    let chyba='';
-    try{
-      const r=await gasPost({akce:'admin_get_all',token});
-      if(r.error==='bad_token'){handleBadToken();return;}
-      if(!r.ok){chyba='Chyba. Obnovte stránku.';}
-      else{
-        allData=r.rezervace||[];bookedData=r.obsazene||{};
-        if(!rozvrhUpraven)rozvrhData=r.rozvrh||{};
-        posledniNacteni=Date.now();
-        dataNactena=true;
-        ulozCache();
-        prekreslit();
-      }
-    }catch(e){chyba='Chyba připojení.';}
-    finally{
-      refreshBtn.disabled=false;
-      refreshBtn.textContent=chyba?'Obnovit ⚠':'Obnovit';
-    }
-    // Chyba přepíše seznam jen tehdy, když v něm nic není; jinak zůstane
-    // poslední stav a chybu ukáže tlačítko Obnovit.
-    if(chyba&&!dataNactena)document.getElementById('rez-list').innerHTML='<div class="empty">'+chyba+'</div>';
-  }
-
-  // ── TABS ───────────────────────────────────────────────────
-  window.switchTab=function(tab){
-    currentTab=tab;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-    document.getElementById('tab-'+tab).classList.add('active');
-    ['section-rez','section-rozvrh','section-trzba','section-servis'].forEach(id=>
-      document.getElementById(id).style.display='none');
-    if(tab==='rozvrh'){document.getElementById('section-rozvrh').style.display='block';renderWeekTabs();renderRozvrh();}
-    else if(tab==='trzba'){document.getElementById('section-trzba').style.display='block';initTrzbaForm();}
-    else if(tab==='servis'){document.getElementById('section-servis').style.display='block';sInit();}
-    else{
-      document.getElementById('section-rez').style.display='block';
-      if(dataNactena)renderList();
-      else document.getElementById('rez-list').innerHTML='<div class="loading">Načítám rezervace...</div>';
-    }
-  }
-
-  // ── TRŽBA ──────────────────────────────────────────────────
-  function initTrzbaForm(){
-    const el=document.getElementById('trzba-datum');
-    if(!el.value){const d=new Date();el.value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-  }
-  function resetTrzbaFieldErrors(){
-    ['trzba-popis','trzba-castka','trzba-datum','trzba-jmeno','trzba-telefon','trzba-vozidlo']
-      .forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('err');});
-    document.getElementById('trzba-err').style.display='none';
-  }
-  function showTrzbaErr(msg,fieldIds){
-    const el=document.getElementById('trzba-err');el.textContent=msg;el.style.display='block';
-    (fieldIds||[]).forEach(id=>{const e=document.getElementById(id);if(e)e.classList.add('err');});
-  }
-  window.saveTrzba=async function(){
-    resetTrzbaFieldErrors();
-    const popis=document.getElementById('trzba-popis').value.trim();
-    const castkaS=document.getElementById('trzba-castka').value.trim();
-    const datum=document.getElementById('trzba-datum').value.trim();
-    const jmeno=document.getElementById('trzba-jmeno').value.trim();
-    const telefon=document.getElementById('trzba-telefon').value.trim();
-    const vozidlo=document.getElementById('trzba-vozidlo').value.trim();
-    if(!popis){showTrzbaErr('Zadej popis práce.',['trzba-popis']);document.getElementById('trzba-popis').focus();return;}
-    const castka=Number(castkaS);
-    if(castkaS===''||!isFinite(castka)||castka<0||castka>30000){showTrzbaErr('Tržba musí být 0–30 000 Kč.',['trzba-castka']);document.getElementById('trzba-castka').focus();return;}
-    const token=getToken();if(!token){handleBadToken();return;}
-    const btn=document.getElementById('trzba-save-btn');btn.disabled=true;btn.textContent='Ukládám...';
-    try{
-      const r=await gasPost({akce:'admin_trzba_primo',token,popis,castka:Math.round(castka),datum,jmeno,telefon,vozidlo});
-      if(r.error==='bad_token'){handleBadToken();return;}
-      if(r.ok){
-        ['trzba-popis','trzba-castka','trzba-jmeno','trzba-telefon','trzba-vozidlo'].forEach(id=>document.getElementById(id).value='');
-        const msg=document.getElementById('trzba-msg');msg.style.display='block';setTimeout(()=>msg.style.display='none',2500);
-        document.getElementById('trzba-popis').focus();
-      }else showTrzbaErr('Chyba: '+(r.message||r.error||'neznámá'));
-    }catch(e){showTrzbaErr('Chyba připojení.');}
-    finally{btn.disabled=false;btn.textContent='Zapsat tržbu';}
-  }
-
-  // ── ROZVRH ─────────────────────────────────────────────────
-  const DAYS_CS=['Ne','Po','Út','St','Čt','Pá','So'];
-  const MONTHS_CS=['ledna','února','března','dubna','května','června','července','srpna','září','října','listopadu','prosince'];
-  const HOURS=Array.from({length:12},(_,i)=>i+8);
-  function getWeeks(){
-    const weeks=[],today=new Date();today.setHours(0,0,0,0);
-    const monday=new Date(today),dow=today.getDay();
-    monday.setDate(today.getDate()-(dow===0?6:dow-1));
-    for(let w=0;w<5;w++){const week=[];for(let i=0;i<7;i++){const d=new Date(monday);d.setDate(monday.getDate()+w*7+i);week.push(d);}weeks.push(week);}
-    return weeks;
-  }
-  function isBeforeToday(date){const t=new Date();t.setHours(0,0,0,0);return date<t;}
-  let selectedWeek=0;
-  function fmtDate(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-  function fmtHourSlot(h){return String(h).padStart(2,'0')+':00';}
-  // Kalendářní číslo týdne podle ISO 8601. Týden patří tomu roku, do kterého
-  // spadá jeho čtvrtek — proto se počítá od čtvrtka, ne od pondělí.
-  function isoTyden(d){
-    const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
-    const dow=t.getUTCDay()||7;              // neděle 0 → 7
-    t.setUTCDate(t.getUTCDate()+4-dow);      // posun na čtvrtek téhož týdne
-    const rok=new Date(Date.UTC(t.getUTCFullYear(),0,1));
-    return Math.ceil(((t-rok)/86400000+1)/7);
-  }
-  function renderWeekTabs(){
-    const weeks=getWeeks();
-    document.getElementById('week-tabs').innerHTML=weeks.map((week,idx)=>{
-      const first=week[0],last=week[6];
-      const cislo=isoTyden(first);
-      const parita=(cislo%2===0)?'sudý':'lichý';
-      const label=`${first.getDate()}. ${MONTHS_CS[first.getMonth()].substring(0,3)}. – ${last.getDate()}. ${MONTHS_CS[last.getMonth()].substring(0,3)}.`;
-      return`<button class="week-tab${idx===selectedWeek?' active':''}" onclick="switchWeek(${idx})">${label} <span class="week-tab-parita">${cislo}. ${parita}</span></button>`;
-    }).join('');
-  }
-  window.switchWeek=function(idx){selectedWeek=idx;renderWeekTabs();renderRozvrh();}
-  function renderRozvrh(){
-    const days=getWeeks()[selectedWeek]||[];
-    document.getElementById('rozvrh-rows').innerHTML=days.map(date=>{
-      const ds=fmtDate(date),ah=rozvrhData[ds]||[],booked=bookedData[ds]||[];
-      const dayLabel=`${DAYS_CS[date.getDay()]} ${date.getDate()}. ${MONTHS_CS[date.getMonth()]}`;
-      const isPast=isBeforeToday(date);
-      const hoursHtml=HOURS.map(h=>{
-        const slot=fmtHourSlot(h),isB=booked.includes(slot),isA=ah.includes(h);
-        const cls=isB?'hour-btn booked':(isA?'hour-btn active':'hour-btn');
-        const oc=(isB||isPast)?'':`onclick="toggleHour('${ds}',${h})"`;
-        return`<button class="${cls}" ${oc}>${h}:00</button>`;
-      }).join('');
-      const selBtns=isPast?'':`<div class="day-select-btns"><button class="sel-btn sel-all" onclick="selectAll('${ds}')">Vše</button><button class="sel-btn sel-none" onclick="selectNone('${ds}')">Nic</button></div>`;
-      return`<div class="${isPast?'day-block past':'day-block'}"><div class="day-header"><div><div class="day-title">${dayLabel}</div><div class="day-meta">${ah.length} hodin dostupných</div></div>${selBtns}</div><div class="hours-grid" id="grid-${ds}">${hoursHtml}</div></div>`;
-    }).join('');
-  }
-  window.toggleHour=function(ds,h){rozvrhUpraven=true;if(!rozvrhData[ds])rozvrhData[ds]=[];const i=rozvrhData[ds].indexOf(h);if(i===-1)rozvrhData[ds].push(h);else rozvrhData[ds].splice(i,1);refreshGrid(ds);}
-  window.selectAll=function(ds){rozvrhUpraven=true;rozvrhData[ds]=HOURS.filter(h=>!(bookedData[ds]||[]).includes(fmtHourSlot(h)));refreshGrid(ds);}
-  window.selectNone=function(ds){rozvrhUpraven=true;rozvrhData[ds]=[];refreshGrid(ds);}
-  function refreshGrid(ds){
-    const ah=rozvrhData[ds]||[],booked=bookedData[ds]||[],grid=document.getElementById('grid-'+ds);if(!grid)return;
-    grid.innerHTML=HOURS.map(h=>{const slot=fmtHourSlot(h),isB=booked.includes(slot),isA=ah.includes(h);const cls=isB?'hour-btn booked':(isA?'hour-btn active':'hour-btn');const oc=isB?'':`onclick="toggleHour('${ds}',${h})"`;return`<button class="${cls}" ${oc}>${h}:00</button>`;}).join('');
-    const block=grid.closest('.day-block');if(block)block.querySelector('.day-meta').textContent=`${ah.length} hodin dostupných`;
-  }
-  window.saveRozvrh=async function(){
-    const token=getToken();if(!token){handleBadToken();return;}
-    const btn=document.getElementById('save-rozvrh-btn');btn.disabled=true;btn.textContent='Ukládám...';
-    try{
-      const r=await gasPost({akce:'admin_rozvrh_set',token,rozvrh:rozvrhData});
-      if(r.error==='bad_token'){handleBadToken();return;}
-      if(r.ok){rozvrhUpraven=false;ulozCache();const msg=document.getElementById('save-msg');msg.style.display='block';setTimeout(()=>msg.style.display='none',2500);}
-      else alert('Chyba: '+(r.message||r.error||'neznámá'));
-    }catch(e){alert('Chyba připojení.');}
-    finally{btn.disabled=false;btn.textContent='Uložit dostupnost';}
-  }
-
-  // ── SEZNAM REZERVACÍ ───────────────────────────────────────
-  function fmtBlokyHtml(bloky){
-    if(!bloky||!bloky.length)return'<span style="color:var(--text-muted)">—</span>';
-    // Seskupit po dnech: { "2026-05-03": ["09:00","10:00"] }
-    const byDay={};
-    bloky.forEach(b=>{if(!byDay[b.datum])byDay[b.datum]=[];byDay[b.datum].push(b.cas);});
-    return Object.entries(byDay).map(([ds,casy])=>{
-      const [,mo,dy]=ds.split('-');
-      return`<div class="rez-bloky-row"><span class="rez-bloky-date">${parseInt(dy)}.${parseInt(mo)}.</span><span class="rez-bloky-times">${casy.join(', ')}</span></div>`;
-    }).join('');
-  }
-
-  // Cena s mezerou po tisících — 3 151 místo 3151.
-  function fmtKc(n){
-    return String(Math.round(Number(n)||0)).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0');
-  }
-
-  function renderList(){
-    const data=currentTab==='all'?allData:allData.filter(r=>r.typ===currentTab);
-    const list=document.getElementById('rez-list');
-    if(!data.length){list.innerHTML='<div class="empty">Žádné rezervace</div>';return;}
-    list.innerHTML=data.map(r=>{
-      const jeServis=r.typ==='servis';
-      let muzeArchivovat=false;
-      if(jeServis){
-        const last=(r.bloky||[]).slice(-1)[0];
-        if(last)muzeArchivovat=new Date(last.datum+'T'+last.cas+':00')<=new Date();
-      }else if(r.datum&&r.cas){
-        muzeArchivovat=new Date(r.datum+'T'+r.cas+':00')<=new Date();
-      }
-      const badgeCls=jeServis?'badge-servis':(r.typ==='prezuti'?'badge-prezuti':'badge-oleje');
-      const badgeTxt=jeServis?'🔧 Servis':(r.typ==='prezuti'?'🚗 Přezutí':'🛢️ Olej');
-      const archivRowHtml=muzeArchivovat?`
-        <div class="archiv-row">
-          <div style="display:flex;gap:8px;align-items:center;width:100%">
-            <input type="number" class="trzba-input" id="trzba-${r.id}" placeholder="Tržba" inputmode="numeric" min="0" max="99999" step="1" value="${r.trzba||''}" style="flex:1">
-            <span class="trzba-suffix">Kč</span>
-          </div>
-          <div style="display:flex;gap:8px;width:100%">
-            <button class="archiv-btn" style="flex:1" onclick="archivovat('${r.id}','${r.col}','${r.typ}')">✓ Archivovat</button>
-            <button class="archiv-btn" style="flex:1;background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="fakturovat('${r.id}','${r.col}')">🧾 Fakturovat</button>
-            <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
-          </div>
-        </div>`:`
-        <div class="archiv-row" style="justify-content:space-between">
-          <span style="font-size:12px;color:var(--text-muted);font-style:italic">Archivace po termínu</span>
-          <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
-        </div>`;
-      const datumBlok=jeServis
-        ?`<div class="rez-bloky">${fmtBlokyHtml(r.bloky)}</div>`
-        :`<div class="rez-datetime">📅 ${r.datum||'—'} · ${r.cas||'—'}</div>`;
-      return`<div class="rez-item" id="rez-${r.id}">
-        <div class="rez-header">
-          <div style="flex:1;padding-right:8px"><div class="rez-name">👤 ${r.jmeno||'—'}</div></div>
-          <div class="rez-badge ${badgeCls}">${badgeTxt}</div>
-        </div>
-        ${datumBlok}
-        <div class="rez-info">
-          ${jeServis&&r.ukon?'🔧 '+r.ukon+'<br>':''}
-          📞 ${r.telefon||'—'}<br>
-          ${r.email?'✉️ '+r.email+'<br>':''}
-          🚙 ${r.auto||r.sluzba||'—'}
-          ${r.vin?'<br>🔑 VIN: '+r.vin:''}
-          ${r.cena_celkem?'<br>💰 '+fmtKc(r.cena_celkem)+' Kč':''}
-          ${r.sluzby?'<br>🔧 '+r.sluzby:''}
-          ${r.cena?'<br>💰 '+r.cena:''}
-          ${r.uskladneni?'<br>🛞 '+r.uskladneni:''}
-          ${r.poznamka?'<br>📝 '+r.poznamka:''}
-        </div>
-        ${(r.naceneni_detail||r.vin)?`<button class="nac-toggle" onclick="otevriNac('${r.id}')">🔍 Detail nacenění</button>`:''}
-        ${archivRowHtml}
-      </div>`;
-    }).join('');
-  }
-
-  // ── DETAIL NACENĚNÍ ────────────────────────────────────────
-  function escHtml(s){
-    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-
-  // Obarví hlášení (!) oranžově a tiché odhady (~) šedě.
-  function nacDetailHtml(text){
-    return String(text||'').split('\n').map(function(r){
-      const cls = r.indexOf('!')===0 ? 'nac-warn' : (r.indexOf('~')===0 ? 'nac-odhad' : '');
-      return cls ? '<span class="'+cls+'">'+escHtml(r)+'</span>' : escHtml(r);
-    }).join('\n');
-  }
-
-  // Adresy na Pegas se tady neskládají — chodí hotové z GASu (pegas_url
-  // u objednávky, url u kandidátů, dily_odkazy u dílů). Pravidlo je jen
-  // v naceneni_odkazy.gs; dokud bylo na dvou místech, oprava zářijové
-  // změny URL minula odkazy v adminu.
-
-  // Čitelný zápis slugu — má informační hodnotu bez klikání na odkaz.
-  //   citroen--c4-ii--1.6-hdi-90-68kw  →  citroen c4-ii 1.6-hdi-90-68kw
-  function pegasPopis(slug){
-    return String(slug||'').trim().split('--').join(' ');
-  }
-
-  function nacJson(text){
-    try{ const x=JSON.parse(text||'[]'); return Array.isArray(x)?x:[]; }catch(e){ return []; }
-  }
-
-  function nacRadek(popisek,hodnota){
-    const h=String(hodnota==null?'':hodnota).trim();
-    if(!h)return'';
-    return'<div class="nac-radek"><b>'+escHtml(popisek)+'</b><span>'+escHtml(h)+'</span></div>';
-  }
-
-  // Vozidlo — totéž, co je v operátorském mailu. Shodné kódy motoru
-  // se slučují do jednoho řádku, rozdíl mezi zdroji je naopak signál.
-  function nacBlokVozidlo(r){
-    let radky = nacRadek('Značka a model', r.auto);
-    radky += nacRadek('Rok 1. registrace', r.rok);
-    radky += nacRadek('Modelový rok (z VIN)', r.rok_vin);
-
-    const zdroje=[['registr MV',r.kod_motoru_registr],['Castrol',r.kodMotoru],
-                  ['párování',r.kod_motoru_pegas]];
-    const videne=[];
-    zdroje.forEach(function(z){
-      const popis=z[0], h=String(z[1]||'').trim(); if(!h)return;
-      const shoda=videne.find(v=>v.h.toUpperCase()===h.toUpperCase());
-      if(shoda)shoda.z.push(popis); else videne.push({h:h,z:[popis]});
-    });
-    videne.forEach(v=>{ radky += nacRadek('Kód motoru ('+v.z.join(' + ')+')', v.h); });
-
-    radky += nacRadek('Max. výkon', r.vykon?(r.vykon+' kW'):'');
-    radky += nacRadek('Palivo', r.palivo);
-
-    if(r.vin){
-      const vin=escHtml(r.vin);
-      radky += '<div class="nac-radek"><b>VIN</b><span>'+
-        (r.tp_url?('<a href="'+escHtml(r.tp_url)+'" target="_blank">'+vin+'</a>'):vin)+
-        '</span></div>';
-    }
-    const pu=r.pegas_url||'';
-    if(pu) radky += '<div class="nac-radek nac-radek-blok"><b>Pegas</b>'+
-      '<span class="nac-slug"><a href="'+escHtml(pu)+'" target="_blank">'+
-      escHtml(pegasPopis(r.slug))+'&nbsp;↗</a></span></div>';
-
-    if(!radky)return'';
-    return'<div class="nac-blok"><div class="nac-blok-nadpis">Vozidlo</div>'+radky+'</div>';
-  }
-
-  // Varianty, které Castrol nabídl po zadání VINu — použitá je zvýrazněná.
-  function nacBlokVarianty(r){
-    const v=nacJson(r.castrol_varianty_json);
-    if(!v.length)return'';
-    const li=v.map(x=>{
-      const roky=(x.rokOd||x.rokDo)?(' ('+(x.rokOd||'?')+' – '+(x.rokDo||'?')+')'):'';
-      const popis=escHtml(String(x.popis||'').trim()+roky);
-      const motor=x.motor?('<br><span class="nac-sedy">'+escHtml(x.motor)+'</span>'):'';
-      return x.pouzita
-        ?'<li><b>'+popis+'</b> <span class="nac-vybran">← použito</span>'+motor+'</li>'
-        :'<li class="nac-sedy">'+popis+motor+'</li>';
-    }).join('');
-    return'<div class="nac-blok"><div class="nac-blok-nadpis">Varianty Castrol ('+
-      v.length+')</div><ul class="nac-seznam">'+li+'</ul></div>';
-  }
-
-  // Vozy, na které sedlo párování. U sloučených karosářských verzí se
-  // označuje celá skupina — díly jsou sjednocené, takže nelze říct,
-  // ze kterého auta ceny jsou.
-  function nacBlokVozy(r){
-    const k=nacJson(r.kandidati_json);
-    if(!k.length)return'';
-    const li=k.map(x=>{
-      const url=x.url||'';
-      const odkaz=url?('<span class="nac-slug"><a href="'+escHtml(url)+'" target="_blank">'+escHtml(pegasPopis(x.slug))+'&nbsp;↗</a></span>'):'';
-      const popis=escHtml(String(x.popis||'').trim());
-      if(x.slouceno){
-        const zn=x.skupinaOK?' <span class="nac-vybran">← z této skupiny</span>':'';
-        return'<li'+(x.skupinaOK?'':' class="nac-sedy"')+'>'+
-          (x.skupinaOK?'<b>'+popis+'</b>':popis)+zn+
-          ' <span class="nac-sedy">(sloučeno — díly shodné)</span>'+odkaz+'</li>';
-      }
-      if(x.nacenen)return'<li><b>'+popis+'</b> <span class="nac-vybran">← vybrán a naceněn</span>'+odkaz+'</li>';
-      return'<li class="nac-sedy">'+popis+odkaz+'</li>';
-    }).join('');
-    return'<div class="nac-blok"><div class="nac-blok-nadpis">Spárované vozy ('+
-      k.length+')</div><ul class="nac-seznam">'+li+'</ul></div>';
-  }
-
-  // Objednání dílů — řádky chodí hotové z GASu (dily_odkazy): název, číslo
-  // dílu, značka a adresa. Stránka jen vykresluje. U objednávek před
-  // 10. 9. 2026 pole chybí a blok se vynechá.
-  function nacBlokDily(r){
-    const dily=Array.isArray(r.dily_odkazy)?r.dily_odkazy:[];
-    if(!dily.length)return'';
-    const li=dily.map(function(p){
-      const popis=escHtml(String((p.znacka||'')+' '+(p.dil||'')).trim());
-      const odkaz=p.url
-        ?' · <a href="'+escHtml(p.url)+'" target="_blank">Objednat ↗</a>':'';
-      return'<li><b>'+escHtml(p.nazev||'')+'</b><br>'+
-        '<span class="nac-sedy">'+popis+'</span>'+odkaz+'</li>';
-    }).join('');
-    return'<div class="nac-blok"><div class="nac-blok-nadpis">Objednání dílů</div>'+
-      '<ul class="nac-seznam">'+li+'</ul></div>';
-  }
-
-  window.otevriNac=function(id){
-    const r=allData.find(x=>x.id===id);
-    if(!r||(!r.naceneni_detail&&!r.vin))return;
-    document.getElementById('nac-modal-sub').textContent =
-      [r.jmeno,r.auto,r.datum].filter(Boolean).join(' · ');
-    // Starší objednávky nová pole nemají — bloky, které nejsou z čeho
-    // vykreslit, se prostě vynechají.
-    const bloky = nacBlokVozidlo(r) + nacBlokDily(r) + nacBlokVarianty(r) + nacBlokVozy(r);
-    const text = r.naceneni_detail
-      ? '<div class="nac-detail">'+nacDetailHtml(r.naceneni_detail)+'</div>' : '';
-    document.getElementById('nac-modal-text').innerHTML = bloky + text;
-    document.getElementById('nac-modal').classList.add('open');
-    document.body.style.overflow='hidden';
-    // Zpětné tlačítko telefonu zavře modál místo odchodu ze stránky
-    history.pushState({nac:true},'');
-  }
-
-  window.zavriNac=function(fromPop){
-    const m=document.getElementById('nac-modal');
-    if(!m.classList.contains('open'))return;
-    m.classList.remove('open');
-    document.body.style.overflow='';
-    if(!fromPop && history.state && history.state.nac) history.back();
-  }
-
-  window.addEventListener('popstate',function(){
-    zavriNac(true);
-  });
-
-  document.addEventListener('keydown',function(e){
-    if(e.key==='Escape')zavriNac();
-  });
-
-  window.archivovat=async function(id,col,typ){
-    const token=getToken();if(!token){handleBadToken();return;}
-    const trzbaInput=document.getElementById('trzba-'+id);
-    const trzbaStr=trzbaInput.value.trim(),trzba=Number(trzbaStr);
-    if(trzbaStr===''||!isFinite(trzba)||trzba<0||trzba>99999){trzbaInput.style.borderColor='#dc2626';trzbaInput.focus();return;}
-    trzbaInput.style.borderColor='';
-    const itemEl=document.getElementById('rez-'+id),archivBtn=itemEl.querySelector('.archiv-btn');
-    archivBtn.disabled=true;archivBtn.textContent='Archivuji...';
-    try{
-      const r=await gasPost({akce:'admin_archive',token,id,col,trzba});
-      if(r.error==='bad_token'){handleBadToken();return;}
-      if(r.ok){
-        allData=allData.filter(x=>x.id!==id);ulozCache();
-        document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
-        document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
-        document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
-        itemEl.innerHTML=`<div class="archived-msg">✓ Archivováno · Tržba ${trzba} Kč</div>`;
-        setTimeout(()=>renderList(),2000);
-      }else{archivBtn.disabled=false;archivBtn.textContent='✓ Archivovat';alert('Chyba: '+(r.message||r.error||'neznámá'));}
-    }catch(e){archivBtn.disabled=false;archivBtn.textContent='✓ Archivovat';alert('Chyba připojení.');}
-  }
-
-  window.cancelRez=async function(id,col){
-    const token=getToken();if(!token){handleBadToken();return;}
-    if(!confirm('Opravdu zrušit rezervaci? (zmizí bez archivace)'))return;
-    try{
-      const r=await gasPost({akce:'admin_delete',token,id,col});
-      if(r.error==='bad_token'){handleBadToken();return;}
-      if(r.ok){
-        allData=allData.filter(x=>x.id!==id);ulozCache();
-        document.getElementById('stat-prezuti').textContent=allData.filter(x=>x.typ==='prezuti').length;
-        document.getElementById('stat-oleje').textContent=allData.filter(x=>x.typ==='oleje').length;
-        document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
-        renderList();
-      }else alert('Chyba: '+(r.message||r.error||'neznámá'));
-    }catch(e){alert('Chyba připojení.');}
-  }
-
-  window.fakturovat=function(id,col){
-    window.location.href='faktura.html?id='+id+'&col='+col;
-  }
-
-  // ══════════════════════════════════════════════════════════
-  //  SERVIS – vícedenní výběr
-  //  sVyber = { "2026-05-03": ["09:00","10:00"], "2026-05-05": ["14:00"] }
-  //  sOpenDay = aktuálně otevřený den (zobrazené sloty), string nebo null
-  // ══════════════════════════════════════════════════════════
-  const S_MESICE=['Leden','Únor','Březen','Duben','Květen','Červen','Červenec','Srpen','Září','Říjen','Listopad','Prosinec'];
-  const S_DNY=['Po','Út','St','Čt','Pá','So','Ne'];
-  const S_MAX_TYDNY=5;
-
-  let sKalDatum   =new Date();
-  let sOpenDay    =null;
-  let sVyber      ={};
-  let sRozvrh     ={};
-  let sObsazene   ={};
-  let sMailDirty  =false;
-  let sInitialized=false;
-
-  function sToDateStr(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
-
-  function sInit(){
-    sRozvrh={};
-    Object.entries(rozvrhData).forEach(([ds,hodiny])=>{
-      sRozvrh[ds]=hodiny.map(h=>String(h).padStart(2,'0')+':00');
-    });
-    sObsazene=Object.assign({},bookedData);
-    if(!sInitialized){
-      sKalDatum=new Date();sKalDatum.setDate(1);
-      ['s-ukon','s-jmeno','s-auto'].forEach(id=>{
-        document.getElementById(id).addEventListener('input',()=>sRegenerateMail());
-      });
-      sInitialized=true;
-    }
-    sRenderKal();sRenderOpenSlots();sRenderVybrano();
-  }
-
-  function sSync(){
-    sRozvrh={};
-    Object.entries(rozvrhData).forEach(([ds,hodiny])=>{
-      sRozvrh[ds]=hodiny.map(h=>String(h).padStart(2,'0')+':00');
-    });
-    sObsazene=Object.assign({},bookedData);
-    sRenderKal();sRenderOpenSlots();
-  }
-
-  window.sKalMesic=function(delta){
-    sKalDatum=new Date(sKalDatum.getFullYear(),sKalDatum.getMonth()+delta,1);
-    sRenderKal();
-  }
-
-  function sRenderKal(){
-    const rok=sKalDatum.getFullYear(),mes=sKalDatum.getMonth();
-    document.getElementById('s-kal-label').textContent=`${S_MESICE[mes]} ${rok}`;
-    const dnes=sToDateStr(new Date());
-    const maxD=new Date();maxD.setDate(maxD.getDate()+S_MAX_TYDNY*7);
-    const maxStr=sToDateStr(maxD);
-    const prvni=new Date(rok,mes,1);
-    let startDow=prvni.getDay();startDow=startDow===0?6:startDow-1;
-    const dniMes=new Date(rok,mes+1,0).getDate();
-    const grid=document.getElementById('s-kal-grid');grid.innerHTML='';
-    S_DNY.forEach(d=>{const el=document.createElement('div');el.className='s-cal-dayname';el.textContent=d;grid.appendChild(el);});
-    for(let i=0;i<startDow;i++){const el=document.createElement('div');el.className='s-cal-day s-empty';grid.appendChild(el);}
-    for(let d=1;d<=dniMes;d++){
-      const ds=`${rok}-${String(mes+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-      const el=document.createElement('div');el.className='s-cal-day';el.textContent=d;
-      const jePast=ds<dnes,jeFuture=ds>maxStr,maRozvrh=sRozvrh[ds]&&sRozvrh[ds].length>0;
-      if(jePast||jeFuture||!maRozvrh){
-        el.classList.add('s-disabled');
-      }else{
-        if(ds===dnes)el.classList.add('s-today');
-        if(ds===sOpenDay)el.classList.add('s-open');
-        else if(sVyber[ds]&&sVyber[ds].length>0)el.classList.add('s-has-slots');
-        el.addEventListener('click',()=>sToggleOpenDay(ds));
-      }
-      grid.appendChild(el);
-    }
-  }
-
-  function sToggleOpenDay(ds){
-    sOpenDay=(sOpenDay===ds)?null:ds;
-    sRenderKal();sRenderOpenSlots();
-  }
-
-  function sRenderOpenSlots(){
-    const container=document.getElementById('s-open-slots');
-    if(!sOpenDay){container.innerHTML='';return;}
-    const hodiny=sRozvrh[sOpenDay]||[];
-    if(!hodiny.length){container.innerHTML='';return;}
-    const obsDs=sObsazene[sOpenDay]||[];
-    const vybrane=sVyber[sOpenDay]||[];
-    const [yr,mo,dy]=sOpenDay.split('-');
-    const dayLabel=`${parseInt(dy)}.${parseInt(mo)}.${yr}`;
-    const slotsHtml=hodiny.map(h=>{
-      const isObs=obsDs.includes(h),isSel=vybrane.includes(h);
-      const cls='s-slot'+(isObs?' s-slot-obs':(isSel?' s-slot-sel':''));
-      return`<button type="button" class="${cls}" onclick="sToggleSlot('${sOpenDay}','${h}')">${h}</button>`;
-    }).join('');
-    container.innerHTML=`<div class="s-slots-panel">
-      <div class="s-slots-panel-bar">
-        <span class="s-slots-panel-label">📅 ${dayLabel}</span>
-        <button class="s-slots-panel-clear" onclick="sClearDay('${sOpenDay}')">Vymazat den ×</button>
-      </div>
-      <div class="s-slots-grid">${slotsHtml}</div>
-    </div>`;
-  }
-
-  window.sToggleSlot=function(ds,h){
-    if((sObsazene[ds]||[]).includes(h))return;
-    if(!sVyber[ds])sVyber[ds]=[];
-    const i=sVyber[ds].indexOf(h);
-    if(i===-1)sVyber[ds].push(h);
-    else sVyber[ds].splice(i,1);
-    if(sVyber[ds].length===0)delete sVyber[ds];
-    sRenderKal();sRenderOpenSlots();sRenderVybrano();sRegenerateMail();
-  }
-
-  window.sClearDay=function(ds){
-    delete sVyber[ds];
-    sRenderKal();sRenderOpenSlots();sRenderVybrano();sRegenerateMail();
-  }
-
-  function sRenderVybrano(){
-    const tableEl=document.getElementById('s-vybrano-table');
-    const emptyEl=document.getElementById('s-vybrano-empty');
-    const boxEl=document.getElementById('s-vybrano-box');
-    const days=Object.keys(sVyber).filter(ds=>sVyber[ds]&&sVyber[ds].length>0).sort();
-    if(!days.length){boxEl.style.display='none';emptyEl.style.display='';return;}
-    emptyEl.style.display='none';boxEl.style.display='';
-    tableEl.innerHTML=days.map(ds=>{
-      const [,mo,dy]=ds.split('-');
-      const dateLabel=`${parseInt(dy)}.${parseInt(mo)}.`;
-      const casy=[...sVyber[ds]].sort().join(', ');
-      return`<tr><td class="s-vybrano-date">${dateLabel}</td><td class="s-vybrano-times">${casy}</td></tr>`;
-    }).join('');
-  }
-
-  // ── Mail ───────────────────────────────────────────────────
-  window.sPoslatMailToggle=function(){
-    const checked=document.getElementById('s-poslat-mail').checked;
-    document.getElementById('s-mail-section').style.display=checked?'block':'none';
-    if(checked)sRegenerateMail(true);
-  }
-
-function sBuildMailText(){
-  const ukon=(document.getElementById('s-ukon').value||'(nezadán)').trim();
-  const days=Object.keys(sVyber).filter(ds=>sVyber[ds]&&sVyber[ds].length>0).sort();
-  let terminyText='(nevybrány)';
-  if(days.length){
-    const prvniDs=days[0];
-    const prvniCas=[...sVyber[prvniDs]].sort()[0];
-    const[,mo,dy]=prvniDs.split('-');
-    terminyText=`${parseInt(dy)}.${parseInt(mo)}. v ${prvniCas}`;
-  }
-  return`Dobrý den,\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}\n\nPřijeďte:\n${terminyText}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nTomáš Skopalík\nM&T Servis`;
+// I, O a Q se ve VINu nevyskytují — každý takový znak z OCR je
+// jednoznačně špatně přečtená 1 nebo 0. Nahrazujeme, nemažeme:
+// smazáním by se VIN zkrátil a posunul.
+function normalizuj(t) {
+  return t.replace(/I/g, '1').replace(/[OQ]/g, '0');
 }
 
-  function sRegenerateMail(force=false){
-    const checked=document.getElementById('s-poslat-mail').checked;if(!checked)return;
-    if(sMailDirty&&!force){document.getElementById('s-dirty-warn').style.display='';return;}
-    document.getElementById('s-mail-preview').value=sBuildMailText();
-    document.getElementById('s-dirty-warn').style.display='none';sMailDirty=false;
-  }
-  window.sOnMailEdit=function(){sMailDirty=true;if(document.getElementById('s-poslat-mail').checked)document.getElementById('s-dirty-warn').style.display='';}
-  window.sResetDirty=function(){sMailDirty=false;sRegenerateMail(true);}
+function dekodujRok(vin) {
+  var znak = vin.charAt(9);
+  var i = ROK_SEQ.indexOf(znak);
+  if (i === -1) return null;
+  var ted = new Date().getFullYear();
+  var mozne = [];
+  for (var c = 0; c < 4; c++) { var r = 1980 + i + c * 30; if (r <= ted + 1) mozne.push(r); }
+  return mozne.length ? mozne[mozne.length - 1] : null;
+}
 
-  // ── Submit ─────────────────────────────────────────────────
-  function genUUID(){return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16);});}
+function skore(v) {
+  var cislic = (v.match(/[0-9]/g) || []).length;
+  if (cislic < 4) return -1;          // VIN bez číslic prakticky neexistuje
+  var s = cislic;
+  if (ROK_SEQ.indexOf(v.charAt(9)) !== -1) s += 8;   // platný znak roku
+  if (/^[A-HJ-NPR-Z0-9][A-HJ-NPR-Z]/.test(v)) s += 3; // typický tvar WMI
+  return s;
+}
 
-  function sShowStatus(msg,type){
-    const el=document.getElementById('s-status');el.textContent=msg;el.className='s-status '+type;el.style.display='';
-    if(type==='ok')setTimeout(()=>el.style.display='none',6000);
-  }
-
-  function sBlokyToArray(){
-    const out=[];
-    Object.keys(sVyber).sort().forEach(ds=>{
-      [...sVyber[ds]].sort().forEach(cas=>out.push({datum:ds,cas}));
-    });
-    return out;
-  }
-
-  window.sSubmit=async function(){
-    const ukon=document.getElementById('s-ukon').value.trim();
-    if(!ukon){document.getElementById('s-ukon').classList.add('s-err');document.getElementById('s-ukon').focus();return;}
-    document.getElementById('s-ukon').classList.remove('s-err');
-    const bloky=sBlokyToArray();
-    if(!bloky.length){sShowStatus('Vyberte alespoň jeden časový slot.','err');return;}
-    const poslatMail=document.getElementById('s-poslat-mail').checked;
-    const email=document.getElementById('s-email').value.trim();
-    if(poslatMail&&!email){if(!confirm('E-mail zákazníka není vyplněn — uložit bez odeslání mailu?'))return;}
-    const vinPole=document.getElementById('s-vin').value.trim();
-    if(vinPole&&!S_VIN_RE.test(vinPole)&&!confirm('VIN není platný (musí mít 17 znaků bez I, O, Q) — uložit zakázku bez VINu?'))return;
-    const token=getToken();if(!token){handleBadToken();return;}
-    const btn=document.getElementById('s-submit-btn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Ukládám…';
-    const prvniDatum=Object.keys(sVyber).sort()[0];
-    const payload={
-      akce:'admin_servis_add',token,
-      data:{
-        ukon,
-        jmeno:document.getElementById('s-jmeno').value.trim(),
-        telefon:document.getElementById('s-telefon').value.trim(),
-        email,
-        auto:document.getElementById('s-auto').value.trim(),
-        // Stejná pole jako u objednávky oleje — Detail nacenění je pak umí ukázat i u servisu.
-        ...sVinData(),
-        datum:prvniDatum,
-        bloky,
-        trzba:parseFloat(document.getElementById('s-trzba').value)||0,
-        poznamka:document.getElementById('s-poznamka').value.trim(),
-        cancel_token:genUUID(),
-        poslatMail:poslatMail&&!!email,
-        mailText:poslatMail&&email?document.getElementById('s-mail-preview').value:''
-      }
-    };
-    try{
-      const r=await gasPost(payload);
-      if(r.error==='bad_token'){handleBadToken();return;}
-      if(r.ok){
-        sShowStatus('✓ Zakázka uložena'+(r.mail_sent?' + e-mail odeslán':'')+'.','ok');
-        sResetForm();loadAll();
-      }else sShowStatus('Chyba: '+(r.error||'neznámá'),'err');
-    }catch(e){sShowStatus('Chyba spojení se serverem.','err');}
-    finally{btn.disabled=false;btn.innerHTML='Uložit zakázku';}
+// Hledání kandidátů. Text se NEslepuje přes mezery — normalizuje se
+// až uvnitř jednotlivých tokenů délky 17, aby ze slepených řádků
+// štítku nevznikali falešní kandidáti.
+function najdiVin(text) {
+  var tokeny = String(text || '').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
+  var kand = [];
+  function pridej(t, bonus) {
+    if (t.length !== 17) return;
+    var v = normalizuj(t);
+    if (!VIN_RE.test(v)) return;
+    var s = skore(v);
+    if (s < 0) return;
+    kand.push({ vin: v, s: s + (bonus || 0) });
   }
 
-  // ══ VIN v novém servisu ═══════════════════════════════════════
-  // Rozpoznání z fotky a dotazy na zdroje jsou převzaté z vin.html
-  // (stejné akce GAS: vin_ocr, registr, naceneni, olej, allegro).
-  // VIN je nepovinný — bez něj se zakázka uloží jako dřív.
-  const S_VIN_RE=/^[A-HJ-NPR-Z0-9]{17}$/;
-  const S_ROK_SEQ='ABCDEFGHJKLMNPRSTVWXY123456789';
-  // Stejné pravidlo jako v operátorském mailu — jinde je rok z 10. znaku nespolehlivý.
-  const S_ZNACKY_S_ROKEM=/^(SKODA|ŠKODA|VOLKSWAGEN|VW|SEAT|AUDI|HYUNDAI|KIA)/;
-  let sVinTimer=null, sVinToken=0, sVinPosledni='', sVinInfo={}, sAutoPredvyplneno='';
-  let sAutoRegistr='', sAutoZnacka='', sAutoParovani='';   // z čeho se skládá předvyplněné Vozidlo
+  // 1) token hned za návěštím (VIN, E, E., č. podvozku)
+  for (var i = 0; i < tokeny.length - 1; i++) {
+    var p = tokeny[i];
+    if (p === 'VIN' || p === 'E' || p === 'PODVOZKU' || p === 'CHASSIS') pridej(tokeny[i + 1], 20);
+  }
+  // 2) samostatné 17znakové tokeny
+  tokeny.forEach(function (t) { pridej(t, 0); });
+  // 3) delší tokeny — návěští slepené s VINem
+  tokeny.forEach(function (t) {
+    if (t.length > 17 && t.length <= 24) { pridej(t.slice(-17), 0); pridej(t.slice(0, 17), 0); }
+  });
+  // 4) poslední možnost: VIN rozlomený OCR na víc částí
+  if (!kand.length) {
+    var vse = tokeny.join('');
+    for (var j = 0; j + 17 <= vse.length; j++) pridej(vse.substr(j, 17), -5);
+  }
 
-  function sEsc(t){
-    return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function sDekodujRok(vin){
-    const i=S_ROK_SEQ.indexOf(vin.charAt(9)); if(i===-1)return null;
-    const ted=new Date().getFullYear(); let rok=null;
-    for(let c=0;c<4;c++){const r=1980+i+c*30; if(r<=ted+1)rok=r;}
-    return rok;
-  }
-  // I, O, Q ve VINu nejsou — z OCR jsou to špatně přečtené 1 a 0.
-  function sNormalizuj(t){return t.replace(/I/g,'1').replace(/[OQ]/g,'0');}
-  function sSkore(v){
-    const cislic=(v.match(/[0-9]/g)||[]).length; if(cislic<4)return -1;
-    let s=cislic;
-    if(S_ROK_SEQ.indexOf(v.charAt(9))!==-1)s+=8;
-    if(/^[A-HJ-NPR-Z0-9][A-HJ-NPR-Z]/.test(v))s+=3;
-    return s;
-  }
-  function sNajdiVin(text){
-    const tokeny=String(text||'').toUpperCase().split(/[^A-Z0-9]+/).filter(Boolean);
-    const kand=[];
-    function pridej(t,bonus){
-      if(t.length!==17)return;
-      const v=sNormalizuj(t); if(!S_VIN_RE.test(v))return;
-      const s=sSkore(v); if(s<0)return;
-      kand.push({vin:v,s:s+(bonus||0)});
-    }
-    for(let i=0;i<tokeny.length-1;i++){
-      const p=tokeny[i];
-      if(p==='VIN'||p==='E'||p==='PODVOZKU'||p==='CHASSIS')pridej(tokeny[i+1],20);
-    }
-    tokeny.forEach(t=>pridej(t,0));
-    tokeny.forEach(t=>{if(t.length>17&&t.length<=24){pridej(t.slice(-17),0);pridej(t.slice(0,17),0);}});
-    if(!kand.length){const vse=tokeny.join('');for(let j=0;j+17<=vse.length;j++)pridej(vse.substr(j,17),-5);}
-    if(!kand.length)return null;
-    kand.sort((a,b)=>b.s-a.s);
-    return kand[0].vin;
-  }
-  function sZmensi(file){
-    return new Promise((res,rej)=>{
-      const r=new FileReader();
-      r.onerror=()=>rej(new Error('Fotku se nepodařilo načíst.'));
-      r.onload=ev=>{
-        const img=new Image();
-        img.onerror=()=>rej(new Error('Fotku se nepodařilo otevřít.'));
-        img.onload=()=>{
-          const k=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight));
-          if(k===1){res(ev.target.result.split(',')[1]);return;}
-          const c=document.createElement('canvas');
-          c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
-          c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-          res(c.toDataURL('image/jpeg',0.92).split(',')[1]);
-        };
-        img.src=ev.target.result;
+  if (!kand.length) return null;
+  var unik = {};
+  kand.forEach(function (k) { if (!unik[k.vin] || unik[k.vin] < k.s) unik[k.vin] = k.s; });
+  var vysl = Object.keys(unik).map(function (v) { return { vin: v, s: unik[v] }; });
+  vysl.sort(function (a, b) { return b.s - a.s; });
+  return { nejlepsi: vysl[0].vin, pocet: vysl.length };
+}
+
+// ══ Zpracování fotky ═════════════════════════════════════════
+var icoCam = '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>';
+var icoSp  = '<path d="M21 12a9 9 0 1 1-6.2-8.6"/>';
+
+function stav(nacita) {
+  var b = document.getElementById('btnScan');
+  var i = document.getElementById('icoScan');
+  b.disabled = nacita;
+  document.getElementById('btnGalerie').disabled = nacita;
+  i.innerHTML = nacita ? icoSp : icoCam;
+  i.classList.toggle('sp', nacita);
+  document.getElementById('txtScan').textContent = nacita ? 'Rozpoznávám…' : 'Vyfotit VIN';
+}
+
+function chyba(nadpis, detail) {
+  var e = document.getElementById('err');
+  e.innerHTML = '<b>' + nadpis + '</b>' + (detail ? detail : '');
+  e.classList.remove('hidden');
+}
+function skryjChybu() { document.getElementById('err').classList.add('hidden'); }
+
+function zmensi(file) {
+  return new Promise(function (res, rej) {
+    var r = new FileReader();
+    r.onerror = function () { rej(new Error('Fotku se nepodařilo načíst.')); };
+    r.onload = function (ev) {
+      var img = new Image();
+      img.onerror = function () { rej(new Error('Fotku se nepodařilo otevřít.')); };
+      img.onload = function () {
+        var w = img.naturalWidth, h = img.naturalHeight;
+        var k = Math.min(1, MAX_PX / Math.max(w, h));
+        if (k === 1) { res(ev.target.result.split(',')[1]); return; }
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * k); c.height = Math.round(h * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', 0.92).split(',')[1]);
       };
-      r.readAsDataURL(file);
+      img.src = ev.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+function zpracuj(input) {
+  if (!input.files || !input.files[0]) return;
+  var soubor = input.files[0];
+  input.value = '';
+  skryjChybu();
+  stav(true);
+
+  zmensi(soubor).then(function (base64) {
+    return fetch(GAS_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      body: JSON.stringify({ akce: 'vin_ocr', obrazek: base64 })
     });
-  }
-  function sVinStav(text,chyba){
-    const e=document.getElementById('s-vin-stav');
-    e.textContent=text||''; e.className='s-vin-stav'+(chyba?' err':'');
-  }
+  })
+  .then(function (r) { return r.json(); })
+  .then(function (data) {
+    stav(false);
 
-  window.sVinFoto=async function(input){
-    if(!input.files||!input.files[0])return;
-    const soubor=input.files[0]; input.value='';
-    const btny=document.querySelectorAll('.s-vin-btn'); btny.forEach(b=>b.disabled=true);
-    sVinStav('Rozpoznávám…');
-    try{
-      const base64=await sZmensi(soubor);
-      const r=await fetch(GAS_URL,{method:'POST',redirect:'follow',body:JSON.stringify({akce:'vin_ocr',obrazek:base64})});
-      const data=await r.json();
-      if(data&&data.error){
-        sVinStav('Rozpoznání selhalo: '+(typeof data.error==='string'?data.error:(data.error.message||JSON.stringify(data.error))),true);
-        return;
-      }
-      let text='';
-      try{text=data.responses[0].fullTextAnnotation.text||'';}catch(e){}
-      const vin=sNajdiVin(text);
-      if(!vin){sVinStav(text.trim()?'Na fotce nebyl nalezen platný VIN — zkus ostřejší fotku štítku nebo TP, nebo ho napiš.':'Na fotce nebyl nalezen žádný text.',true);return;}
-      document.getElementById('s-vin').value=vin;
-      sVinZmena();
-    }catch(e){
-      sVinStav('Spojení selhalo — zkus to znovu, nebo VIN napiš.',true);
-    }finally{btny.forEach(b=>b.disabled=false);}
-  }
-
-  window.sVinZmena=function(){
-    const el=document.getElementById('s-vin');
-    const v=el.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
-    if(el.value!==v)el.value=v;
-    clearTimeout(sVinTimer);
-    if(!v){sVinVycisti();return;}
-    if(!S_VIN_RE.test(v)){
-      sVinToken++; sVinPosledni=''; sVinInfo={};
-      document.getElementById('s-vin-zdroje').innerHTML='';
-      el.classList.toggle('s-err',v.length===17);
-      sVinStav(v.length+'/17 znaků'+(/[IOQ]/.test(v)?' — VIN nesmí obsahovat I, O ani Q':''),v.length===17);
+    // Vision vrací zamítnutý klíč s HTTP 200 a chybou v těle —
+    // bez téhle větve by to vypadalo jako nenalezený VIN.
+    if (data && data.error) {
+      // Chyba může přijít jako text i jako objekt — prázdná hláška by nic neřekla.
+      var popis = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+      chyba('Vision API odmítlo požadavek', esc(popis) +
+        '<br><br>Zkontroluj VISION_API_KEY ve Vlastnostech skriptu GAS a list errors_log.');
       return;
     }
-    el.classList.remove('s-err');
-    if(v===sVinPosledni)return;
-    sVinStav('Načítám vozidlo…');
-    sVinTimer=setTimeout(()=>sVinNacti(v),600);
-  }
+    var chybaOdp = data && data.responses && data.responses[0] && data.responses[0].error;
+    if (chybaOdp) { chyba('Vision API vrátilo chybu', chybaOdp.message || ''); return; }
 
-  function sVinVycisti(){
-    clearTimeout(sVinTimer); sVinToken++; sVinPosledni=''; sVinInfo={};
-    document.getElementById('s-vin').classList.remove('s-err');
-    document.getElementById('s-vin-zdroje').innerHTML='';
-    sVinStav('');
-    sAutoPredvyplneno=''; sAutoRegistr=''; sAutoZnacka=''; sAutoParovani='';
-  }
+    var text = '';
+    try { text = data.responses[0].fullTextAnnotation.text || ''; } catch (e) {}
+    if (!text.trim()) { chyba('Na fotce nebyl nalezen žádný text', 'Zkus ostřejší záběr nebo lepší světlo.'); return; }
 
-  // Vlastní párování je nejpřesnější, jen v něm chybí značka — ta je z registru.
-  // Registr a párování dobíhají v libovolném pořadí, proto se text skládá znovu.
-  function sAutoText(){
-    if(sAutoParovani){
-      const zn=sAutoZnacka&&sAutoParovani.toUpperCase().indexOf(sAutoZnacka.toUpperCase())===-1?sAutoZnacka+' ':'';
-      return zn+sAutoParovani;
+    var nalez = najdiVin(text);
+    if (!nalez) {
+      chyba('VIN nebyl rozpoznán', 'Text na fotce byl přečten, ale neobsahuje platný 17znakový VIN. Zkus záběr jen na štítek.');
+      return;
     }
-    return sAutoRegistr;
+    ukazVysledek(nalez.nejlepsi, nalez.pocet);
+  })
+  .catch(function (e) {
+    stav(false);
+    chyba('Spojení selhalo', (e && e.message ? e.message + ' ' : '') + 'Zkontroluj připojení a zkus to znovu.');
+  });
+}
+
+// ══ Zobrazení a kopírování ═══════════════════════════════════
+var posledni = null;
+
+function ukazVysledek(vin, pocet) {
+  if (posledni && posledni !== vin) doHistorie(posledni);
+  posledni = vin;
+  document.getElementById('vinLbl').textContent = 'Rozpoznaný VIN — lze přepsat';
+  document.getElementById('vin').value = vin;
+  document.getElementById('vysledek').classList.remove('hidden');
+  prekresli(pocet);
+  document.getElementById('vysledek').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Bez fotky — prázdné pole, ověření a zdroje se spustí po napsání 17 znaků.
+function zadatRucne() {
+  skryjChybu();
+  ukazVysledek('');
+  document.getElementById('vinLbl').textContent = 'Zadej VIN';
+  document.getElementById('vin').focus();
+}
+
+function prekresli(pocet) {
+  var el = document.getElementById('vin');
+  var v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (el.value !== v) el.value = v;
+
+  var platny = VIN_RE.test(v);
+  el.classList.toggle('bad', v.length > 0 && !platny);
+
+  document.getElementById('gWmi').textContent = v.slice(0, 3) || '—';
+  document.getElementById('gVds').textContent = v.slice(3, 9) || '—';
+  document.getElementById('gRok').textContent = v.charAt(9) || '—';
+  document.getElementById('gSer').textContent = v.slice(10, 17) || '—';
+
+  var zpravy = [];
+  if (!platny) {
+    if (v.length !== 17) zpravy.push('<b>' + v.length + '/17 znaků.</b>');
+    if (/[IOQ]/.test(v)) zpravy.push('VIN nesmí obsahovat I, O ani Q.');
+  } else {
+    var rok = dekodujRok(v);
+    if (rok) zpravy.push('Modelový rok podle 10. znaku: <b>' + rok + '</b>. Nesedí-li s autem, je VIN přečtený špatně.');
+    else zpravy.push('<b>10. znak není platný kód roku</b> — zkontroluj ho se štítkem.');
+    if (pocet > 1) zpravy.push('Na fotce byly i jiné možnosti — porovnej se štítkem.');
+  }
+  zpravy.push('Záměny <b>8/B, 5/S, 2/Z, 6/G</b> rozpoznat nejdou — ty zkontroluj okem.');
+  document.getElementById('note').innerHTML = zpravy.join(' ');
+
+  if (platny) {
+    document.getElementById('over').classList.remove('hidden');
+    naplanujOvereni(v);
+  } else {
+    clearTimeout(overTimer); overToken++;
+    document.getElementById('over').classList.add('hidden');
+    document.getElementById('zdroje').classList.add('hidden');
   }
 
-  // Do pole Vozidlo se píše jen tehdy, když ho mezitím nikdo nepřepsal.
-  function sPredvyplnAuto(text){
-    const el=document.getElementById('s-auto');
-    if(!text)return;
-    if(el.value.trim()&&el.value.trim()!==sAutoPredvyplneno)return;
-    el.value=text; sAutoPredvyplneno=text;
-  }
+  var b = document.getElementById('btnCopy');
+  b.classList.remove('ok');
+  b.classList.toggle('bad', !platny);
+  document.getElementById('txtCopy').textContent = platny ? 'Kopírovat' : 'Zkopírovat i tak';
+}
 
-  function sZdroj(id,trida,html){
-    const e=document.getElementById('s-zdroj-'+id); if(!e)return;
-    e.className='s-zdroj '+(trida||'');
-    e.querySelector('.z-t').innerHTML=html;
-  }
+// ══ Ověření proti registru ═══════════════════════════════════
+// Ověřuje se na pozadí — VIN jde kopírovat hned, bez čekání na signál.
+var overTimer = null, overToken = 0, overPosledni = null;
 
-  function sVinNacti(vin){
-    const muj=++sVinToken; sVinPosledni=vin; sVinInfo={};
-    sAutoRegistr=''; sAutoZnacka=''; sAutoParovani='';
-    const box=document.getElementById('s-vin-zdroje');
-    box.innerHTML=[['registr','Registr'],['db','Moje databáze'],['castrol','Castrol'],['allegro','Allegro']].map(z=>
-      '<div class="s-zdroj load" id="s-zdroj-'+z[0]+'"><div class="z-n">'+z[1]+'</div><div class="z-t">Načítám…</div></div>').join('');
-    const dotaz=(par)=>fetch(GAS_URL+'?vin='+encodeURIComponent(vin)+par,{redirect:'follow'}).then(r=>r.json());
-    const aktualni=()=>muj===sVinToken;
+function overPanel(trida, nadpis, detail, tocit) {
+  var e = document.getElementById('over');
+  e.className = 'over ' + (trida || '');
+  e.innerHTML = '<div class="over-h"><span class="dot' + (tocit ? ' load' : '') + '"></span>' +
+    nadpis + '</div>' + (detail ? '<div class="over-d">' + detail + '</div>' : '');
+}
 
-    // Registr první — rok a značka z něj zpřesní Castrol.
-    dotaz('').then(d=>d||{}).catch(()=>({error:'spojeni'})).then(reg=>{
-      if(!aktualni())return;
-      if(reg.error){
-        sZdroj('registr','none',reg.error==='spojeni'?'Nepodařilo se načíst':'V registru ČR nenalezeno');
-      }else{
-        const rokVin=sDekodujRok(vin);
-        const zn=String(reg.znacka||'').toUpperCase().trim();
-        sVinInfo.rok=reg.rok||'';
-        sVinInfo.rok_vin=(rokVin&&S_ZNACKY_S_ROKEM.test(zn))?String(rokVin):'';
-        sVinInfo.kod_motoru_registr=reg.kodMotoru||'';
-        sVinInfo.palivo=reg.palivo||'';
-        sVinInfo.objem=reg.obsah?String(reg.obsah):'';
-        sVinInfo.vykon=reg.vykon?String(reg.vykon).split('/')[0].trim():'';
-        const radky=[];
-        if(reg.kodMotoru)radky.push('Kód motoru: <b>'+sEsc(reg.kodMotoru)+'</b>');
-        if(reg.obsah||reg.palivo)radky.push([reg.obsah?sEsc(reg.obsah)+' cm³':'',sEsc(reg.palivo||'')].filter(Boolean).join(' · '));
-        if(reg.rok)radky.push('Rok 1. registrace: <b>'+sEsc(reg.rok)+'</b>');
-        if(sVinInfo.rok_vin)radky.push('Modelový rok (z VIN): <b>'+sVinInfo.rok_vin+'</b>');
-        sZdroj('registr','ok','<b>'+sEsc([reg.znacka,reg.model].filter(Boolean).join(' '))+'</b>'+(radky.length?'<br>'+radky.join('<br>'):''));
-        sAutoZnacka=reg.znacka||'';
-        sAutoRegistr=[reg.znacka,reg.model].filter(Boolean).join(' ');
-        sPredvyplnAuto(sAutoText());
+function naplanujOvereni(vin) {
+  clearTimeout(overTimer);
+  if (vin === overPosledni) return;          // už ověřeno, neposílat znovu
+  document.getElementById('zdroje').classList.add('hidden');
+  overPanel('', 'Ověřuji v registru…', '', true);
+  overTimer = setTimeout(function () { overVin(vin); }, 700);
+}
+
+function overVin(vin) {
+  var muj = ++overToken;
+  fetch(GAS_URL + '?vin=' + encodeURIComponent(vin), { redirect: 'follow' })
+    .then(function (r) {
+      return r.text().then(function (t) { return { status: r.status, text: t }; });
+    })
+    .then(function (o) {
+      var data = null;
+      try { data = JSON.parse(o.text); } catch (e) {}
+      if (!data) {
+        var uk = (o.text || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90);
+        throw new Error('Server nevrátil JSON (HTTP ' + o.status + '). ' + (uk || 'Prázdná odpověď.'));
       }
-      sVinStav('');
+      return data;
+    })
+    .then(function (data) {
+      if (muj !== overToken) return;          // mezitím přišel novější dotaz
+      overPosledni = vin;
 
-      const castrol='&action=olej'+(reg.rok?'&rok='+encodeURIComponent(reg.rok):'')+(reg.znacka?'&znacka='+encodeURIComponent(reg.znacka):'');
-      dotaz(castrol).then(c=>{
-        if(!aktualni())return; c=c||{};
-        const v=c.vehicle;
-        if(c.ok&&v){
-          sVinInfo.kodMotoru=c.kodMotoru||'';
-          const roky=v.yearFrom?' ('+v.yearFrom+'–'+(v.yearTo||'')+')':'';
-          sZdroj('castrol','ok','<b>'+sEsc([v.make,v.model].filter(Boolean).join(' '))+'</b><br>'+sEsc((v.type||'')+roky)+
-            (c.kodMotoru?'<br>Kód motoru: <b>'+sEsc(c.kodMotoru)+'</b>':''));
-        }else sZdroj('castrol','none',sEsc(c.message||(c.error==='not_found'?'Nenalezeno':c.error)||'Nenalezeno'));
-      }).catch(()=>{if(aktualni())sZdroj('castrol','none','Nepodařilo se načíst');});
+      if (!data || data.error) {
+        overPanel('warn', 'V registru ČR nenalezeno',
+          'Buď je ve VINu špatně přečtený znak, nebo jde o vůz ze zahraničí, ' +
+          'případně o vozidlo neregistrované v ČR. Porovnej znaky se štítkem.');
+        nactiZdroje(vin, null);
+        return;
+      }
+      var d = [];
+      if (data.kodMotoru) d.push('<span>Kód motoru: <b>' + esc(data.kodMotoru) + '</b></span>');
+      if (data.obsah)     d.push('<span>' + esc(data.obsah) + ' cm³</span>');
+      if (data.palivo)    d.push('<span>' + esc(data.palivo) + '</span>');
+      if (data.rok) d.push('<br><span>Rok 1. registrace: <b>' + esc(data.rok) + '</b></span>');
+      // Stejné pravidlo jako v operátorském mailu: modelový rok z VINu
+      // jen u značek, kde vychází spolehlivě (Renault, Ford, BMW… ho nekódují).
+      var rok = dekodujRok(vin);
+      if (rok && ZNACKY_S_ROKEM_VE_VIN.test(String(data.znacka || '').toUpperCase().trim())) {
+        d.push('<span>Modelový rok (z VIN): <b>' + rok + '</b></span>');
+      }
+
+      var nazev = [data.znacka, data.model].filter(Boolean).join(' ') || 'Vozidlo nalezeno';
+      overPanel('ok', nazev, d.join('') +
+        '<div style="margin-top:5px;">Sedí-li s autem před tebou, je VIN přečtený správně.</div>');
+      nactiZdroje(vin, data);
+    })
+    .catch(function (e) {
+      if (muj !== overToken) return;
+      // NENÍ totéž co nenalezeno — VIN může být v pořádku.
+      overPanel('fail', 'Ověření se nepodařilo',
+        '<b>' + ((e && e.message) ? e.message : 'Neznámá chyba.') + '</b><br>' +
+        'Problém je na straně ověřování, ne ve VINu. ' +
+        '<a href="#" onclick="overPosledni=null;naplanujOvereni(document.getElementById(\'vin\').value);return false;" ' +
+        'style="color:inherit;font-weight:700;">Zkusit znovu</a>');
     });
+  document.getElementById('over').classList.remove('hidden');
+}
 
-    dotaz('&action=naceneni').then(n=>{
-      if(!aktualni())return; n=n||{};
-      if(n.uspech&&n.vozidlo){
-        sVinInfo.kod_motoru_pegas=n.kodMotoru||'';
-        sZdroj('db','ok','<b>'+sEsc(n.vozidlo)+'</b>'+(n.kodMotoru?'<br>Kód motoru: <b>'+sEsc(n.kodMotoru)+'</b>':''));
-        sAutoParovani=n.vozidlo+(n.kodMotoru?' · '+n.kodMotoru:'');
-        sPredvyplnAuto(sAutoText());
-      }else sZdroj('db','none',sEsc(n.duvod||'Nenalezeno'));
-    }).catch(()=>{if(aktualni())sZdroj('db','none','Nepodařilo se načíst');});
+// ══ Zdroje: moje databáze, Castrol, Allegro ══════════════════
+// Jen pro informaci a porovnání. Každý zdroj se načítá zvlášť —
+// výpadek jednoho (typicky vypršelé přihlášení k Allegru) neblokuje ostatní.
+var ZDROJE = [
+  { id: 'db',      nazev: 'Moje databáze' },
+  { id: 'castrol', nazev: 'Castrol' },
+  { id: 'allegro', nazev: 'Allegro' }
+];
 
-    dotaz('&action=allegro').then(a=>{
-      if(!aktualni())return; a=a||{};
-      if(a.ok){
-        if(!a.auta||!a.auta.length)return sZdroj('allegro','none','Allegro auto nenašlo');
-        sZdroj('allegro','ok',a.auta.map(x=>'<b>'+sEsc([x.znacka,x.model].filter(Boolean).join(' '))+'</b><br>'+sEsc(x.typ)).join('<hr>'));
-      }else if(a.error){
-        sZdroj('allegro',(a.error==='prihlaseni'||a.error==='blokace')?'warn':'none',sEsc(a.zprava||a.error));
-      }else sZdroj('allegro','none','Allegro není v GAS zapnuté');
-    }).catch(()=>{if(aktualni())sZdroj('allegro','none','Nepodařilo se načíst');});
+// Převzato z mail_oleje_html_ v GAS — u ostatních značek je rok z 10. znaku nespolehlivý.
+var ZNACKY_S_ROKEM_VE_VIN = /^(SKODA|ŠKODA|VOLKSWAGEN|VW|SEAT|AUDI|HYUNDAI|KIA)/;
+
+// Texty z Castrolu a Allegra jsou cizí data — do HTML jen escapované.
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function zdrojRadek(id, trida, html) {
+  var e = document.getElementById('zdroj-' + id);
+  if (!e) return;
+  e.className = 'zdroj ' + (trida || '');
+  e.querySelector('.z-t').innerHTML = html;
+}
+
+function nactiZdroje(vin, registr) {
+  var box = document.getElementById('zdroje');
+  box.innerHTML = '<div class="lbl">Zdroje</div>' + ZDROJE.map(function (z) {
+    return '<div class="zdroj load" id="zdroj-' + z.id + '"><div class="z-n">' + z.nazev +
+      '</div><div class="z-t">Načítám…</div></div>';
+  }).join('');
+  box.classList.remove('hidden');
+
+  var muj = overToken;                         // výsledky starého VINu nový nepřepíšou
+  function dotaz(id, parametry, zobraz) {
+    fetch(GAS_URL + '?vin=' + encodeURIComponent(vin) + parametry, { redirect: 'follow' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { if (muj === overToken) zobraz(data || {}); })
+      .catch(function () { if (muj === overToken) zdrojRadek(id, 'fail', 'Nepodařilo se načíst'); });
   }
 
-  // Co se k zakázce uloží. Neplatný nebo nenačtený VIN = nic, zakázka jde bez něj.
-  function sVinData(){
-    const vin=document.getElementById('s-vin').value.trim();
-    if(!S_VIN_RE.test(vin))return {vin:''};
-    return Object.assign({vin:vin},vin===sVinPosledni?sVinInfo:{});
-  }
+  dotaz('db', '&action=naceneni', function (n) {
+    var ROK_ZDROJ = { vin: 'z VIN', registrace: 'z registrace' };
+    if (n.uspech && n.vozidlo) zdrojRadek('db', 'ok', '<b>' + esc(n.vozidlo) + '</b>' +
+      (n.kodMotoru ? '<br>Kód motoru: <b>' + esc(n.kodMotoru) + '</b>' : '') +
+      (n.rokPouzity ? '<br>Rok pro párování: ' + esc(n.rokPouzity) +
+        (ROK_ZDROJ[n.rokZdroj] ? ' (' + ROK_ZDROJ[n.rokZdroj] + ')' : '') : ''));
+    else zdrojRadek('db', 'none', esc(n.duvod || 'Nenalezeno'));
+  });
 
-  function sResetForm(){
-    ['s-ukon','s-jmeno','s-telefon','s-email','s-auto','s-trzba','s-poznamka','s-vin'].forEach(id=>document.getElementById(id).value='');
-    sVinVycisti();
-    document.getElementById('s-poslat-mail').checked=false;
-    document.getElementById('s-mail-section').style.display='none';
-    document.getElementById('s-dirty-warn').style.display='none';
-    sVyber={};sOpenDay=null;sMailDirty=false;
-    sRenderKal();sRenderOpenSlots();sRenderVybrano();
+  // Rok a značka z registru zpřesní výběr varianty u Castrolu (stejně jako v oleje.html).
+  var castrol = '&action=olej' +
+    (registr && registr.rok ? '&rok=' + encodeURIComponent(registr.rok) : '') +
+    (registr && registr.znacka ? '&znacka=' + encodeURIComponent(registr.znacka) : '');
+  dotaz('castrol', castrol, function (c) {
+    var v = c.vehicle;
+    if (c.ok && v) {
+      var roky = v.yearFrom ? ' (' + v.yearFrom + '–' + (v.yearTo || '') + ')' : '';
+      zdrojRadek('castrol', 'ok', '<b>' + esc([v.make, v.model].filter(Boolean).join(' ')) + '</b><br>' +
+        esc((v.type || '') + roky) + (c.kodMotoru ? '<br>Kód motoru: <b>' + esc(c.kodMotoru) + '</b>' : ''));
+    } else {
+      zdrojRadek('castrol', 'none', esc(c.message || (c.error === 'not_found' ? 'Nenalezeno' : c.error) || 'Nenalezeno'));
+    }
+  });
+
+  dotaz('allegro', '&action=allegro', function (a) {
+    if (a.ok) {
+      if (!a.auta || !a.auta.length) return zdrojRadek('allegro', 'none', 'Allegro auto nenašlo');
+      zdrojRadek('allegro', 'ok', a.auta.map(function (x) {
+        return '<b>' + esc([x.znacka, x.model].filter(Boolean).join(' ')) + '</b><br>' + esc(x.typ);
+      }).join('<hr>'));
+    } else if (a.error) {
+      // Vypršelé přihlášení a blokace se řeší ručně — proto výrazně, ne šedě.
+      var trida = (a.error === 'prihlaseni' || a.error === 'blokace') ? 'warn' : 'none';
+      zdrojRadek('allegro', trida, esc(a.zprava || a.error));
+    } else {
+      // Bez řádku action=allegro v doGet vrátí GAS data z registru místo Allegra.
+      zdrojRadek('allegro', 'fail', 'Allegro není v GAS zapnuté (chybí action=allegro v doGet)');
+    }
+  });
+}
+
+function kopiruj() {
+  var v = document.getElementById('vin').value.toUpperCase().trim();
+  if (!v) return;
+  function hotovo() {
+    var b = document.getElementById('btnCopy');
+    b.classList.add('ok'); b.classList.remove('bad');
+    document.getElementById('txtCopy').textContent = 'Zkopírováno ✓';
+    setTimeout(function () { prekresli(); }, 1600);
   }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(v).then(hotovo).catch(function () { zaloha(v, hotovo); });
+  } else { zaloha(v, hotovo); }
+}
+
+function zaloha(v, cb) {
+  var t = document.createElement('textarea');
+  t.value = v;
+  t.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+  document.body.appendChild(t);
+  t.select(); t.setSelectionRange(0, 99);
+  var ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(t);
+  if (ok) cb();
+  else chyba('Kopírování se nezdařilo', 'Označ VIN v poli a zkopíruj ho ručně.');
+}
+
+// ══ Historie ═════════════════════════════════════════════════
+var historie = [];
+function doHistorie(vin) {
+  historie = historie.filter(function (h) { return h !== vin; });
+  historie.unshift(vin);
+  if (historie.length > 3) historie.length = 3;
+  var box = document.getElementById('histList');
+  box.innerHTML = '';
+  historie.forEach(function (h) {
+    var b = document.createElement('button');
+    b.className = 'hist-i';
+    b.innerHTML = '<span class="hv">' + h + '</span><span class="hc">Kopírovat</span>';
+    b.onclick = function () {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(h).then(function () { b.querySelector('.hc').textContent = 'Hotovo ✓'; })
+          .catch(function () { zaloha(h, function () { b.querySelector('.hc').textContent = 'Hotovo ✓'; }); });
+      } else { zaloha(h, function () { b.querySelector('.hc').textContent = 'Hotovo ✓'; }); }
+    };
+    box.appendChild(b);
+  });
+  document.getElementById('hist').classList.remove('hidden');
+}
 </script>
-
-<!-- Modál s detailem nacenění -->
-<div class="nac-modal" id="nac-modal" onclick="if(event.target===this)zavriNac()">
-  <div class="nac-modal-box">
-    <div class="nac-modal-bar">
-      <div>
-        <div class="nac-modal-title">Detail nacenění</div>
-        <div class="nac-modal-sub" id="nac-modal-sub"></div>
-      </div>
-      <button class="nac-modal-close" onclick="zavriNac()">&times;</button>
-    </div>
-    <div id="nac-modal-text"></div>
-  </div>
-</div>
-
 </body>
 </html>
