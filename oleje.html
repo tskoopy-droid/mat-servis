@@ -245,6 +245,8 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .krok-header .section-title{margin:0;}
 
   .sekce-nadpis{font-size:15px;font-weight:700;color:var(--text);margin:16px 0 6px;}
+  .volitelne-stitek{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 8px;border-radius:999px;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
+  .zaklad-volitelne{margin-top:12px;padding:10px 12px;background:var(--blue-light);border-radius:10px;font-size:13px;color:var(--text);line-height:1.5;}
   .sekce-popis{font-size:13px;color:var(--text);opacity:.85;line-height:1.6;margin-bottom:12px;}
   .kategorie-item{border:2px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;background:var(--white);}
   .kategorie-item:active,.kategorie-item.selected{border-color:var(--blue);background:var(--blue-light);}
@@ -294,6 +296,8 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .cal-day.available:active{background:var(--blue-mid);}
   .cal-day.selected{background:var(--blue)!important;border-color:var(--blue)!important;color:#fff!important;font-weight:700;}
   .cal-legend{margin-top:14px;font-size:11px;color:var(--text-muted);}
+  .cal-nav-tydny{justify-content:center;margin-bottom:8px;}
+  .cal-oddelovac{border-top:2px solid var(--border);margin:16px 0 14px;}
   .cal-empty-note{margin-top:12px;padding:10px 12px;background:#fef9f0;border:1px solid #f4d68a;border-radius:10px;color:#8a6d2f;font-size:13px;font-weight:600;text-align:center;line-height:1.5;}
   .time-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px;}
   .time-slot{padding:22px 8px;border-radius:16px;text-align:center;font-weight:700;font-size:22px;border:2px solid var(--border);background:var(--white);color:var(--text);cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.05);}
@@ -460,6 +464,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
     <div class="zaklad-soucet">
       <span>Celkem</span><b id="zakladCelkem">—</b>
     </div>
+    <div class="zaklad-volitelne" id="zakladVolitelne" style="display:none"></div>
     <button onclick="dalPo('cardZaklad')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
@@ -467,19 +472,26 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   <div class="card hidden" id="cardVzduch">
     <div class="krok-header">
       <button class="back-btn-cal" onclick="zpetPred('cardVzduch')">←</button>
-      <div class="section-title">Vzduchový filtr</div>
+      <div class="section-title">Vzduchový filtr <span class="volitelne-stitek">Volitelné</span></div>
     </div>
     <div class="sekce-popis">Průchodný filtr znamená nižší spotřebu a plný výkon motoru. Výměnou každých 30 000 km zajistíte, že motor nebude zbytečně namáhán kvůli nedostatku vzduchu.</div>
-    <div class="sluzba-item" id="slVzduch" onclick="toggleSluzba('vzduch')">
+    <div class="sluzba-item" id="slVzduch" onclick="vyberSluzbu('vzduch', true)">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkVzduch"></div>
         <div class="sluzba-hlavni" id="nazevVzduch"><span class="sluzba-name">Vzduchový filtr</span></div>
       </div>
       <div class="sluzba-spodek">
-        <span class="sluzba-detail">Výměna v ceně</span>
+        <span class="sluzba-detail">Cena filtru včetně výměny</span>
         <span class="sluzba-cena" id="cenaVzduch">—</span>
       </div>
     </div>
+    <div class="sluzba-item" id="slVzduchNe" style="margin-top:10px;" onclick="vyberSluzbu('vzduch', false)">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkVzduchNe"></div>
+        <div class="sluzba-hlavni"><span class="sluzba-name">Bez vzduchového filtru</span></div>
+      </div>
+    </div>
+    <div class="error-box" id="errVzduch">Vyberte prosím jednu z možností.</div>
     <button onclick="dalPo('cardVzduch')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
@@ -487,10 +499,11 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   <div class="card hidden" id="cardKabina">
     <div class="krok-header">
       <button class="back-btn-cal" onclick="zpetPred('cardKabina')">←</button>
-      <div class="section-title">Kabinový filtr</div>
+      <div class="section-title">Kabinový filtr <span class="volitelne-stitek">Volitelné</span></div>
     </div>
     <div class="sekce-popis">Čistý filtr chrání posádku před alergeny a zamezuje pronikání nepříjemných pachů do interiéru. Zajišťuje svěží vzduch během jízdy, šetří klimatizaci a účinně zabraňuje zamlžování oken. <b>Doporučujeme měnit každý rok.</b></div>
     <div id="kabinaVarianty"></div>
+    <div class="error-box" id="errKabina">Vyberte prosím jednu z možností.</div>
     <button onclick="dalPo('cardKabina')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
@@ -498,19 +511,26 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   <div class="card hidden" id="cardPalivo">
     <div class="krok-header">
       <button class="back-btn-cal" onclick="zpetPred('cardPalivo')">←</button>
-      <div class="section-title">Palivový filtr</div>
+      <div class="section-title">Palivový filtr <span class="volitelne-stitek">Volitelné</span></div>
     </div>
     <div class="sekce-popis">Klíčová ochrana pro citlivé a drahé vstřikovače před nečistotami v naftě. Výměna v rozmezí 30 000–60 000 km je nejlevnější pojistkou proti náhlým poruchám palivového systému a špatným startům.</div>
-    <div class="sluzba-item" id="slPalivo" onclick="toggleSluzba('palivo')">
+    <div class="sluzba-item" id="slPalivo" onclick="vyberSluzbu('palivo', true)">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkPalivo"></div>
         <div class="sluzba-hlavni" id="nazevPalivo"><span class="sluzba-name">Palivový filtr</span></div>
       </div>
       <div class="sluzba-spodek">
-        <span class="sluzba-detail">Výměna v ceně</span>
+        <span class="sluzba-detail">Cena filtru včetně výměny</span>
         <span class="sluzba-cena" id="cenaPalivo">—</span>
       </div>
     </div>
+    <div class="sluzba-item" id="slPalivoNe" style="margin-top:10px;" onclick="vyberSluzbu('palivo', false)">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkPalivoNe"></div>
+        <div class="sluzba-hlavni"><span class="sluzba-name">Bez palivového filtru</span></div>
+      </div>
+    </div>
+    <div class="error-box" id="errPalivo">Vyberte prosím jednu z možností.</div>
     <button onclick="dalPo('cardPalivo')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
@@ -558,7 +578,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
          uložené jméno, telefon a e-mail. Neodesílá se: odeslání řeší odeslat(). -->
     <form id="f-kontakt" autocomplete="on" onsubmit="event.preventDefault(); return false;">
     <div class="field"><label for="fJmeno">Jméno a příjmení *</label><input type="text" id="fJmeno" name="name" placeholder="Jan Novák" autocomplete="name"></div>
-    <div class="field"><label for="fTelefon">Telefon *</label><input type="tel" id="fTelefon" name="tel" placeholder="+420 777 123 456" autocomplete="tel"></div>
+    <div class="field"><label for="fTelefon">Telefon *</label><input type="tel" id="fTelefon" name="tel" placeholder="777 123 456" autocomplete="tel" onblur="this.value=upravTelefon(this.value)"></div>
     <div class="field"><label for="fEmail">E-mail * <span style="text-transform:none;font-weight:400;">(přijde vám potvrzení a odkaz na zrušení)</span></label><input type="email" id="fEmail" name="email" placeholder="jan@email.cz" autocomplete="email" inputmode="email"></div>
     <div class="field"><label for="fPoznamka">Poznámka</label><textarea id="fPoznamka" name="poznamka" placeholder="Dotazy, speciální požadavky..."></textarea></div>
     <div class="error-box" id="kontaktError"></div>
@@ -706,11 +726,11 @@ var stav = {
   castrolPreloadPromise: null,
   naceneni: null,               // odpoved z ?action=naceneni
   naceneniPromise: null,
-  kabinaVarianta: 0,            // index varianty, -1 = bez kabinoveho filtru
+  kabinaVarianta: null,         // index varianty, -1 = bez kabinoveho filtru, null = zatím nevybráno (nic se nepředvybírá)
   olejVybrany: null,
   doliti: false,
   cenik: null,
-  sluzby: { vzduch:false, kabina:false, palivo:false, reset:true },
+  sluzby: { vzduch:null, kabina:false, palivo:null, reset:true },   // vzduch/palivo: null = zatím nevybráno, true/false = volba zákazníka
   selDate: null, selTime: null,
   cenaCelkem: 0,
 };
@@ -834,7 +854,7 @@ function resetVin() {
   // Všechny klíče, které nactiVin plní, musí být i tady — jinak by po
   // "Jiné vozidlo" a neúspěšném načtení zůstaly hodnoty z předchozího vozu
   // a odešly by v objednávce.
-  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:0,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:false,kabina:false,palivo:false,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:null,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:null,kabina:false,palivo:null,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
   document.getElementById('vinInput').value = '';
   document.getElementById('vinError').classList.remove('visible');
   zobrazKartu('cardVin');
@@ -1011,10 +1031,6 @@ function vykresliKabinu() {
   var kab = stav.naceneni && stav.naceneni.polozky && stav.naceneni.polozky.kabinovy;
   if (!kab || !kab.varianty || !kab.varianty.length) { box.innerHTML = ''; return; }
 
-  if (stav.kabinaVarianta === 0) {
-    kab.varianty.forEach(function(v, i) { if (v.vychozi) stav.kabinaVarianta = i; });
-  }
-
   var html = '';
   kab.varianty.forEach(function(v, i) {
     var sel = (stav.kabinaVarianta === i);
@@ -1046,7 +1062,7 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka, odrazky) {
          (index >= 0
             ? odrazkyHtml +
               '<div class="sluzba-spodek' + (odrazkyHtml ? ' s-odrazkami' : '') + '">' +
-              '<span class="sluzba-detail">Výměna v ceně</span>' +
+              '<span class="sluzba-detail">Cena filtru včetně výměny</span>' +
               '<span class="sluzba-cena">' + cena + '</span>' +
               '</div>'
             : '') +
@@ -1055,6 +1071,8 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka, odrazky) {
 
 function vyberKabinu(index) {
   stav.kabinaVarianta = index;
+  var errKab = document.getElementById('errKabina');
+  if (errKab) errKab.classList.remove('visible');
   vykresliKabinu();
   aktualizujSouhrn();
 }
@@ -1135,6 +1153,21 @@ function zobrazZaklad() {
   document.getElementById('zakladPraceCena').textContent = cenaPrace + ' Kč';
   document.getElementById('zakladCelkem').textContent =
     (cenaOleje + cenaFiltru + cenaPrace) + ' Kč';
+
+  // Upozornění, že další kroky (filtry) jsou jen nabídka — jen když nějaký filtr přijde
+  var volitelneEl = document.getElementById('zakladVolitelne');
+  var filtry = [];
+  if (kartaMaObsah('cardVzduch')) filtry.push('vzduchový');
+  if (kartaMaObsah('cardKabina')) filtry.push('kabinový');
+  if (kartaMaObsah('cardPalivo')) filtry.push('palivový');
+  if (filtry.length) {
+    volitelneEl.innerHTML = 'Toto je cena výměny oleje. Dále si můžete <b>volitelně</b> přidat ' +
+      (filtry.length === 1 ? filtry[0] + ' filtr' : filtry.slice(0, -1).join(', ') + ' a ' + filtry[filtry.length - 1] + ' filtr') +
+      ' – není to povinné.';
+    volitelneEl.style.display = 'block';
+  } else {
+    volitelneEl.style.display = 'none';
+  }
 
   if (p.olejovy) {
     document.getElementById('zakladFiltrNazev').innerHTML =
@@ -1304,15 +1337,25 @@ function zobrazNaceneni(duvod) {
   document.getElementById('naceneniSection').classList.add('visible');
 }
 
-function toggleSluzba(klic) {
+// Vzduchový a palivový filtr: dvě dlaždice „filtr“ / „Bez … filtru“, nic předvybraného.
+// Zákazník musí jednu zvolit (kontrola v dalPo), stejně jako u kabinového filtru.
+function vyberSluzbu(klic, ano) {
   if (!stav.cenik) return;
-  stav.sluzby[klic] = !stav.sluzby[klic];
-  var k = klic.charAt(0).toUpperCase() + klic.slice(1);
-  var item = document.getElementById('sl' + k);
-  var chk  = document.getElementById('chk' + k);
-  if (stav.sluzby[klic]) { item.classList.add('selected'); chk.textContent = '✓'; }
-  else                   { item.classList.remove('selected'); chk.textContent = ''; }
+  stav.sluzby[klic] = !!ano;
+  vykresliSluzbu(klic);
   aktualizujSouhrn();
+}
+function vykresliSluzbu(klic) {
+  var k = klic.charAt(0).toUpperCase() + klic.slice(1);
+  var v = stav.sluzby[klic];
+  [['sl' + k, 'chk' + k, v === true], ['sl' + k + 'Ne', 'chk' + k + 'Ne', v === false]].forEach(function(x) {
+    var item = document.getElementById(x[0]), chk = document.getElementById(x[1]);
+    if (!item || !chk) return;
+    item.classList.toggle('selected', x[2]);
+    chk.textContent = x[2] ? '✓' : '';
+  });
+  var err = document.getElementById('err' + k);
+  if (err && v !== null) err.classList.remove('visible');
 }
 
 /**
@@ -1340,7 +1383,7 @@ function sestavPolozky() {
 
   if (stav.sluzby.vzduch && p.vzduchovy) polozky.push({ popis: sZnackou('Vzduchový filtr', p.vzduchovy.znacka), cena: Math.round(Number(p.vzduchovy.cena) || 0) });
 
-  if (p.kabinovy && p.kabinovy.varianty && stav.kabinaVarianta >= 0) {
+  if (p.kabinovy && p.kabinovy.varianty && stav.kabinaVarianta !== null && stav.kabinaVarianta >= 0) {
     var v = p.kabinovy.varianty[stav.kabinaVarianta];
     if (v) polozky.push({ popis: sZnackou('Kabinový filtr – ' + v.nazev, v.znacka), cena: Math.round(Number(v.cena) || 0) });
   }
@@ -1483,10 +1526,29 @@ function kartaMaObsah(id) {
   return false;
 }
 
+// U filtrů musí zákazník zvolit filtr, nebo „Bez … filtru“ — nic se nepředvybírá.
+var FILTR_VOLBA = {
+  cardVzduch: function() { return stav.sluzby.vzduch !== null; },
+  cardKabina: function() { return stav.kabinaVarianta !== null; },
+  cardPalivo: function() { return stav.sluzby.palivo !== null; }
+};
+var FILTR_CHYBA = { cardVzduch: 'errVzduch', cardKabina: 'errKabina', cardPalivo: 'errPalivo' };
+
+function zobrazFiltr(id) {
+  if (id === 'cardVzduch') vykresliSluzbu('vzduch');
+  if (id === 'cardPalivo') vykresliSluzbu('palivo');
+  if (id === 'cardKabina') vykresliKabinu();
+  zobrazKartu(id);
+}
+
 function dalPo(id) {
+  if (FILTR_VOLBA[id] && !FILTR_VOLBA[id]()) {
+    document.getElementById(FILTR_CHYBA[id]).classList.add('visible');
+    return;
+  }
   var od = (id === 'cardZaklad') ? 0 : FILTR_KARTY.indexOf(id) + 1;
   for (var i = od; i < FILTR_KARTY.length; i++) {
-    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazFiltr(FILTR_KARTY[i]); updateSteps(3); return; }
   }
   aktualizujSouhrn();
   zobrazKartu('cardSouhrn');
@@ -1496,7 +1558,7 @@ function dalPo(id) {
 function zpetPred(id) {
   var idx = FILTR_KARTY.indexOf(id);
   for (var i = idx - 1; i >= 0; i--) {
-    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazFiltr(FILTR_KARTY[i]); updateSteps(3); return; }
   }
   zobrazKartu('cardZaklad');
   updateSteps(2);
@@ -1504,7 +1566,7 @@ function zpetPred(id) {
 
 function zpetZeSouhrnu() {
   for (var i = FILTR_KARTY.length - 1; i >= 0; i--) {
-    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazKartu(FILTR_KARTY[i]); updateSteps(3); return; }
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazFiltr(FILTR_KARTY[i]); updateSteps(3); return; }
   }
   zobrazKartu('cardZaklad');
   updateSteps(2);
@@ -1610,46 +1672,51 @@ function renderCalendar() {
     return;
   }
 
-  var volno = maMesicVolnyDen(calState.year, calState.month);
+  // Plynulých 5 týdnů (od pondělí týdne, ve kterém je první volný den) místo listování
+  // po měsících. U prvního dne v měsíci a na začátku mřížky je zkratka měsíce.
+  var TYDNU = 5;
+  var dnes = new Date(); dnes.setHours(0,0,0,0);
+  var prvniVolny = null;
+  for (var k = 0; k < 120 && !prvniVolny; k++) {
+    var t = new Date(dnes); t.setDate(dnes.getDate() + k);
+    if (isAvailable(t.getFullYear(), t.getMonth(), t.getDate())) prvniVolny = t;
+  }
+  if (!prvniVolny) {
+    box.innerHTML='<div style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;border-radius:12px;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">Aktuálně není žádný volný termín.<br>Zkuste to prosím později.</div>';
+    return;
+  }
+  var od = new Date(prvniVolny);
+  od.setDate(od.getDate() - ((od.getDay() + 6) % 7));   // pondělí toho týdne
+  var konec = new Date(od); konec.setDate(od.getDate() + TYDNU * 7 - 1);
 
-  // Auto-skip jen při prvním vykreslení s načteným rozvrhem
-  if (!calAutoSkipHotovo) {
-    calAutoSkipHotovo = true;
-    if (!volno) {
-      var ny=calState.year, nm=calState.month+1;
-      if (nm===12){nm=0;ny++;}
-      if (calLzeDal(calState.year, calState.month) && maMesicVolnyDen(ny,nm)) {
-        calState.month=nm; calState.year=ny;
-        renderCalendar();
-        return;
-      }
-      // V celém rozsahu není nic volného → hláška (navigace tu nemá smysl)
-      box.innerHTML='<div style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;border-radius:12px;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">Aktuálně není žádný volný termín.<br>Zkuste to prosím později.</div>';
-      return;
-    }
+  // Dny rozsahu se rozdělí po měsících: nadpis měsíce, jeho dny (zarovnané na dny v týdnu)
+  // a mezi měsíci čára. Dny jiného měsíce ve stejném týdnu zůstanou prázdné.
+  var html = '';
+  var mesicDnu = [];
+  for (var i = 0; i < TYDNU * 7; i++) {
+    var den = new Date(od); den.setDate(od.getDate() + i);
+    var posledni = mesicDnu[mesicDnu.length - 1];
+    if (!posledni || posledni.m !== den.getMonth()) mesicDnu.push({ m: den.getMonth(), y: den.getFullYear(), dny: [] });
+    mesicDnu[mesicDnu.length - 1].dny.push(den);
   }
-
-  var y=calState.year, m=calState.month;
-  var predOk=calLzePred(y,m), dalOk=calLzeDal(y,m);
-  var first=new Date(y,m,1).getDay(); var total=new Date(y,m+1,0).getDate();
-  var offset=first===0?6:first-1;
-  var html='<div class="cal-nav">' +
-    '<button class="cal-btn" onclick="calPrev()"'+(predOk?'':' disabled')+' aria-label="Předchozí měsíc">‹</button>' +
-    '<span class="cal-title">'+MONTHS_CZ[m]+' '+y+'</span>' +
-    '<button class="cal-btn" onclick="calNext()"'+(dalOk?'':' disabled')+' aria-label="Další měsíc">›</button></div>';
-  html+='<div class="cal-grid">';
-  DAYS_CZ.forEach(function(d){ html+='<div class="cal-day-name">'+d+'</div>'; });
-  for (var i=0;i<offset;i++) html+='<div class="cal-day empty">.</div>';
-  for (var d2=1;d2<=total;d2++) {
-    var ds=fmtD(y,m,d2); var avail=isAvailable(y,m,d2); var sel=ds===calState.selDate;
-    var cls='cal-day'+(avail?' available':' unavailable')+(sel?' selected':'');
-    var oc=avail?' onclick="selectCalDate(\''+ds+'\')"':'';
-    html+='<div class="'+cls+'"'+oc+'>'+d2+'</div>';
-  }
-  html+='</div><div class="cal-legend"><span style="color:var(--blue);font-weight:600">■ Dostupný den</span></div>';
-  if (!volno) {
-    html+='<div class="cal-empty-note">V tomto měsíci není volný termín.'+(predOk?'<br>Zkuste předchozí měsíc.':'')+'</div>';
-  }
+  mesicDnu.forEach(function(blok, bi) {
+    if (bi > 0) html += '<div class="cal-oddelovac"></div>';
+    html += '<div class="cal-nav cal-nav-tydny"><span class="cal-title">' + MONTHS_CZ[blok.m] + ' ' + blok.y + '</span></div>';
+    html += '<div class="cal-grid">';
+    DAYS_CZ.forEach(function(d){ html += '<div class="cal-day-name">' + d + '</div>'; });
+    var posun = (blok.dny[0].getDay() + 6) % 7;
+    for (var e = 0; e < posun; e++) html += '<div class="cal-day empty">.</div>';
+    blok.dny.forEach(function(den) {
+      var y = den.getFullYear(), m = den.getMonth(), d2 = den.getDate();
+      var ds = fmtD(y, m, d2); var avail = isAvailable(y, m, d2); var sel = ds === calState.selDate;
+      var cls = 'cal-day' + (avail ? ' available' : ' unavailable') + (sel ? ' selected' : '');
+      var oc = avail ? ' onclick="selectCalDate(\'' + ds + '\')"' : '';
+      html += '<div class="' + cls + '"' + oc + '>' + d2 + '</div>';
+    });
+    html += '</div>';
+  });
+  html = '<div>' + html;
+  html += '</div><div class="cal-legend"><span style="color:var(--blue);font-weight:600">■ Dostupný den</span></div>';
 
   box.innerHTML = html;
   if (window._slotError) { var el=document.getElementById('slot-error-msg'); if(el) el.style.display='block'; window._slotError=false; }
@@ -1696,15 +1763,42 @@ function selectCalTime(t) {
 //   status:'error' + code      → jistě neuloženo, zákazník může zkusit znovu
 //   cokoli jiného / síť        → NEJISTÉ: rezervace se mohla uložit.
 //                                Neodesílat znovu (duplicita), nahlásit Tomášovi.
+// Telefon do jednotného tvaru: „777 123 456“, s předvolbou „+420 777 123 456“.
+// Zahraniční a neobvyklá čísla se nechají, jak je zákazník napsal.
+function upravTelefon(v) {
+  var t = String(v || '').trim();
+  if (!t) return '';
+  var cislice = t.replace(/\D/g, '');
+  if (cislice.indexOf('00') === 0) cislice = cislice.slice(2);
+  var trojice = function(c) { return c.slice(0,3) + ' ' + c.slice(3,6) + ' ' + c.slice(6); };
+  if (cislice.length === 12 && cislice.indexOf('420') === 0) return '+420 ' + trojice(cislice.slice(3));
+  if (cislice.length === 9 && !/^\s*(\+|00)/.test(t)) return trojice(cislice);
+  return t;
+}
+// České číslo bez předvolby má 9 číslic. Jiná délka bez + je skoro jistě překlep —
+// upozorní se jednou, druhé kliknutí odešle (zahraniční číslo, pevná linka…).
+function telefonVypadaChybne(t) {
+  if (/^\s*(\+|00)/.test(t)) return false;
+  return t.replace(/\D/g, '').length !== 9;
+}
+var telefonVaroval = '';
+
 function odeslat() {
   var jmeno=document.getElementById('fJmeno').value.trim();
-  var telefon=document.getElementById('fTelefon').value.trim();
+  var telEl=document.getElementById('fTelefon');
+  telEl.value=upravTelefon(telEl.value);
+  var telefon=telEl.value;
   var email=document.getElementById('fEmail').value.trim();
   var poznamka=document.getElementById('fPoznamka').value.trim();
   var err=document.getElementById('kontaktError');
   err.classList.remove('visible');
 
   if (!jmeno||!telefon) { err.textContent='Vyplňte prosím jméno a telefon.'; err.classList.add('visible'); return; }
+  if (telefonVypadaChybne(telefon) && telefonVaroval !== telefon) {
+    telefonVaroval = telefon;
+    err.textContent='Zkontrolujte prosím telefon – české číslo má 9 číslic. Pokud je správně, klikněte znovu na Odeslat.';
+    err.classList.add('visible'); telEl.focus(); return;
+  }
   // E-mail je povinný — přichází na něj potvrzení a odkaz na zrušení.
   // Kontrola tvaru zachytí překlepy (chybějící zavináč, tečka, mezera), ne vymyšlenou adresu.
   if (!email) { err.textContent='Vyplňte prosím e-mail — pošleme na něj potvrzení rezervace.'; err.classList.add('visible'); return; }
@@ -1755,7 +1849,7 @@ function odeslat() {
           gtag('event', 'rezervace_dokoncena', { sluzba: 'olej', value: stav.cenaCelkem, currency: 'CZK', datum_terminu: stav.selDate });
           var pol = (stav.naceneni && stav.naceneni.polozky) || {};
           if (stav.sluzby.vzduch && pol.vzduchovy) merOlej('olej_obj_vzduch');
-          if (pol.kabinovy && stav.kabinaVarianta >= 0) merOlej('olej_obj_kabina');
+          if (pol.kabinovy && stav.kabinaVarianta !== null && stav.kabinaVarianta >= 0) merOlej('olej_obj_kabina');
           if (stav.sluzby.palivo && pol.palivovy) merOlej('olej_obj_palivo');
         }
       } catch (x) {}
