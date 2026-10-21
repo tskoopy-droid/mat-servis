@@ -141,13 +141,18 @@
     <span>Vybrat z galerie</span>
   </button>
 
+  <button class="galerie" id="btnRucne" onclick="zadatRucne()">
+    <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="10"/><line x1="10" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="14" y2="10"/><line x1="18" y1="10" x2="18" y2="10"/><line x1="7" y1="14" x2="17" y2="14"/></svg>
+    <span>Zadat VIN ručně</span>
+  </button>
+
   <input type="file" id="foto" accept="image/*" capture="environment" style="display:none" onchange="zpracuj(this)">
   <input type="file" id="fotoGalerie" accept="image/*" style="display:none" onchange="zpracuj(this)">
 
   <div class="err hidden" id="err"></div>
 
   <div class="card hidden" id="vysledek">
-    <div class="lbl">Rozpoznaný VIN — lze přepsat</div>
+    <div class="lbl" id="vinLbl">Rozpoznaný VIN — lze přepsat</div>
     <input type="text" class="vin-in" id="vin" maxlength="17" autocomplete="off" autocorrect="off"
            autocapitalize="characters" spellcheck="false" oninput="prekresli()">
     <div class="groups">
@@ -315,7 +320,9 @@ function zpracuj(input) {
     // Vision vrací zamítnutý klíč s HTTP 200 a chybou v těle —
     // bez téhle větve by to vypadalo jako nenalezený VIN.
     if (data && data.error) {
-      chyba('Vision API odmítlo požadavek', (data.error.message || '') +
+      // Chyba může přijít jako text i jako objekt — prázdná hláška by nic neřekla.
+      var popis = typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error));
+      chyba('Vision API odmítlo požadavek', esc(popis) +
         '<br><br>Zkontroluj VISION_API_KEY ve Vlastnostech skriptu GAS a list errors_log.');
       return;
     }
@@ -345,10 +352,19 @@ var posledni = null;
 function ukazVysledek(vin, pocet) {
   if (posledni && posledni !== vin) doHistorie(posledni);
   posledni = vin;
+  document.getElementById('vinLbl').textContent = 'Rozpoznaný VIN — lze přepsat';
   document.getElementById('vin').value = vin;
   document.getElementById('vysledek').classList.remove('hidden');
   prekresli(pocet);
   document.getElementById('vysledek').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Bez fotky — prázdné pole, ověření a zdroje se spustí po napsání 17 znaků.
+function zadatRucne() {
+  skryjChybu();
+  ukazVysledek('');
+  document.getElementById('vinLbl').textContent = 'Zadej VIN';
+  document.getElementById('vin').focus();
 }
 
 function prekresli(pocet) {
