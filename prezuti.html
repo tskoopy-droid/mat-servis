@@ -22,16 +22,29 @@
   // Časy v ms od začátku načítání (otevření stránky, nebo kliknutí na „Zkusit znovu“).
   // Při matdev se nic neposílá.
   let mereni = {};
+  // Diagnostika reklamy: načetla se stránka skrytě (Facebook ji připravuje dopředu
+  // a člověk ji zatím nevidí) a běží návštěva z reklamy mimo facebookovou aplikaci?
+  const NACTENO_SKRYTE = document.visibilityState === 'hidden' || document.prerendering === true;
+  const VE_FB_APLIKACI = /FBAN|FBAV|FB_IAB|FBIOS|Instagram/i.test(navigator.userAgent);
 
   function odesliMereni() {
     try {
       if (localStorage.getItem('matdev') === '1') return;
     } catch (x) {}
     try {
-      // Opakované načtení se pozná podle sloupce Stránka, ať není potřeba měnit GAS
+      // Příznaky se zapisují do sloupce Stránka, ať není potřeba měnit GAS.
+      // GAS ukládá jen prvních 20 znaků, proto krátké značky:
+      //   opak  = první načtení selhalo, automatické opakování pomohlo
+      //   ručně = zákazník klikl na „Zkusit znovu“
+      //   skr   = stránka se načetla skrytě (bez zobrazení na obrazovce)
+      //   web   = návštěva z reklamy, ale mimo facebookovou aplikaci
       let stranka = 'prezuti';
-      if (mereni.rucne) stranka = 'prezuti – ručně znovu';
-      else if (mereni.pokusy_rozvrh > 1 || mereni.pokusy_obsazene > 1) stranka = 'prezuti – opakováno';
+      if (mereni.rucne) stranka += ' ručně';
+      else {
+        if (mereni.pokusy_rozvrh > 1 || mereni.pokusy_obsazene > 1) stranka += ' opak';
+        if (NACTENO_SKRYTE) stranka += ' skr';
+        if (!VE_FB_APLIKACI && /utm_source=facebook|fbclid=/.test(location.search)) stranka += ' web';
+      }
       const data = JSON.stringify({
         akce: 'mereni_kalendar',
         stranka: stranka,
