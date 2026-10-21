@@ -70,16 +70,22 @@
   // jako by nebyl volný termín.
   const GAS_POKUSU = 3;
   const GAS_PRODLEVA_MS = 1500;
+  // Pokus, který visí déle, se přeruší a zkusí znovu – GAS občas neodpovídá desítky sekund.
+  const GAS_LIMIT_MS = 12000;
 
   function nactiZGas(akce, klicPokusu) {
     mereni[klicPokusu]++;
-    return fetch(GAS_URL + '?action=' + akce, { redirect: 'follow' })
+    const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+    const limit = ctrl ? setTimeout(() => ctrl.abort(), GAS_LIMIT_MS) : null;
+    return fetch(GAS_URL + '?action=' + akce, { redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
       .then(r => r.json())
       .then(d => {
+        clearTimeout(limit);
         if (!d || !d.ok) throw new Error('GAS vrátil chybu (' + akce + ')');
         return d;
       })
       .catch(e => {
+        clearTimeout(limit);
         if (mereni[klicPokusu] >= GAS_POKUSU) throw e;
         return new Promise(res => setTimeout(res, GAS_PRODLEVA_MS))
           .then(() => nactiZGas(akce, klicPokusu));
