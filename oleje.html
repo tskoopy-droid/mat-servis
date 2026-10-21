@@ -1775,13 +1775,27 @@ function upravTelefon(v) {
   if (cislice.length === 9 && !/^\s*(\+|00)/.test(t)) return trojice(cislice);
   return t;
 }
-// České číslo bez předvolby má 9 číslic. Jiná délka bez + je skoro jistě překlep —
-// upozorní se jednou, druhé kliknutí odešle (zahraniční číslo, pevná linka…).
+// Telefon musí být platné číslo, jinak rezervace neodejde (bez obcházení druhým kliknutím):
+//  - české: 9 číslic začínajících 2–9, smí mít mezery/pomlčky a předvolbu 420, +420, 00420
+//  - zahraniční: jen s předvolbou (+421…, 0049…), 8–15 číslic
+// Nesmysly (dvě čísla s čárkou, písmena, špatná délka) neprojdou.
 function telefonVypadaChybne(t) {
-  if (/^\s*(\+|00)/.test(t)) return false;
-  return t.replace(/\D/g, '').length !== 9;
+  var s = String(t || '').trim();
+  if (!s || /[^\d\s+\-().\/]/.test(s)) return true;
+  var c = s.replace(/[\s\-().\/]/g, '');
+  if (/^(?:\+420|00420|420)?[2-9]\d{8}$/.test(c)) return false;
+  if (/^(?:\+|00)(?!420)[1-9]\d{7,14}$/.test(c)) return false;
+  return true;
 }
-var telefonVaroval = '';
+// Do rezervace (log, Firestore, SMS): česká čísla jako 9 číslic bez předvolby a mezer
+// (jednotně v tabulce, jde v ní hledat), zahraniční s „+“. Formulář ukazuje čitelný tvar.
+function telefonKUlozeni(t) {
+  var c = String(t || '').replace(/[\s\-().\/]/g, '');
+  var m = c.match(/^(?:\+|00)?420(\d{9})$/);
+  if (m) return m[1];
+  if (/^00\d/.test(c)) return '+' + c.slice(2);
+  return c;
+}
 
 function odeslat() {
   var jmeno=document.getElementById('fJmeno').value.trim();
@@ -1794,9 +1808,8 @@ function odeslat() {
   err.classList.remove('visible');
 
   if (!jmeno||!telefon) { err.textContent='Vyplňte prosím jméno a telefon.'; err.classList.add('visible'); return; }
-  if (telefonVypadaChybne(telefon) && telefonVaroval !== telefon) {
-    telefonVaroval = telefon;
-    err.textContent='Zkontrolujte prosím telefon – české číslo má 9 číslic. Pokud je správně, klikněte znovu na Odeslat.';
+  if (telefonVypadaChybne(telefon)) {
+    err.textContent='Zadejte prosím platné telefonní číslo – 9 číslic, např. 777 123 456. Zahraniční číslo s předvolbou, např. +421 905 123 456.';
     err.classList.add('visible'); telEl.focus(); return;
   }
   // E-mail je povinný — přichází na něj potvrzení a odkaz na zrušení.
@@ -1812,7 +1825,7 @@ function odeslat() {
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
 
   var payload={
-    akce:'rezervace', jmeno:jmeno, telefon:telefon.replace(/\s+/g,''), email:email, poznamka:poznamka,
+    akce:'rezervace', jmeno:jmeno, telefon:telefonKUlozeni(telefon), email:email, poznamka:poznamka,
     vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
     kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
     // Rok 1. registrace jen z registru. Bez fallbacku na stav.rok —
@@ -1893,7 +1906,7 @@ function odeslat() {
         body: JSON.stringify({
           akce:'klient_chyba', zdroj:'oleje', typ:typ,
           detail:String(detail||'').slice(0,1000),
-          jmeno:jmeno, telefon:telefon.replace(/\s+/g,''), email:email,
+          jmeno:jmeno, telefon:telefonKUlozeni(telefon), email:email,
           vin:stav.vin||'', datum:stav.selDate||'', cas:stav.selTime||''
         })
       }).catch(function(){});
