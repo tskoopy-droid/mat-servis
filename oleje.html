@@ -15,35 +15,74 @@
 window.GAS_ROZVRH = null;
 window.GAS_BOOKED = {};
 // Měření rychlosti načtení kalendáře (časy v ms od otevření stránky)
-var MERENI = { rozvrh_ms: null, obsazene_ms: null };
+var MERENI = { rozvrh_ms: null, obsazene_ms: null, start: 0, rucne: false };
 window.GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
 
-function loadRozvrhGAS() {
-  return fetch(window.GAS_URL + '?action=get_rozvrh', { method: 'GET', redirect: 'follow' })
+// GAS občas odpoví chybou nebo neodpoví desítky sekund. Každý dotaz se proto
+// při chybě nebo po 12 s bez odpovědi zopakuje (nejvýš 3 pokusy). Chyba obsazených
+// termínů se bere jako chyba kalendáře – jinak by se všechny časy tvářily jako volné.
+var GAS_POKUSU = 3, GAS_PRODLEVA_MS = 1500, GAS_LIMIT_MS = 12000;
+var POKUSY = { rozvrh: 0, obsazene: 0 };
+var OBSAZENE_CHYBA = false;
+
+function nactiZGas(akce, klic) {
+  POKUSY[klic]++;
+  var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+  var limit = ctrl ? setTimeout(function(){ ctrl.abort(); }, GAS_LIMIT_MS) : null;
+  return fetch(window.GAS_URL + '?action=' + akce, { method: 'GET', redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
     .then(function(r){ return r.json(); })
-    .then(function(data){ window.GAS_ROZVRH = (data && data.ok && data.rozvrh) ? data.rozvrh : 'error'; })
+    .then(function(data){
+      clearTimeout(limit);
+      if (!data || !data.ok) throw new Error('GAS vrátil chybu (' + akce + ')');
+      return data;
+    })
+    .catch(function(e){
+      clearTimeout(limit);
+      if (POKUSY[klic] >= GAS_POKUSU) throw e;
+      return new Promise(function(res){ setTimeout(res, GAS_PRODLEVA_MS); })
+        .then(function(){ return nactiZGas(akce, klic); });
+    });
+}
+function loadRozvrhGAS() {
+  POKUSY.rozvrh = 0;
+  return nactiZGas('get_rozvrh', 'rozvrh')
+    .then(function(data){ window.GAS_ROZVRH = data.rozvrh || {}; })
     .catch(function(){ window.GAS_ROZVRH = 'error'; })
-    .then(function(){ MERENI.rozvrh_ms = Math.round(performance.now()); });
+    .then(function(){ MERENI.rozvrh_ms = Math.round(performance.now() - MERENI.start); });
 }
 function loadObsazeneGAS() {
-  return fetch(window.GAS_URL + '?action=get_obsazene_oleje', { method: 'GET', redirect: 'follow' })
-    .then(function(r){ return r.json(); })
-    .then(function(data){ if (data && data.ok && data.obsazene) window.GAS_BOOKED = data.obsazene; })
-    .catch(function(){})
-    .then(function(){ MERENI.obsazene_ms = Math.round(performance.now()); });
+  POKUSY.obsazene = 0;
+  OBSAZENE_CHYBA = false;
+  return nactiZGas('get_obsazene_oleje', 'obsazene')
+    .then(function(data){ window.GAS_BOOKED = data.obsazene || {}; })
+    .catch(function(){ OBSAZENE_CHYBA = true; })
+    .then(function(){ MERENI.obsazene_ms = Math.round(performance.now() - MERENI.start); });
 }
-window.GAS_NACTENO = Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
+function nactiKalendarGAS(rucne) {
+  MERENI.start = rucne ? performance.now() : 0;
+  MERENI.rucne = !!rucne;
+  window.GAS_ROZVRH = null;
+  window.GAS_BOOKED = {};
+  return Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]).then(function(){
+    if (OBSAZENE_CHYBA) { window.GAS_ROZVRH = 'error'; window.GAS_BOOKED = {}; }
+  });
+}
+window.GAS_NACTENO = nactiKalendarGAS(false);
 
-// Po prvním načtení pošle GAS řádek do listu "Měření". Při matdev se nic neposílá.
-window.GAS_NACTENO.then(function() {
+// Po každém načtení kalendáře pošle GAS řádek do listu "Měření". Při matdev se nic neposílá.
+// Sloupec Stránka: „oleje“, s příznaky „opak“ (pomohlo opakování) nebo „ručně“ (Zkusit znovu).
+function odesliMereniOleje() {
   try {
     if (localStorage.getItem('matdev') === '1') return;
   } catch (x) {}
   try {
+    var stranka = 'oleje';
+    if (MERENI.rucne) stranka += ' ručně';
+    else if (POKUSY.rozvrh > 1 || POKUSY.obsazene > 1) stranka += ' opak';
     var data = JSON.stringify({
       akce: 'mereni_kalendar',
-      stranka: 'oleje',
-      celkem_ms: Math.round(performance.now()),
+      stranka: stranka,
+      celkem_ms: Math.round(performance.now() - MERENI.start),
       rozvrh_ms: MERENI.rozvrh_ms,
       obsazene_ms: MERENI.obsazene_ms,
       chyba: window.GAS_ROZVRH === 'error',
@@ -55,7 +94,8 @@ window.GAS_NACTENO.then(function() {
       fetch(window.GAS_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: data }).catch(function(){});
     }
   } catch (x) {}   // měření nesmí nikdy rozbít stránku
-});
+}
+window.GAS_NACTENO.then(odesliMereniOleje);
 </script>
 <style>
   @keyframes vinSpin{to{transform:rotate(360deg)}}
@@ -1536,8 +1576,8 @@ function isAvailable(y,m,d) {
 
 /** Znovu načte rozvrh po chybě (tlačítko "Zkusit znovu"). */
 function znovuNactiRozvrh() {
-  window.GAS_ROZVRH = null;
-  window.GAS_NACTENO = Promise.all([loadRozvrhGAS(), loadObsazeneGAS()]);
+  window.GAS_NACTENO = nactiKalendarGAS(true);
+  window.GAS_NACTENO.then(odesliMereniOleje);
   renderCalendar();
 }
 
