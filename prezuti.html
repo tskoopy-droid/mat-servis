@@ -183,6 +183,8 @@
   .cal-day.available:active { background: var(--blue-mid); }
   .cal-day.fully-booked { background: #fee2e2; border-color: #fecaca; color: #dc2626; cursor: not-allowed; font-weight: 600; }
   .cal-day.selected { background: var(--blue) !important; border-color: var(--blue) !important; color: #fff !important; font-weight: 700; }
+  .cal-nav-tydny { justify-content: center; margin-bottom: 8px; }
+  .cal-oddelovac { border-top: 2px solid var(--border); margin: 16px 0 14px; }
   .cal-legend { margin-top: 14px; font-size: 11px; color: var(--text-muted); display: flex; gap: 16px; }
   .legend-avail { color: var(--blue); font-weight: 600; }
   .cal-empty-note { margin-top: 12px; padding: 10px 12px; background: #fef9f0; border: 1px solid #f4d68a; border-radius: 10px; color: #8a6d2f; font-size: 13px; font-weight: 600; text-align: center; line-height: 1.5; }
@@ -512,6 +514,26 @@ function pouzijNavrhEmailu() {
 // E-mail, u kterého zákazník nabídku opravy viděl a přesto odeslal — podruhé se nebrzdí
 let emailNavrhVidel = '';
 
+// Telefon do jednotného tvaru: „777 123 456“, s předvolbou „+420 777 123 456“.
+// Zahraniční a neobvyklá čísla se nechají, jak je zákazník napsal.
+function upravTelefon(v) {
+  const t = String(v || '').trim();
+  if (!t) return '';
+  let cislice = t.replace(/\D/g, '');
+  if (cislice.indexOf('00') === 0) cislice = cislice.slice(2);
+  const trojice = c => c.slice(0,3) + ' ' + c.slice(3,6) + ' ' + c.slice(6);
+  if (cislice.length === 12 && cislice.indexOf('420') === 0) return '+420 ' + trojice(cislice.slice(3));
+  if (cislice.length === 9 && !/^\s*(\+|00)/.test(t)) return trojice(cislice);
+  return t;
+}
+// České číslo bez předvolby má 9 číslic. Jiná délka bez + je skoro jistě překlep —
+// upozorní se jednou, druhé kliknutí odešle (zahraniční číslo, pevná linka…).
+function telefonVypadaChybne(t) {
+  if (/^\s*(\+|00)/.test(t)) return false;
+  return t.replace(/\D/g, '').length !== 9;
+}
+let telefonVaroval = '';
+
 function escHtml(t) {
   return String(t == null ? '' : t).replace(/[&<>"]/g, function(c) {
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
@@ -627,73 +649,63 @@ function renderCalendar() {
     return;
   }
 
-  const {year, month} = state;
-  const firstDay = new Date(year, month, 1).getDay();
-  const totalDays = new Date(year, month+1, 0).getDate();
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
-  const volnoVMesici = maMesicVolnyDen(year, month);
-
-  // Auto-skip jen při prvním vykreslení po načtení rozvrhu:
-  // pokud aktuální měsíc nemá volný den a následující (v limitu 35 dní) ano, přepnout.
-  if (!autoSkipHotovo) {
-    autoSkipHotovo = true;
-    if (!volnoVMesici) {
-      let ny = year, nm = month + 1;
-      if (nm === 12) { nm = 0; ny++; }
-      if (lzeNaDalsi(year, month) && maMesicVolnyDen(ny, nm)) {
-        state.month = nm;
-        state.year = ny;
-        renderCalendar();
-        return;
-      }
-      // V celém rozsahu není nic volného → hláška (navigace tu nemá smysl)
-      merPrezuti('prezuti_zadny_termin');
-      document.getElementById("view-date").innerHTML = `
-        <div class="card" style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">
-          Aktuálně není žádný volný termín.<br>Zkuste to prosím později.
-        </div>`;
-      return;
-    }
+  // Plynulých 5 týdnů od pondělí týdne, ve kterém je první volný den, rozdělených
+  // po měsících (nadpis měsíce, jeho dny, čára). Bez listování šipkami.
+  const TYDNU = 5;
+  const volnyDen = (y, m, d) => !isPast(y, m, d) && isWorkingDay(y, m, d) && !isFullyBooked(y, m, d);
+  const dnes = new Date(); dnes.setHours(0,0,0,0);
+  let prvniVolny = null;
+  for (let k = 0; k < 120 && !prvniVolny; k++) {
+    const t = new Date(dnes); t.setDate(dnes.getDate() + k);
+    if (volnyDen(t.getFullYear(), t.getMonth(), t.getDate())) prvniVolny = t;
   }
-
-  const predOk = lzeNaPredchozi(year, month);
-  const dalOk = lzeNaDalsi(year, month);
+  if (!prvniVolny) {
+    merPrezuti('prezuti_zadny_termin');
+    document.getElementById("view-date").innerHTML = `
+      <div class="card" style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">
+        Aktuálně není žádný volný termín.<br>Zkuste to prosím později.
+      </div>`;
+    return;
+  }
   merPrezuti('prezuti_kalendar');
-  if (!volnoVMesici) merPrezuti('prezuti_mesic_bez_terminu');
+  const od = new Date(prvniVolny);
+  od.setDate(od.getDate() - ((od.getDay() + 6) % 7));   // pondělí toho týdne
+
+  const bloky = [];
+  for (let i = 0; i < TYDNU * 7; i++) {
+    const den = new Date(od); den.setDate(od.getDate() + i);
+    const posledni = bloky[bloky.length - 1];
+    if (!posledni || posledni.m !== den.getMonth()) bloky.push({ m: den.getMonth(), y: den.getFullYear(), dny: [] });
+    bloky[bloky.length - 1].dny.push(den);
+  }
 
   let html = `
     <div id="slot-error-msg" class="slot-error">⚠️ Omlouváme se, tento termín byl právě obsazen. Vyberte prosím jiný čas.</div>
-    <div class="card">
-      <div class="cal-nav">
-        <button class="cal-btn" onclick="prevMonth()" ${predOk ? '' : 'disabled'} aria-label="Předchozí měsíc">‹</button>
-        <span class="cal-title">${MONTHS[month]} ${year}</span>
-        <button class="cal-btn" onclick="nextMonth()" ${dalOk ? '' : 'disabled'} aria-label="Další měsíc">›</button>
-      </div>
+    <div class="card">`;
+  bloky.forEach((blok, bi) => {
+    if (bi > 0) html += `<div class="cal-oddelovac"></div>`;
+    html += `<div class="cal-nav cal-nav-tydny"><span class="cal-title">${MONTHS[blok.m]} ${blok.y}</span></div>
       <div class="cal-grid">
-        ${DAYS_SHORT.map(d=>`<div class="cal-day-name">${d}</div>`).join("")}
-  `;
-
-  for (let i = 0; i < offset; i++) html += `<div class="cal-day empty"></div>`;
-  for (let d = 1; d <= totalDays; d++) {
-    const past = isPast(year, month, d);
-    const work = isWorkingDay(year, month, d);
-    const ds = fmt(year, month, d);
-    const sel = ds === state.selDate;
-    let cls = "cal-day";
-    if (past || !work || isFullyBooked(year, month, d)) cls += " unavailable";
-    else cls += " available";
-    if (sel) cls += " selected";
-    if (mojeAuto(ds)) cls += " moje";
-    const onclick = (!past && work && !isFullyBooked(year, month, d)) ? `onclick="selectDate('${ds}')"` : "";
-    html += `<div class="${cls}" ${onclick}>${d}</div>`;
-  }
-
-  html += `</div>
+        ${DAYS_SHORT.map(d=>`<div class="cal-day-name">${d}</div>`).join("")}`;
+    const posun = (blok.dny[0].getDay() + 6) % 7;
+    for (let e = 0; e < posun; e++) html += `<div class="cal-day empty"></div>`;
+    blok.dny.forEach(den => {
+      const y = den.getFullYear(), m = den.getMonth(), d = den.getDate();
+      const ds = fmt(y, m, d);
+      const volno = volnyDen(y, m, d);
+      let cls = "cal-day" + (volno ? " available" : " unavailable");
+      if (ds === state.selDate) cls += " selected";
+      if (mojeAuto(ds)) cls += " moje";
+      const onclick = volno ? `onclick="selectDate('${ds}')"` : "";
+      html += `<div class="${cls}" ${onclick}>${d}</div>`;
+    });
+    html += `</div>`;
+  });
+  html += `
       <div class="cal-legend">
         <span class="legend-avail">■ Dostupný den</span>
         ${objednanaAuta.length ? '<span class="legend-moje">■ Vaše objednávka</span>' : ''}
       </div>
-      ${volnoVMesici ? '' : `<div class="cal-empty-note">V tomto měsíci není volný termín.${predOk ? '<br>Zkuste předchozí měsíc.' : ''}</div>`}
     </div>`;
 
   document.getElementById("view-date").innerHTML = html;
@@ -771,7 +783,7 @@ function renderForm() {
     </div>
     <div class="field">
       <label for="f-phone">Telefon *</label>
-      <input type="tel" id="f-phone" name="tel" placeholder="777 000 000" value="${escHtml(k.p)}" autocomplete="tel" oninput="checkForm()">
+      <input type="tel" id="f-phone" name="tel" placeholder="777 000 000" value="${escHtml(k.p)}" autocomplete="tel" oninput="checkForm()" onblur="this.value=upravTelefon(this.value); checkForm()">
     </div>
     <div class="field">
       <label for="f-email">E-mail *</label>
@@ -942,7 +954,9 @@ function submitForm() {
   if (odesilani || zamceno) return;
 
   const n = document.getElementById("f-name").value.trim();
-  const p = document.getElementById("f-phone").value.trim();
+  const telEl = document.getElementById("f-phone");
+  telEl.value = upravTelefon(telEl.value);
+  const p = telEl.value;
   const e = document.getElementById("f-email").value.trim();
   const c = document.getElementById("f-car").value.trim();
   const o = document.getElementById("f-note").value.trim();
@@ -950,6 +964,12 @@ function submitForm() {
   const u2 = document.getElementById("f-chci-ulozit").checked;
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
   if (!n || !p || !e || !emailValid || !c) return;
+  if (telefonVypadaChybne(p) && telefonVaroval !== p) {
+    telefonVaroval = p;
+    zobrazChybu('Zkontrolujte prosím telefon – české číslo má 9 číslic. Pokud je správně, klikněte znovu na Potvrdit.');
+    telEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   // Překlep v doméně → poprvé zastavit a ukázat nabídku opravy. Když zákazník
   // e-mail nechá a klikne znovu, odešle se (může mít firemní doménu).
   if (navrhniEmail(e) && emailNavrhVidel !== e) {
