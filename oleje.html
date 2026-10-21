@@ -1812,7 +1812,7 @@ function odeslat() {
   var btn=document.querySelector('.submit-btn'); btn.textContent='Odesílám…'; btn.disabled=true;
 
   var payload={
-    akce:'rezervace', jmeno:jmeno, telefon:telefon, email:email, poznamka:poznamka,
+    akce:'rezervace', jmeno:jmeno, telefon:telefon.replace(/\s+/g,''), email:email, poznamka:poznamka,
     vin:stav.vin, znacka:stav.znacka, model:stav.model, varianta:stav.varianta||'',
     kodMotoru:stav.kodMotoru||'', palivo:stav.palivo||'', objem:stav.objem,
     // Rok 1. registrace jen z registru. Bez fallbacku na stav.rok —
@@ -1893,7 +1893,7 @@ function odeslat() {
         body: JSON.stringify({
           akce:'klient_chyba', zdroj:'oleje', typ:typ,
           detail:String(detail||'').slice(0,1000),
-          jmeno:jmeno, telefon:telefon, email:email,
+          jmeno:jmeno, telefon:telefon.replace(/\s+/g,''), email:email,
           vin:stav.vin||'', datum:stav.selDate||'', cas:stav.selTime||''
         })
       }).catch(function(){});
