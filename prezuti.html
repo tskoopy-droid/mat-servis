@@ -998,7 +998,7 @@ function submitForm() {
       akce: 'prezuti',
       sluzba: 'Přezutí pneumatik',
       jmeno: n,
-      telefon: p,
+      telefon: p.replace(/\s+/g, ''),   // do rezervace bez mezer, ve formuláři s mezerami
       email: e,
       auto: c,
       poznamka: o,
@@ -1083,7 +1083,7 @@ function submitForm() {
         body: JSON.stringify({
           akce: 'klient_chyba', zdroj: 'prezuti', typ: typ,
           detail: String(detail || '').slice(0, 1000),
-          jmeno: n, telefon: p, email: e,
+          jmeno: n, telefon: p.replace(/\s+/g, ''), email: e,
           vin: '', datum: datum || '', cas: cas || ''
         })
       }).catch(function(){});
