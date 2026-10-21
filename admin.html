@@ -375,7 +375,7 @@
       <div class="s-field"><label>E-mail</label><input type="text" id="s-email" placeholder="Nepovinné" autocomplete="off" name="x-email-x" data-lpignore="true" data-1p-ignore /></div>
 
 
-      <div class="servis-section-title">Termín — klikněte na den, vyberte hodiny</div>
+      <div class="servis-section-title">Termín — nepovinné, klikněte na den, vyberte hodiny</div>
       <div class="s-cal-header">
         <button onclick="sKalMesic(-1)">&#8249;</button>
         <span id="s-kal-label"></span>
@@ -734,7 +734,7 @@
 
   // ── SEZNAM REZERVACÍ ───────────────────────────────────────
   function fmtBlokyHtml(bloky){
-    if(!bloky||!bloky.length)return'<span style="color:var(--text-muted)">—</span>';
+    if(!bloky||!bloky.length)return'<span style="color:var(--text-muted)">Bez termínu</span>';
     // Seskupit po dnech: { "2026-05-03": ["09:00","10:00"] }
     const byDay={};
     bloky.forEach(b=>{if(!byDay[b.datum])byDay[b.datum]=[];byDay[b.datum].push(b.cas);});
@@ -758,12 +758,15 @@
       let muzeArchivovat=false;
       if(jeServis){
         const last=(r.bloky||[]).slice(-1)[0];
-        if(last)muzeArchivovat=new Date(last.datum+'T'+last.cas+':00')<=new Date();
+        // Bez termínu není na co čekat — archivovat jde kdykoli.
+        muzeArchivovat=last?new Date(last.datum+'T'+last.cas+':00')<=new Date():true;
       }else if(r.datum&&r.cas){
         muzeArchivovat=new Date(r.datum+'T'+r.cas+':00')<=new Date();
       }
       const badgeCls=jeServis?'badge-servis':(r.typ==='prezuti'?'badge-prezuti':'badge-oleje');
       const badgeTxt=jeServis?'🔧 Servis':(r.typ==='prezuti'?'🚗 Přezutí':'🛢️ Olej');
+      // Servisní zakázku jde fakturovat hned (i před termínem), archivovat až po něm.
+      // U oleje a přezutí zůstává obojí až po termínu.
       const archivRowHtml=muzeArchivovat?`
         <div class="archiv-row">
           <div style="display:flex;gap:8px;align-items:center;width:100%">
@@ -778,7 +781,10 @@
         </div>`:`
         <div class="archiv-row" style="justify-content:space-between">
           <span style="font-size:12px;color:var(--text-muted);font-style:italic">Archivace po termínu</span>
-          <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
+          <div style="display:flex;gap:8px">
+            ${jeServis?`<button class="archiv-btn" style="background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="fakturovat('${r.id}','${r.col}')">🧾 Fakturovat</button>`:''}
+            <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
+          </div>
         </div>`;
       const datumBlok=jeServis
         ?`<div class="rez-bloky">${fmtBlokyHtml(r.bloky)}</div>`
@@ -795,6 +801,7 @@
           ${r.email?'✉️ '+r.email+'<br>':''}
           🚙 ${r.auto||r.sluzba||'—'}
           ${r.vin?'<br>🔑 VIN: '+r.vin:''}
+          ${r.barva?'<br>🎨 '+escHtml(r.barva):''}
           ${r.cena_celkem?'<br>💰 '+fmtKc(r.cena_celkem)+' Kč':''}
           ${r.sluzby?'<br>🔧 '+r.sluzby:''}
           ${r.cena?'<br>💰 '+r.cena:''}
@@ -860,6 +867,7 @@
 
     radky += nacRadek('Max. výkon', r.vykon?(r.vykon+' kW'):'');
     radky += nacRadek('Palivo', r.palivo);
+    radky += nacRadek('Barva', r.barva);
 
     if(r.vin){
       const vin=escHtml(r.vin);
@@ -1159,7 +1167,8 @@ function sBuildMailText(){
     const[,mo,dy]=prvniDs.split('-');
     terminyText=`${parseInt(dy)}.${parseInt(mo)}. v ${prvniCas}`;
   }
-  return`Dobrý den,\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}\n\nPřijeďte:\n${terminyText}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nTomáš Skopalík\nM&T Servis`;
+  const terminBlok=days.length?`Přijeďte:\n${terminyText}`:'Termín s Vámi domluvíme telefonicky.';
+  return`Dobrý den,\n\npotvrzujeme Vaši objednávku servisu:\n\nÚkon: ${ukon}\n\n${terminBlok}\n\nProsíme, dostavte se na adresu:\n${SERVIS_ADRESA}\n\nV případě zrušení nás prosím kontaktujte telefonicky:\n${SERVIS_TEL}\n\nS pozdravem,\nTomáš Skopalík\nM&T Servis`;
 }
 
   function sRegenerateMail(force=false){
@@ -1191,8 +1200,7 @@ function sBuildMailText(){
     const ukon=document.getElementById('s-ukon').value.trim();
     if(!ukon){document.getElementById('s-ukon').classList.add('s-err');document.getElementById('s-ukon').focus();return;}
     document.getElementById('s-ukon').classList.remove('s-err');
-    const bloky=sBlokyToArray();
-    if(!bloky.length){sShowStatus('Vyberte alespoň jeden časový slot.','err');return;}
+    const bloky=sBlokyToArray();   // může být prázdné — termín je nepovinný
     const poslatMail=document.getElementById('s-poslat-mail').checked;
     const email=document.getElementById('s-email').value.trim();
     if(poslatMail&&!email){if(!confirm('E-mail zákazníka není vyplněn — uložit bez odeslání mailu?'))return;}
@@ -1211,7 +1219,7 @@ function sBuildMailText(){
         auto:document.getElementById('s-auto').value.trim(),
         // Stejná pole jako u objednávky oleje — Detail nacenění je pak umí ukázat i u servisu.
         ...sVinData(),
-        datum:prvniDatum,
+        datum:prvniDatum||'',
         bloky,
         trzba:parseFloat(document.getElementById('s-trzba').value)||0,
         poznamka:document.getElementById('s-poznamka').value.trim(),
@@ -1403,9 +1411,11 @@ function sBuildMailText(){
         sVinInfo.palivo=reg.palivo||'';
         sVinInfo.objem=reg.obsah?String(reg.obsah):'';
         sVinInfo.vykon=reg.vykon?String(reg.vykon).split('/')[0].trim():'';
+        sVinInfo.barva=reg.barva||'';
         const radky=[];
         if(reg.kodMotoru)radky.push('Kód motoru: <b>'+sEsc(reg.kodMotoru)+'</b>');
         if(reg.obsah||reg.palivo)radky.push([reg.obsah?sEsc(reg.obsah)+' cm³':'',sEsc(reg.palivo||'')].filter(Boolean).join(' · '));
+        if(reg.barva)radky.push('Barva: <b>'+sEsc(reg.barva)+'</b>');
         if(reg.rok)radky.push('Rok 1. registrace: <b>'+sEsc(reg.rok)+'</b>');
         if(sVinInfo.rok_vin)radky.push('Modelový rok (z VIN): <b>'+sVinInfo.rok_vin+'</b>');
         sZdroj('registr','ok','<b>'+sEsc([reg.znacka,reg.model].filter(Boolean).join(' '))+'</b>'+(radky.length?'<br>'+radky.join('<br>'):''));
