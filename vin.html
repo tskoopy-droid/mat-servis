@@ -454,11 +454,16 @@ function overVin(vin) {
         return;
       }
       var d = [];
-      if (data.kodMotoru) d.push('<span>Motor: <b>' + data.kodMotoru + '</b></span>');
-      if (data.obsah)     d.push('<span>' + data.obsah + ' cm³</span>');
-      if (data.palivo)    d.push('<span>' + data.palivo + '</span>');
+      if (data.kodMotoru) d.push('<span>Kód motoru: <b>' + esc(data.kodMotoru) + '</b></span>');
+      if (data.obsah)     d.push('<span>' + esc(data.obsah) + ' cm³</span>');
+      if (data.palivo)    d.push('<span>' + esc(data.palivo) + '</span>');
+      if (data.rok) d.push('<br><span>Rok 1. registrace: <b>' + esc(data.rok) + '</b></span>');
+      // Stejné pravidlo jako v operátorském mailu: modelový rok z VINu
+      // jen u značek, kde vychází spolehlivě (Renault, Ford, BMW… ho nekódují).
       var rok = dekodujRok(vin);
-      if (rok) d.push('<span>' + rok + '</span>');
+      if (rok && ZNACKY_S_ROKEM_VE_VIN.test(String(data.znacka || '').toUpperCase().trim())) {
+        d.push('<span>Modelový rok (z VIN): <b>' + rok + '</b></span>');
+      }
 
       var nazev = [data.znacka, data.model].filter(Boolean).join(' ') || 'Vozidlo nalezeno';
       overPanel('ok', nazev, d.join('') +
@@ -485,6 +490,9 @@ var ZDROJE = [
   { id: 'castrol', nazev: 'Castrol' },
   { id: 'allegro', nazev: 'Allegro' }
 ];
+
+// Převzato z mail_oleje_html_ v GAS — u ostatních značek je rok z 10. znaku nespolehlivý.
+var ZNACKY_S_ROKEM_VE_VIN = /^(SKODA|ŠKODA|VOLKSWAGEN|VW|SEAT|AUDI|HYUNDAI|KIA)/;
 
 // Texty z Castrolu a Allegra jsou cizí data — do HTML jen escapované.
 function esc(s) {
@@ -517,7 +525,11 @@ function nactiZdroje(vin, registr) {
   }
 
   dotaz('db', '&action=naceneni', function (n) {
-    if (n.uspech && n.vozidlo) zdrojRadek('db', 'ok', '<b>' + esc(n.vozidlo) + '</b>');
+    var ROK_ZDROJ = { vin: 'z VIN', registrace: 'z registrace' };
+    if (n.uspech && n.vozidlo) zdrojRadek('db', 'ok', '<b>' + esc(n.vozidlo) + '</b>' +
+      (n.kodMotoru ? '<br>Kód motoru: <b>' + esc(n.kodMotoru) + '</b>' : '') +
+      (n.rokPouzity ? '<br>Rok pro párování: ' + esc(n.rokPouzity) +
+        (ROK_ZDROJ[n.rokZdroj] ? ' (' + ROK_ZDROJ[n.rokZdroj] + ')' : '') : ''));
     else zdrojRadek('db', 'none', esc(n.duvod || 'Nenalezeno'));
   });
 
@@ -530,7 +542,7 @@ function nactiZdroje(vin, registr) {
     if (c.ok && v) {
       var roky = v.yearFrom ? ' (' + v.yearFrom + '–' + (v.yearTo || '') + ')' : '';
       zdrojRadek('castrol', 'ok', '<b>' + esc([v.make, v.model].filter(Boolean).join(' ')) + '</b><br>' +
-        esc((v.type || '') + roky) + (c.kodMotoru ? '<br>Motor: ' + esc(c.kodMotoru) : ''));
+        esc((v.type || '') + roky) + (c.kodMotoru ? '<br>Kód motoru: <b>' + esc(c.kodMotoru) + '</b>' : ''));
     } else {
       zdrojRadek('castrol', 'none', esc(c.message || (c.error === 'not_found' ? 'Nenalezeno' : c.error) || 'Nenalezeno'));
     }
