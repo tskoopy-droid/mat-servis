@@ -81,6 +81,18 @@
   .over-d{margin-top:5px;font-size:12px;opacity:.92;}
   .over-d span{display:inline-block;margin-right:10px;white-space:nowrap;}
 
+  .zdroje{margin-top:12px;}
+  .zdroj{border:1px solid var(--border);border-radius:14px;padding:11px 14px;margin-bottom:8px;background:var(--bg);}
+  .zdroj .z-n{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:0.08em;text-transform:uppercase;}
+  .zdroj .z-t{margin-top:4px;font-size:13px;line-height:1.45;color:var(--text);}
+  .zdroj .z-t hr{border:none;border-top:1px solid var(--border);margin:6px 0;}
+  .zdroj.load .z-t,.zdroj.none .z-t{color:var(--text-muted);}
+  .zdroj.ok{background:var(--white);}
+  .zdroj.warn{background:#fffbeb;border-color:#fde68a;}
+  .zdroj.warn .z-t{color:#92400e;}
+  .zdroj.fail{background:#f1f5f9;border-color:#cbd5e1;}
+  .zdroj.fail .z-t{color:#475569;}
+
   .note{font-size:12px;color:var(--text-muted);margin-top:12px;line-height:1.5;}
   .note b{color:var(--text);font-weight:600;}
 
@@ -145,6 +157,7 @@
       <div class="grp"><div class="g-val" id="gSer">—</div><div class="g-cap">Sériové</div></div>
     </div>
     <div class="over hidden" id="over"></div>
+    <div class="zdroje hidden" id="zdroje"></div>
     <div class="note" id="note"></div>
     <button class="copy" id="btnCopy" onclick="kopiruj()">
       <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -370,6 +383,7 @@ function prekresli(pocet) {
   } else {
     clearTimeout(overTimer); overToken++;
     document.getElementById('over').classList.add('hidden');
+    document.getElementById('zdroje').classList.add('hidden');
   }
 
   var b = document.getElementById('btnCopy');
@@ -392,6 +406,7 @@ function overPanel(trida, nadpis, detail, tocit) {
 function naplanujOvereni(vin) {
   clearTimeout(overTimer);
   if (vin === overPosledni) return;          // už ověřeno, neposílat znovu
+  document.getElementById('zdroje').classList.add('hidden');
   overPanel('', 'Ověřuji v registru…', '', true);
   overTimer = setTimeout(function () { overVin(vin); }, 700);
 }
@@ -419,6 +434,7 @@ function overVin(vin) {
         overPanel('warn', 'V registru ČR nenalezeno',
           'Buď je ve VINu špatně přečtený znak, nebo jde o vůz ze zahraničí, ' +
           'případně o vozidlo neregistrované v ČR. Porovnej znaky se štítkem.');
+        nactiZdroje(vin, null);
         return;
       }
       var d = [];
@@ -431,6 +447,7 @@ function overVin(vin) {
       var nazev = [data.znacka, data.model].filter(Boolean).join(' ') || 'Vozidlo nalezeno';
       overPanel('ok', nazev, d.join('') +
         '<div style="margin-top:5px;">Sedí-li s autem před tebou, je VIN přečtený správně.</div>');
+      nactiZdroje(vin, data);
     })
     .catch(function (e) {
       if (muj !== overToken) return;
@@ -442,6 +459,82 @@ function overVin(vin) {
         'style="color:inherit;font-weight:700;">Zkusit znovu</a>');
     });
   document.getElementById('over').classList.remove('hidden');
+}
+
+// ══ Zdroje: moje databáze, Castrol, Allegro ══════════════════
+// Jen pro informaci a porovnání. Každý zdroj se načítá zvlášť —
+// výpadek jednoho (typicky vypršelé přihlášení k Allegru) neblokuje ostatní.
+var ZDROJE = [
+  { id: 'db',      nazev: 'Moje databáze' },
+  { id: 'castrol', nazev: 'Castrol' },
+  { id: 'allegro', nazev: 'Allegro' }
+];
+
+// Texty z Castrolu a Allegra jsou cizí data — do HTML jen escapované.
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function zdrojRadek(id, trida, html) {
+  var e = document.getElementById('zdroj-' + id);
+  if (!e) return;
+  e.className = 'zdroj ' + (trida || '');
+  e.querySelector('.z-t').innerHTML = html;
+}
+
+function nactiZdroje(vin, registr) {
+  var box = document.getElementById('zdroje');
+  box.innerHTML = '<div class="lbl">Zdroje</div>' + ZDROJE.map(function (z) {
+    return '<div class="zdroj load" id="zdroj-' + z.id + '"><div class="z-n">' + z.nazev +
+      '</div><div class="z-t">Načítám…</div></div>';
+  }).join('');
+  box.classList.remove('hidden');
+
+  var muj = overToken;                         // výsledky starého VINu nový nepřepíšou
+  function dotaz(id, parametry, zobraz) {
+    fetch(GAS_URL + '?vin=' + encodeURIComponent(vin) + parametry, { redirect: 'follow' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { if (muj === overToken) zobraz(data || {}); })
+      .catch(function () { if (muj === overToken) zdrojRadek(id, 'fail', 'Nepodařilo se načíst'); });
+  }
+
+  dotaz('db', '&action=naceneni', function (n) {
+    if (n.uspech && n.vozidlo) zdrojRadek('db', 'ok', '<b>' + esc(n.vozidlo) + '</b>');
+    else zdrojRadek('db', 'none', esc(n.duvod || 'Nenalezeno'));
+  });
+
+  // Rok a značka z registru zpřesní výběr varianty u Castrolu (stejně jako v oleje.html).
+  var castrol = '&action=olej' +
+    (registr && registr.rok ? '&rok=' + encodeURIComponent(registr.rok) : '') +
+    (registr && registr.znacka ? '&znacka=' + encodeURIComponent(registr.znacka) : '');
+  dotaz('castrol', castrol, function (c) {
+    var v = c.vehicle;
+    if (c.ok && v) {
+      var roky = v.yearFrom ? ' (' + v.yearFrom + '–' + (v.yearTo || '') + ')' : '';
+      zdrojRadek('castrol', 'ok', '<b>' + esc([v.make, v.model].filter(Boolean).join(' ')) + '</b><br>' +
+        esc((v.type || '') + roky) + (c.kodMotoru ? '<br>Motor: ' + esc(c.kodMotoru) : ''));
+    } else {
+      zdrojRadek('castrol', 'none', esc(c.message || (c.error === 'not_found' ? 'Nenalezeno' : c.error) || 'Nenalezeno'));
+    }
+  });
+
+  dotaz('allegro', '&action=allegro', function (a) {
+    if (a.ok) {
+      if (!a.auta || !a.auta.length) return zdrojRadek('allegro', 'none', 'Allegro auto nenašlo');
+      zdrojRadek('allegro', 'ok', a.auta.map(function (x) {
+        return '<b>' + esc([x.znacka, x.model].filter(Boolean).join(' ')) + '</b><br>' + esc(x.typ);
+      }).join('<hr>'));
+    } else if (a.error) {
+      // Vypršelé přihlášení a blokace se řeší ručně — proto výrazně, ne šedě.
+      var trida = (a.error === 'prihlaseni' || a.error === 'blokace') ? 'warn' : 'none';
+      zdrojRadek('allegro', trida, esc(a.zprava || a.error));
+    } else {
+      // Bez řádku action=allegro v doGet vrátí GAS data z registru místo Allegra.
+      zdrojRadek('allegro', 'fail', 'Allegro není v GAS zapnuté (chybí action=allegro v doGet)');
+    }
+  });
 }
 
 function kopiruj() {
