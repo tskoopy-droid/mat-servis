@@ -199,6 +199,10 @@
   .back-btn { background: var(--blue-light); border: none; color: var(--blue); cursor: pointer; font-size: 20px; padding: 8px 12px; border-radius: 10px; line-height: 1; transition: background 0.15s; }
   .back-btn:active { background: var(--blue-mid); }
   .section-title { color: var(--text); font-size: 17px; font-weight: 700; }
+  /* Výrazné tlačítko zpět s popiskem (výběr času → kalendář, formulář → výběr času) */
+  .zpet-btn { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; background: var(--blue-light); border: 2px solid var(--blue-mid); color: var(--blue); border-radius: 12px; padding: 10px 16px; font-size: 15px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.15s; }
+  .zpet-btn:active { background: var(--blue-mid); }
+  .zpet-sipka { font-size: 20px; line-height: 1; }
   .row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
 
   /* TIME SLOTS - velká tlačítka pro mobil */
@@ -746,8 +750,8 @@ function renderTimeSlots() {
   const booked = getBooked(state.selDate);
 
   let html = `
+    <button class="zpet-btn" onclick="goBack(2)"><span class="zpet-sipka">←</span> Zpět na kalendář</button>
     <div class="row">
-      <button class="back-btn" onclick="goBack(2)">←</button>
       <span class="section-title">${fmtDateCZ(state.selDate)}</span>
     </div>
     <div class="time-grid">
@@ -778,8 +782,8 @@ function renderTimeSlots() {
 function renderForm() {
   const k = state.kontakt || {};
   document.getElementById("view-form").innerHTML = `
+    <button class="zpet-btn" onclick="goBack(3)"><span class="zpet-sipka">←</span> Změnit čas</button>
     <div class="row">
-      <button class="back-btn" onclick="goBack(3)">←</button>
       <span class="section-title">Vaše údaje</span>
     </div>
     <div class="summary-bar">
