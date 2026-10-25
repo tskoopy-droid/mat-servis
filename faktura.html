@@ -49,6 +49,8 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   .sumup-box { display:none; margin-bottom:12px; padding:14px 16px; border-radius:14px; background:var(--blue-light); border:1px solid var(--blue-mid); color:var(--blue-dark); font-size:14px; font-weight:600; align-items:center; gap:12px; flex-wrap:wrap; }
   .sumup-box .spinner { border-color:rgba(29,78,216,0.25); border-top-color:var(--blue-dark); }
   .sumup-box span { flex:1; min-width:180px; }
+  .sumup-box.ok { background:var(--green-light); border-color:var(--green-mid); color:var(--green); font-size:16px; }
+  .sumup-box.ok .spinner { display:none; }
   .btn-sm { padding:8px 12px; font-size:12px; }
 
   .card { background:var(--white); border-radius:20px; padding:22px; box-shadow:0 2px 8px rgba(0,0,0,0.06); margin-bottom:16px; }
@@ -358,13 +360,15 @@ async function zaplatitKartou() {
     if (v.stav === 'zaplaceno') {
       sumupKod = v.kod; sumupCastka = castka;
       document.getElementById('forma').disabled = true;
-      sumupBox('', false, true);
-      setStatus('✓ Zaplaceno kartou (kód ' + sumupKod + '). Ukládám fakturu…', 'ok');
+      sumupBox('✅ Platba kartou proběhla: ' + fmtKc(castka) + ' · kód ' + sumupKod, false, false, true);
+      pipnuti(true);
+      setStatus('Ukládám fakturu…', 'ok');
       sumupBezi = false;
       syncEet();
       await ulozAVytiskni();
       return;
     }
+    pipnuti(false);
     if (v.stav === 'timeout') throw new Error('Výsledek platby nepřišel. Podívej se na terminál / do aplikace SumUp — pokud platba prošla, ulož fakturu tlačítkem Uložit.');
     throw new Error(v.stav === 'zruseno' ? 'Platba byla zrušena.' : 'Platba neproběhla' + (v.duvod ? ' (' + v.duvod + ')' : '') + '. Můžeš to zkusit znovu.');
   } catch (e) {
@@ -403,9 +407,26 @@ async function zrusitKartu() {
   // výsledek (zrušeno / zaplaceno) přijde dalším dotazem na stav
 }
 
-function sumupBox(text, lzeZrusit, skryt) {
+// Krátký zvuk: vysoký dvojtón = zaplaceno, hluboký tón = neprošlo / zrušeno
+function pipnuti(ok) {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const tony = ok ? [[880, 0], [1320, 0.16]] : [[220, 0]];
+    tony.forEach(([f, t]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; o.type = 'sine';
+      g.gain.setValueAtTime(0.25, ctx.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + (ok ? 0.15 : 0.45));
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + t); o.stop(ctx.currentTime + t + (ok ? 0.16 : 0.46));
+    });
+  } catch (e) { /* bez zvuku */ }
+}
+
+function sumupBox(text, lzeZrusit, skryt, ok) {
   const box = document.getElementById('sumup-box');
   box.style.display = skryt ? 'none' : 'flex';
+  box.classList.toggle('ok', !!ok);
   if (text) document.getElementById('sumup-text').textContent = text;
   const z = document.getElementById('sumup-zrusit');
   z.style.display = lzeZrusit ? '' : 'none';
@@ -639,6 +660,7 @@ function resetForm() {
   ['odberatel_nazev','odberatel_ico','odberatel_adresa','poznamka','zakazka-cislo'].forEach(id => document.getElementById(id).value = '');
   polozky = []; ulozeno = false; posledniEet = null;
   sumupKod = ''; sumupCastka = 0;
+  sumupBox('', false, true);
   document.getElementById('forma').disabled = false;
   document.getElementById('forma').value = '';
   document.getElementById('platba-tiles').classList.remove('chyba');
