@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="favicon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zásady ochrany osobních údajů – M&T Servis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background:#f4f4f4; font-family:'Inter',Arial,sans-serif;
+    color:#333; line-height:1.6; padding:20px;
+  }
+  /* lišta menu přes celou šířku i přes odsazení stránky */
+  .mtm-bar { margin:-20px -20px 0; }
+  .wrap {
+    max-width:760px; margin:20px auto; background:#fff;
+    border-radius:12px; padding:40px 32px; box-shadow:0 2px 12px rgba(0,0,0,0.06);
+  }
+  h1 { font-size:26px; color:#1a1a2e; margin-bottom:8px; }
+  h2 {
+    font-size:18px; color:#16213e; margin:28px 0 10px 0;
+    padding-bottom:6px; border-bottom:2px solid #e0e4ea;
+  }
+  h3 { font-size:15px; color:#333; margin:18px 0 6px 0; }
+  p { margin-bottom:10px; font-size:15px; }
+  ul { margin:8px 0 12px 24px; font-size:15px; }
+  li { margin-bottom:6px; }
+  .meta {
+    font-size:13px; color:#666; margin-bottom:24px;
+    padding-bottom:16px; border-bottom:1px solid #e0e4ea;
+  }
+  a { color:#16213e; }
+  .footer {
+    margin-top:40px; padding-top:20px; border-top:1px solid #e0e4ea;
+    text-align:center; font-size:13px; color:#666;
+  }
+  .footer a { color:#16213e; text-decoration:none; font-weight:600; }
+  table { border-collapse:collapse; width:100%; margin:10px 0; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #e0e4ea; }
+  th { background:#f8f9fb; font-weight:600; color:#1a1a2e; }
+  @media (max-width:600px) {
+    .wrap { padding:24px 18px; }
+    h1 { font-size:22px; }
+    h2 { font-size:16px; }
+    table { font-size:13px; }
+    th, td { padding:6px 8px; }
+  }
+</style>
+</head>
+<body>
+<!-- ===== M&T menu — STEJNÉ na všech stránkách. Při změně upravit ve všech:
+     index, prezuti, oleje, zasady, dilenska-prirucka, zavitove-tabulky ===== -->
+<style>
+  .mtm-bar { position: relative; z-index: 900; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 84px; padding: 0 12px 0 16px; background: #fff; border-bottom: 1px solid #e2e8f0; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; box-sizing: border-box; }
+  .mtm-znacka { display: block; line-height: 0; }
+  .mtm-znacka img { height: 68px; width: auto; display: block; }
+  .mtm-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #dbe4f0; border-radius: 10px; background: #eff6ff; color: #1d4ed8; font: 700 14px 'Inter', system-ui, sans-serif; cursor: pointer; }
+  .mtm-btn:active { background: #dbeafe; }
+  .mtm-ikona { font-size: 18px; line-height: 1; }
+  .mtm-zaves { position: fixed; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.45); opacity: 0; visibility: hidden; transition: opacity 0.2s; }
+  .mtm-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 1001; width: min(320px, 86vw); background: #fff; box-shadow: -6px 0 24px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.22s ease; overflow-y: auto; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #1e293b; box-sizing: border-box; padding: 0 0 24px; }
+  .mtm-otevreno .mtm-zaves { opacity: 1; visibility: visible; }
+  .mtm-otevreno .mtm-panel { transform: translateX(0); }
+  .mtm-hlava { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 12px 0 20px; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #17496e; }
+  .mtm-zavrit { width: 36px; height: 36px; border: none; border-radius: 10px; background: #f1f5f9; color: #334155; font-size: 18px; cursor: pointer; }
+  .mtm-sekce { padding: 14px 20px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #64748b; }
+  .mtm-odkaz { display: block; padding: 11px 20px; color: #1e293b; text-decoration: none; font-size: 15px; font-weight: 600; border-left: 3px solid transparent; }
+  .mtm-odkaz:active { background: #f1f5f9; }
+  .mtm-odkaz.mtm-aktivni { color: #1d4ed8; background: #eff6ff; border-left-color: #2563eb; }
+  .mtm-kontakt { margin: 16px 20px 0; padding: 14px 16px; background: #f8fafc; border-radius: 12px; font-size: 14px; line-height: 1.9; }
+  .mtm-kontakt a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
+  .mtm-kontakt-nadpis { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
+  body.mtm-zamceno { overflow: hidden; }
+</style>
+<nav class="mtm-bar" aria-label="Hlavní menu">
+  <a class="mtm-znacka" href="index.html"><img src="logo.png" alt="M&amp;T Servis" width="141" height="68"></a>
+  <button class="mtm-btn" type="button" aria-label="Otevřít menu" aria-expanded="false" aria-controls="mtm-panel" onclick="mtmOtevri()"><span class="mtm-ikona" aria-hidden="true">☰</span> Menu</button>
+</nav>
+<div id="mtm-obal">
+  <div class="mtm-zaves" onclick="mtmZavri()"></div>
+  <aside class="mtm-panel" id="mtm-panel" aria-hidden="true" aria-label="Menu">
+    <div class="mtm-hlava">Menu <button class="mtm-zavrit" type="button" aria-label="Zavřít menu" onclick="mtmZavri()">✕</button></div>
+    <a class="mtm-odkaz" href="index.html">Úvod</a>
+    <div class="mtm-sekce">Služby</div>
+    <a class="mtm-odkaz" href="prezuti.html">Přezutí pneumatik</a>
+    <a class="mtm-odkaz" href="oleje.html">Výměna oleje</a>
+    <div class="mtm-sekce">Pro dílnu</div>
+    <a class="mtm-odkaz" href="dilenska-prirucka.html">Dílenská příručka</a>
+    <a class="mtm-odkaz" href="zavitove-tabulky.html">Závitové tabulky</a>
+    <div class="mtm-sekce">Informace</div>
+    <a class="mtm-odkaz" href="zasady.html">Ochrana osobních údajů</a>
+    <div class="mtm-kontakt">
+      <div class="mtm-kontakt-nadpis">Kontakt</div>
+      📞 <a href="tel:+420731885825">731 885 825</a><br>
+      ✉️ <a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a><br>
+      📍 <a href="https://www.google.com/maps/search/?api=1&amp;query=%C5%A0umvaldsk%C3%A1%2059%2C%20Dlouh%C3%A1%20Lou%C4%8Dka" target="_blank" rel="noopener">Šumvaldská 59, Dlouhá Loučka</a><br>
+      👍 <a href="https://www.facebook.com/people/MT-Servis/61566852234635/" target="_blank" rel="noopener">M&amp;T Servis na Facebooku</a>
+    </div>
+  </aside>
+</div>
+<script>
+(function () {
+  // Zvýraznit stránku, na které zákazník je
+  var stranka = (location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index';
+  var odkazy = document.querySelectorAll('#mtm-panel .mtm-odkaz');
+  for (var i = 0; i < odkazy.length; i++) {
+    if (odkazy[i].getAttribute('href').replace(/\.html$/, '') === stranka) odkazy[i].classList.add('mtm-aktivni');
+  }
+})();
+function mtmOtevri() {
+  document.getElementById('mtm-obal').classList.add('mtm-otevreno');
+  document.getElementById('mtm-panel').setAttribute('aria-hidden', 'false');
+  document.querySelector('.mtm-btn').setAttribute('aria-expanded', 'true');
+  document.body.classList.add('mtm-zamceno');
+}
+function mtmZavri() {
+  document.getElementById('mtm-obal').classList.remove('mtm-otevreno');
+  document.getElementById('mtm-panel').setAttribute('aria-hidden', 'true');
+  document.querySelector('.mtm-btn').setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('mtm-zamceno');
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') mtmZavri(); });
+</script>
+<!-- ===== konec M&T menu ===== -->
+
+
+<div class="wrap">
+
+<h1>Zásady ochrany osobních údajů</h1>
+<div class="meta">Účinnost od 19. 4. 2026</div>
+
+<p>
+Tento dokument vysvětluje, jaké osobní údaje o Vás zpracováváme, proč je
+zpracováváme a jaká jsou Vaše práva. Zpracování probíhá v souladu s nařízením
+GDPR.
+</p>
+
+<h2>Kdo je správcem Vašich údajů</h2>
+<p>
+<strong>Tomáš Skopalík</strong> (M&amp;T Servis)<br>
+IČO: 08134235<br>
+Šumvaldská 59, Dlouhá Loučka<br>
+E-mail: <a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a><br>
+Telefon: <a href="tel:+420731885825">731&nbsp;885&nbsp;825</a>
+</p>
+
+<h2>Jaké údaje zpracováváme</h2>
+
+<h3>Při rezervaci</h3>
+<ul>
+  <li>Jméno a příjmení</li>
+  <li>Telefon</li>
+  <li>E-mail</li>
+  <li>Údaje o vozidle (VIN, značka, model, kód motoru)</li>
+  <li>Termín a typ služby</li>
+  <li>Případná poznámka</li>
+</ul>
+
+<h3>Po provedení služby</h3>
+<ul>
+  <li>Všechny údaje z rezervace</li>
+  <li>Datum provedení a cena</li>
+</ul>
+
+<h2>Proč je zpracováváme</h2>
+<ul>
+  <li>
+    <strong>Zajištění rezervace a provedení služby</strong> — bez kontaktu
+    a údajů o vozidle Vám nemůžeme službu rezervovat ani provést.
+    (Právní základ: plnění smlouvy.)
+  </li>
+  <li>
+    <strong>Archivace po provedení služby</strong> — pro případ reklamace
+    nebo dotazu k provedené práci.
+    (Právní základ: oprávněný zájem.)
+  </li>
+  <li>
+    <strong>Informační e-maily</strong> před sezónou přezutí nebo doporučení
+    k servisu — zasíláme zákazníkům, kteří u nás využili služby. Kdykoliv se
+    můžete odhlásit kliknutím v patičce e-mailu.
+    (Právní základ: oprávněný zájem.)
+  </li>
+</ul>
+
+<h2>Kde Vaše údaje leží</h2>
+
+<p>Pro fungování rezervačního systému využíváme následující zpracovatele:</p>
+
+<table>
+  <tr>
+    <th>Služba</th>
+    <th>Účel</th>
+    <th>Umístění</th>
+  </tr>
+  <tr>
+    <td>Google (Firestore, Sheets, Apps Script)</td>
+    <td>Databáze a zpracování rezervací</td>
+    <td>EU</td>
+  </tr>
+  <tr>
+    <td>Brevo (Sendinblue)</td>
+    <td>Odesílání potvrzovacích a informačních e-mailů</td>
+    <td>EU (Francie)</td>
+  </tr>
+  <tr>
+    <td>dataovozidlech.cz</td>
+    <td>Technické údaje vozidla podle VIN</td>
+    <td>ČR</td>
+  </tr>
+  <tr>
+    <td>Castrol Oil Selector</td>
+    <td>Doporučení typu motorového oleje</td>
+    <td>Velká Británie</td>
+  </tr>
+  <tr>
+    <td>GitHub Pages</td>
+    <td>Hosting webových stránek</td>
+    <td>USA</td>
+  </tr>
+</table>
+
+<p style="font-size:14px;color:#666;">
+Osobní údaje neopouštějí prostředí EU. Na GitHub Pages neleží žádné osobní údaje —
+hostuje pouze statické stránky. Na Castrol se posílá pouze VIN vozidla, bez
+jakýchkoliv údajů o Vaší osobě.
+</p>
+
+<h2>Jak dlouho údaje uchováváme</h2>
+<ul>
+  <li>
+    <strong>Aktivní rezervace:</strong> po dobu, dokud jste naším zákazníkem.
+  </li>
+  <li>
+    <strong>Archiv po provedení služby:</strong> 5 let od Vaší poslední návštěvy.
+    Po této době Vaše osobní údaje (jméno, telefon, e-mail, VIN) anonymizujeme —
+    zůstávají pouze anonymní obchodní údaje (datum, typ služby, cena).
+  </li>
+  <li>
+    <strong>Marketingový kontakt:</strong> po odhlášení z e-mailingu okamžitě
+    smažeme.
+  </li>
+</ul>
+
+<h2>Vaše práva</h2>
+<p>V souvislosti se zpracováním osobních údajů máte právo:</p>
+<ul>
+  <li><strong>Na přístup</strong> — vědět, jaké údaje o Vás máme.</li>
+  <li><strong>Na opravu</strong> — nechat si opravit nepřesné údaje.</li>
+  <li><strong>Na výmaz</strong> — nechat svá data smazat.</li>
+  <li><strong>Na přenositelnost</strong> — získat kopii svých údajů.</li>
+  <li>
+    <strong>Vznést námitku</strong> — proti zasílání marketingových e-mailů
+    (nejrychleji přes odhlašovací odkaz v patičce mailu).
+  </li>
+</ul>
+
+<p>
+Pro uplatnění práva nám napište na
+<a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a>.
+Vyřídíme do 30 dní.
+</p>
+
+<h2>Stížnost na dozorový úřad</h2>
+<p>
+Pokud máte za to, že při zpracování Vašich údajů porušujeme GDPR, můžete
+podat stížnost u Úřadu pro ochranu osobních údajů
+(<a href="https://www.uoou.cz" target="_blank" rel="noopener">www.uoou.cz</a>).
+</p>
+
+<h2>Zabezpečení</h2>
+<p>
+Přístup k systému je chráněn heslem a bezpečnostními opatřeními odpovídajícími
+standardu pro malé podniky. Vaše data jsou uložena u prověřených zpracovatelů
+s vlastními bezpečnostními certifikacemi.
+</p>
+
+<div class="footer">
+  <a href="index.html">← Zpět na úvod</a>
+</div>
+
+</div>
+
+</body>
+</html>
