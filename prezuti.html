@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="favicon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Přezutí pneumatik Dlouhá Loučka – online rezervace | M&amp;T Servis</title>
+<meta name="description" content="Přezutí pneumatik v Dlouhé Loučce od 400 Kč za 4 kola. Závaží v ceně, uskladnění pneumatik zdarma, online rezervace termínu.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // ============================================================
+  // GAS BACKEND URL (Faze 3 - vse pres GAS, nic primo do Firebase)
+  // ============================================================
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
+
+  // Nacteni rozvrhu + obsazenych slotu pres GAS (vzdy fetch — GAS ma vlastni cache)
+  window.GAS_BOOKED = {};
+  window.GAS_ROZVRH = null;
+
+  // Měření rychlosti načtení kalendáře → GAS zapíše řádek do listu "Měření".
+  // Časy v ms od začátku načítání (otevření stránky, nebo kliknutí na „Zkusit znovu“).
+  // Při matdev se nic neposílá.
+  let mereni = {};
+  // Diagnostika reklamy: načetla se stránka skrytě (Facebook ji připravuje dopředu
+  // a člověk ji zatím nevidí) a běží návštěva z reklamy mimo facebookovou aplikaci?
+  const NACTENO_SKRYTE = document.visibilityState === 'hidden' || document.prerendering === true;
+  const VE_FB_APLIKACI = /FBAN|FBAV|FB_IAB|FBIOS|Instagram/i.test(navigator.userAgent);
+
+  function odesliMereni() {
+    try {
+      if (localStorage.getItem('matdev') === '1') return;
+    } catch (x) {}
+    try {
+      // Příznaky se zapisují do sloupce Stránka, ať není potřeba měnit GAS.
+      // GAS ukládá jen prvních 20 znaků, proto krátké značky:
+      //   opak  = první načtení selhalo, automatické opakování pomohlo
+      //   ručně = zákazník klikl na „Zkusit znovu“
+      //   skr   = stránka se načetla skrytě (bez zobrazení na obrazovce)
+      //   web   = návštěva z reklamy, ale mimo facebookovou aplikaci
+      let stranka = 'prezuti';
+      if (mereni.rucne) stranka += ' ručně';
+      else {
+        if (mereni.pokusy_rozvrh > 1 || mereni.pokusy_obsazene > 1) stranka += ' opak';
+        if (NACTENO_SKRYTE) stranka += ' skr';
+        if (!VE_FB_APLIKACI && /utm_source=facebook|fbclid=/.test(location.search)) stranka += ' web';
+      }
+      const data = JSON.stringify({
+        akce: 'mereni_kalendar',
+        stranka: stranka,
+        celkem_ms: Math.round(performance.now() - mereni.start),
+        rozvrh_ms: mereni.rozvrh_ms,
+        obsazene_ms: mereni.obsazene_ms,
+        chyba: mereni.chyba_rozvrh || mereni.chyba_obsazene,
+        pokusy_rozvrh: mereni.pokusy_rozvrh,
+        pokusy_obsazene: mereni.pokusy_obsazene,
+        mobil: /Mobi|Android|iPhone/i.test(navigator.userAgent),
+        sit: (navigator.connection && navigator.connection.effectiveType) || '',
+        z_reklamy: /utm_source=facebook|fbclid=/.test(location.search)
+      });
+      if (!(navigator.sendBeacon && navigator.sendBeacon(GAS_URL, data))) {
+        fetch(GAS_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: data }).catch(function(){});
+      }
+    } catch (x) {}   // měření nesmí nikdy rozbít kalendář
+  }
+
+  // GAS občas odpoví chybou nebo ne-JSON stránkou (souběh, probuzení skriptu).
+  // Proto se načtení samo zopakuje, než zákazník uvidí hlášku o chybě.
+  // Chybou je i odpověď s ok:false – jinak by se ukázal prázdný kalendář,
+  // jako by nebyl volný termín.
+  const GAS_POKUSU = 3;
+  const GAS_PRODLEVA_MS = 1500;
+  // Pokus, který visí déle, se přeruší a zkusí znovu – GAS občas neodpovídá desítky sekund.
+  const GAS_LIMIT_MS = 12000;
+
+  function nactiZGas(akce, klicPokusu) {
+    mereni[klicPokusu]++;
+    const ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+    const limit = ctrl ? setTimeout(() => ctrl.abort(), GAS_LIMIT_MS) : null;
+    return fetch(GAS_URL + '?action=' + akce, { redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
+      .then(r => r.json())
+      .then(d => {
+        clearTimeout(limit);
+        if (!d || !d.ok) throw new Error('GAS vrátil chybu (' + akce + ')');
+        return d;
+      })
+      .catch(e => {
+        clearTimeout(limit);
+        if (mereni[klicPokusu] >= GAS_POKUSU) throw e;
+        return new Promise(res => setTimeout(res, GAS_PRODLEVA_MS))
+          .then(() => nactiZGas(akce, klicPokusu));
+      });
+  }
+
+  function loadGasData(rucne) {
+    window.GAS_ROZVRH = null;
+    window.GAS_BOOKED = {};
+    mereni = {
+      start: rucne ? performance.now() : 0, rucne: !!rucne,
+      rozvrh_ms: null, obsazene_ms: null, chyba_rozvrh: false, chyba_obsazene: false,
+      pokusy_rozvrh: 0, pokusy_obsazene: 0
+    };
+    const m = mereni;
+    let rozvrh = null, obsazene = null;
+
+    const pRozvrh = nactiZGas('get_rozvrh', 'pokusy_rozvrh')
+      .then(d => { rozvrh = d.rozvrh || {}; })
+      .catch(e => { console.error('Chyba nacitani rozvrhu:', e); m.chyba_rozvrh = true; })
+      .finally(() => { m.rozvrh_ms = Math.round(performance.now() - m.start); });
+
+    const pObsazene = nactiZGas('get_obsazene_prezuti', 'pokusy_obsazene')
+      .then(d => { obsazene = d.obsazene || {}; })
+      .catch(e => { console.error('Chyba nacitani obsazenych:', e); m.chyba_obsazene = true; })
+      .finally(() => { m.obsazene_ms = Math.round(performance.now() - m.start); });
+
+    Promise.all([pRozvrh, pObsazene]).then(() => {
+      // Bez obsazených termínů by kalendář nabízel i zabrané časy – to je taky chyba
+      if (m.chyba_rozvrh || m.chyba_obsazene) {
+        window.GAS_ROZVRH = 'error';
+      } else {
+        window.GAS_ROZVRH = rozvrh;
+        window.GAS_BOOKED = obsazene;
+      }
+      if (typeof renderCalendar === 'function') renderCalendar();
+      // Pokud je uzivatel zrovna v kroku 2 (vyber casu), prerender slotu
+      if (typeof state !== 'undefined' && state.step === 2 && state.selDate && typeof renderTimeSlots === 'function') {
+        renderTimeSlots();
+      }
+      odesliMereni();
+    });
+  }
+  loadGasData(false);
+</script>
+<style>
+  :root {
+    --blue: #2563eb;
+    --blue-dark: #1d4ed8;
+    --blue-light: #eff6ff;
+    --blue-mid: #bfdbfe;
+    --text: #1e293b;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --bg: #f8fafc;
+    --white: #ffffff;
+    --red: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+  .page-title { max-width:500px; margin:0 auto; padding:24px 16px 0; text-align:center; }
+
+  .page-title h1 { font-size:24px; font-weight:700; color:var(--text); margin:0; }
+  .header-text { display:table-cell; vertical-align:middle; padding-right:16px; width:100%; }
+  .header-sub { font-size:19px; font-weight:700; color:var(--text); }
+  .header-sub-small { font-size:11px; font-weight:500; color:var(--text-muted); line-height:1.5; }
+  .header-logo { height: 70px; max-width: 160px; width: auto; flex-shrink: 0; border-radius: 6px; display: inline-block; object-fit: contain; }
+
+  /* CONTAINER */
+  .container { max-width: 500px; margin: 0 auto; padding: 24px 16px; }
+
+  /* STEPS */
+  .steps { display: flex; align-items: center; margin-bottom: 6px; background: var(--white); border-radius: 16px; padding: 14px 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+  .step-item { display: flex; align-items: center; flex: 1; }
+  .step-circle { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; transition: all 0.3s; border: 2px solid var(--border); background: var(--white); color: var(--text-muted); }
+  .step-line { flex: 1; height: 2px; margin: 0 8px; transition: background 0.3s; background: var(--border); }
+  .step-popisek { text-align: center; font-size: 12px; font-weight: 600; color: var(--blue); margin-bottom: 20px; letter-spacing: 0.3px; }
+
+  /* CARD */
+  .card { background: var(--white); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+
+  /* CALENDAR */
+  .cal-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .cal-btn { background: var(--blue-light); border: none; color: var(--blue); border-radius: 10px; width: 40px; height: 40px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; font-weight: bold; transition: background 0.15s; }
+  .cal-btn:active { background: var(--blue-mid); }
+  .cal-btn:disabled { opacity: 0.3; cursor: default; }
+  .cal-btn:disabled:active { background: var(--blue-light); }
+  .cal-title { font-weight: 700; color: var(--text); font-size: 16px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+  .cal-day-name { font-size: 11px; color: var(--text-muted); padding: 6px 0; font-weight: 600; }
+  .cal-day { padding: 10px 2px; border-radius: 10px; font-size: 14px; border: 2px solid transparent; transition: all 0.1s; font-weight: 500; }
+  .cal-day.empty { color: transparent; }
+  .cal-day.past { color: #cbd5e1; }
+  .cal-day.unavailable { color: #cbd5e1; }
+  .cal-day.available { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue-dark); cursor: pointer; font-weight: 600; }
+  .cal-day.available:active { background: var(--blue-mid); }
+  .cal-day.fully-booked { background: #fee2e2; border-color: #fecaca; color: #dc2626; cursor: not-allowed; font-weight: 600; }
+  .cal-day.selected { background: var(--blue) !important; border-color: var(--blue) !important; color: #fff !important; font-weight: 700; }
+  .cal-nav-tydny { justify-content: center; margin-bottom: 8px; }
+  .cal-oddelovac { border-top: 2px solid var(--border); margin: 16px 0 14px; }
+  .cal-legend { margin-top: 14px; font-size: 11px; color: var(--text-muted); display: flex; gap: 16px; }
+  .legend-avail { color: var(--blue); font-weight: 600; }
+  .cal-empty-note { margin-top: 12px; padding: 10px 12px; background: #fef9f0; border: 1px solid #f4d68a; border-radius: 10px; color: #8a6d2f; font-size: 13px; font-weight: 600; text-align: center; line-height: 1.5; }
+
+  /* LOADER */
+  .cal-loader { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+  .cal-spinner { display: inline-block; width: 36px; height: 36px; border: 3px solid var(--blue-light); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+  .cal-loader-text { font-size: 14px; color: var(--text-muted); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* BACK BTN & TITLE */
+  .back-btn { background: var(--blue-light); border: none; color: var(--blue); cursor: pointer; font-size: 20px; padding: 8px 12px; border-radius: 10px; line-height: 1; transition: background 0.15s; }
+  .back-btn:active { background: var(--blue-mid); }
+  .section-title { color: var(--text); font-size: 17px; font-weight: 700; }
+  /* Výrazné tlačítko zpět s popiskem (výběr času → kalendář, formulář → výběr času) */
+  .zpet-btn { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; background: var(--blue-light); border: 2px solid var(--blue-mid); color: var(--blue); border-radius: 12px; padding: 10px 16px; font-size: 15px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: background 0.15s; }
+  .zpet-btn:active { background: var(--blue-mid); }
+  .zpet-sipka { font-size: 20px; line-height: 1; }
+  .row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+
+  /* TIME SLOTS - velká tlačítka pro mobil */
+  .time-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  /* Všechny dlaždice stejně vysoké — štítek OBSAZENO/NELZE/1. AUTO je nezvětšuje */
+  .time-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 92px; padding: 12px 8px; border-radius: 16px; text-align: center; font-weight: 700; font-size: 22px; border: 2px solid var(--border); background: var(--white); color: var(--text); cursor: pointer; transition: all 0.15s; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+  .time-slot:active { border-color: var(--blue); background: var(--blue-light); }
+  .time-slot.booked { background: var(--bg); border-color: var(--border); color: #cbd5e1; cursor: not-allowed; box-shadow: none; }
+  .time-slot.booked .booked-label { font-size: 10px; color: #cbd5e1; margin-top: 4px; letter-spacing: 0.5px; display: block; font-weight: 500; }
+  /* Termíny aut, která si zákazník už v této návštěvě objednal („Přidat další auto“) */
+  .cal-day.moje { border-color: #16a34a !important; box-shadow: inset 0 0 0 1px #16a34a; }
+  .cal-day.moje.unavailable { background: #dcfce7; color: #166534; font-weight: 600; }
+  .legend-moje { color: #16a34a; font-weight: 600; }
+  .time-slot.moje { background: #dcfce7; border-color: #16a34a; color: #166534; }
+  .time-slot.moje .booked-label { color: #16a34a; font-weight: 700; }
+  .dalsi-auto-btn { display: block; width: 100%; max-width: 360px; margin: 0 auto 12px; background: var(--blue); color: #fff; border: none; border-radius: 12px; padding: 14px 18px; font-size: 15px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
+  .dalsi-auto-btn:active { background: var(--blue-dark); }
+  .objednana-auta { max-width: 360px; margin: 0 auto 14px; text-align: left; font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .time-slot.selected { background: var(--blue); border-color: var(--blue); color: #fff; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+
+  /* SUMMARY BAR */
+  .summary-bar { background: var(--blue-light); border: 1.5px solid var(--blue-mid); border-radius: 14px; padding: 14px 16px; margin-bottom: 22px; font-size: 14px; color: var(--blue-dark); font-weight: 500; }
+
+  /* FORM */
+  .field { margin-bottom: 16px; }
+  .field label { font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .field input { width: 100%; background: var(--white); border: 2px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 16px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; }
+  .field input:focus { border-color: var(--blue); }
+  .field input::placeholder { color: #cbd5e1; }
+  .field textarea { width: 100%; background: var(--white); border: 2px solid var(--border); border-radius: 12px; padding: 14px 16px; color: var(--text); font-size: 16px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; resize: vertical; min-height: 80px; }
+  .field textarea:focus { border-color: var(--blue); }
+  .field textarea::placeholder { color: #cbd5e1; }
+  .field .nepovinne { text-transform: none; font-weight: 400; }
+
+  /* Zaškrtávátka uskladnění — velká plocha pro prst na mobilu */
+  /* .field .volba přebíjí obecné .field label (velká písmena, display:block) */
+  .field .volba { display: flex; align-items: flex-start; gap: 12px; background: var(--white); border: 2px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.2s; text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 14px; color: var(--text); }
+  .field .volba:has(input:checked) { border-color: var(--blue); background: var(--blue-light); }
+  .field .volba input { width: 22px; height: 22px; padding: 0; margin: 1px 0 0; flex-shrink: 0; accent-color: var(--blue); cursor: pointer; }
+  .volba-text { font-size: 14px; color: var(--text); line-height: 1.4; }
+  .volba-text small { display: block; font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .volba-zdarma { color: #16a34a; font-weight: 700; }
+
+  .karty { display: inline-flex; gap: 6px; margin-top: 6px; }
+  .karty svg { width: 40px; height: 25px; display: block; }
+
+  /* Výhody pod ceníkem — zelené kolečko s fajfkou */
+  .cenik-vyhody { margin-top: 8px; padding: 10px 12px; background: #f0fdf4; border-radius: 10px; }
+  .vyhoda { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #334155; line-height: 1.5; }
+  .vyhoda + .vyhoda { margin-top: 6px; }
+  .fajfka { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #16a34a; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+
+  /* Nabídka opravy překlepu v e-mailu */
+  .email-navrh { display: none; margin-top: 6px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; font-size: 13px; color: #92400e; line-height: 1.5; }
+  .email-navrh-btn { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--blue); text-decoration: underline; cursor: pointer; }
+
+  /* Upozornění na bezpečnostní šrouby na potvrzení */
+  .srouby-info { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.5; text-align: left; margin: 0 auto 14px; max-width: 360px; }
+
+  /* Chybová hláška formuláře — místo alert(), který na mobilu vypadá jako chyba prohlížeče */
+  .form-error { display: none; margin: 4px 0 8px; padding: 12px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; font-size: 13px; color: #dc2626; line-height: 1.5; }
+
+  /* SUBMIT BTN - velké mobilní tlačítko */
+  .submit-btn { width: 100%; border: none; border-radius: 14px; padding: 18px; font-size: 17px; font-weight: 700; letter-spacing: 0.3px; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; margin-top: 10px; }
+  .submit-btn.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+  .submit-btn.active:active { background: var(--blue-dark); }
+  .submit-btn.inactive { background: var(--border); color: #94a3b8; cursor: not-allowed; }
+  .slot-error { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; border-radius:12px; padding:14px 16px; font-size:14px; font-weight:600; text-align:center; margin-bottom:14px; display:none; }
+
+  /* CONFIRM */
+  .confirm { text-align: center; padding: 20px 16px; }
+  .confirm-icon { font-size: 48px; margin-bottom: 8px; }
+  .confirm-title { color: var(--blue); font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .confirm-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
+  .confirm-card { background: var(--white); border: 2px solid var(--blue-mid); border-radius: 14px; padding: 14px 16px; display: inline-block; text-align: left; margin-bottom: 14px; min-width: 260px; font-size: 14px; line-height: 1.9; box-shadow: 0 2px 12px rgba(37,99,235,0.1); }
+  .confirm-card .row-item { display: flex; align-items: center; gap: 10px; }
+  .new-btn { background: var(--blue-light); border: none; color: var(--blue); border-radius: 12px; padding: 12px 20px; cursor: pointer; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; transition: background 0.15s; }
+  .new-btn:active { background: var(--blue-mid); }
+
+  /* ======================================================
+     PRACOVNÍ DOBA - ZDE MĚŇ
+     Dny: 1=Po 2=Út 3=St 4=Čt 5=Pá 6=So 0=Ne
+     Formát: "HH:00-HH:00" oddělené čárkou pro více bloků
+     ====================================================== */
+</style>
+<script>
+(function(){
+  var p = new URLSearchParams(location.search);
+  if (p.get('matdev') === '1') { try { localStorage.setItem('matdev','1'); } catch(e){} }
+  if (p.get('matdev') === '0') { try { localStorage.removeItem('matdev'); } catch(e){} }
+  var vypnuto = false;
+  try { vypnuto = localStorage.getItem('matdev') === '1'; } catch(e){}
+  if (!vypnuto) {
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-Z3Z3QHH5T7';
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){ dataLayer.push(arguments); };
+    gtag('js', new Date());
+    gtag('config', 'G-Z3Z3QHH5T7');
+  }
+})();
+</script>
+</head>
+<body>
+<!-- ===== M&T menu — STEJNÉ na všech stránkách. Při změně upravit ve všech:
+     index, prezuti, oleje, zasady, dilenska-prirucka, zavitove-tabulky ===== -->
+<style>
+  .mtm-bar { position: relative; z-index: 900; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 84px; padding: 0 12px 0 16px; background: #fff; border-bottom: 1px solid #e2e8f0; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; box-sizing: border-box; }
+  .mtm-znacka { display: block; line-height: 0; }
+  .mtm-znacka img { height: 68px; width: auto; display: block; }
+  .mtm-btn { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid #dbe4f0; border-radius: 10px; background: #eff6ff; color: #1d4ed8; font: 700 14px 'Inter', system-ui, sans-serif; cursor: pointer; }
+  .mtm-btn:active { background: #dbeafe; }
+  .mtm-ikona { font-size: 18px; line-height: 1; }
+  .mtm-zaves { position: fixed; inset: 0; z-index: 1000; background: rgba(15, 23, 42, 0.45); opacity: 0; visibility: hidden; transition: opacity 0.2s; }
+  .mtm-panel { position: fixed; top: 0; right: 0; bottom: 0; z-index: 1001; width: min(320px, 86vw); background: #fff; box-shadow: -6px 0 24px rgba(0,0,0,0.15); transform: translateX(100%); transition: transform 0.22s ease; overflow-y: auto; font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; color: #1e293b; box-sizing: border-box; padding: 0 0 24px; }
+  .mtm-otevreno .mtm-zaves { opacity: 1; visibility: visible; }
+  .mtm-otevreno .mtm-panel { transform: translateX(0); }
+  .mtm-hlava { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 0 12px 0 20px; border-bottom: 1px solid #e2e8f0; font-weight: 800; color: #17496e; }
+  .mtm-zavrit { width: 36px; height: 36px; border: none; border-radius: 10px; background: #f1f5f9; color: #334155; font-size: 18px; cursor: pointer; }
+  .mtm-sekce { padding: 14px 20px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #64748b; }
+  .mtm-odkaz { display: block; padding: 11px 20px; color: #1e293b; text-decoration: none; font-size: 15px; font-weight: 600; border-left: 3px solid transparent; }
+  .mtm-odkaz:active { background: #f1f5f9; }
+  .mtm-odkaz.mtm-aktivni { color: #1d4ed8; background: #eff6ff; border-left-color: #2563eb; }
+  .mtm-kontakt { margin: 16px 20px 0; padding: 14px 16px; background: #f8fafc; border-radius: 12px; font-size: 14px; line-height: 1.9; }
+  .mtm-kontakt a { color: #1d4ed8; text-decoration: none; font-weight: 600; }
+  .mtm-kontakt-nadpis { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
+  body.mtm-zamceno { overflow: hidden; }
+</style>
+<nav class="mtm-bar" aria-label="Hlavní menu">
+  <a class="mtm-znacka" href="index.html"><img src="logo.png" alt="M&amp;T Servis" width="141" height="68"></a>
+  <button class="mtm-btn" type="button" aria-label="Otevřít menu" aria-expanded="false" aria-controls="mtm-panel" onclick="mtmOtevri()"><span class="mtm-ikona" aria-hidden="true">☰</span> Menu</button>
+</nav>
+<div id="mtm-obal">
+  <div class="mtm-zaves" onclick="mtmZavri()"></div>
+  <aside class="mtm-panel" id="mtm-panel" aria-hidden="true" aria-label="Menu">
+    <div class="mtm-hlava">Menu <button class="mtm-zavrit" type="button" aria-label="Zavřít menu" onclick="mtmZavri()">✕</button></div>
+    <a class="mtm-odkaz" href="index.html">Úvod</a>
+    <div class="mtm-sekce">Služby</div>
+    <a class="mtm-odkaz" href="prezuti.html">Přezutí pneumatik</a>
+    <a class="mtm-odkaz" href="oleje.html">Výměna oleje</a>
+    <div class="mtm-sekce">Pro dílnu</div>
+    <a class="mtm-odkaz" href="dilenska-prirucka.html">Dílenská příručka</a>
+    <a class="mtm-odkaz" href="zavitove-tabulky.html">Závitové tabulky</a>
+    <div class="mtm-sekce">Informace</div>
+    <a class="mtm-odkaz" href="zasady.html">Ochrana osobních údajů</a>
+    <div class="mtm-kontakt">
+      <div class="mtm-kontakt-nadpis">Kontakt</div>
+      📞 <a href="tel:+420731885825">731 885 825</a><br>
+      ✉️ <a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a><br>
+      📍 <a href="https://www.google.com/maps/search/?api=1&amp;query=%C5%A0umvaldsk%C3%A1%2059%2C%20Dlouh%C3%A1%20Lou%C4%8Dka" target="_blank" rel="noopener">Šumvaldská 59, Dlouhá Loučka</a><br>
+      👍 <a href="https://www.facebook.com/people/MT-Servis/61566852234635/" target="_blank" rel="noopener">M&amp;T Servis na Facebooku</a>
+    </div>
+  </aside>
+</div>
+<script>
+(function () {
+  // Zvýraznit stránku, na které zákazník je
+  var stranka = (location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index';
+  var odkazy = document.querySelectorAll('#mtm-panel .mtm-odkaz');
+  for (var i = 0; i < odkazy.length; i++) {
+    if (odkazy[i].getAttribute('href').replace(/\.html$/, '') === stranka) odkazy[i].classList.add('mtm-aktivni');
+  }
+})();
+function mtmOtevri() {
+  document.getElementById('mtm-obal').classList.add('mtm-otevreno');
+  document.getElementById('mtm-panel').setAttribute('aria-hidden', 'false');
+  document.querySelector('.mtm-btn').setAttribute('aria-expanded', 'true');
+  document.body.classList.add('mtm-zamceno');
+}
+function mtmZavri() {
+  document.getElementById('mtm-obal').classList.remove('mtm-otevreno');
+  document.getElementById('mtm-panel').setAttribute('aria-hidden', 'true');
+  document.querySelector('.mtm-btn').setAttribute('aria-expanded', 'false');
+  document.body.classList.remove('mtm-zamceno');
+}
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape') mtmZavri(); });
+</script>
+<!-- ===== konec M&T menu ===== -->
+
+
+<div class="page-title" id="main-header"><h1>Přezutí pneumatik</h1></div>
+
+<div class="container">
+
+  
+<div id="cenik-box" style="background:#fff;border-radius:16px;padding:16px 20px;margin:16px 0 4px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #e2e8f0">
+  <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Ceník</div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:14px;color:#1e293b">Vyvážení s montáží na vůz (pneu z disku se nesundává)</span>
+    <span style="text-align:right;flex-shrink:0"><span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap">400 Kč</span><br><span style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap">za 4 kola</span></span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:14px;color:#1e293b">Komplet přezutí – sundání a nasazení pneu na disky, vyvážení, montáž na vůz</span>
+    <span style="text-align:right;flex-shrink:0"><span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap">600 Kč</span><br><span style="font-size:11px;font-weight:500;color:#64748b;white-space:nowrap">za 4 kola</span></span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:14px;color:#1e293b">Výměna bezdušového ventilku (na požádání)</span>
+    <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:14px;color:#1e293b">RunFlat a nízkoprofilové pneu</span>
+    <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+    <span style="font-size:14px;color:#1e293b">Uskladnění pneumatik (při přezutí u nás)</span>
+    <span style="font-size:15px;font-weight:700;color:#16a34a;white-space:nowrap;flex-shrink:0">zdarma</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0">
+    <span style="font-size:14px;color:#1e293b">Platba hotově, kartou<br>nebo QR kódem</span>
+    <span class="karty" style="margin:0"><svg viewBox="0 0 48 30" role="img" aria-label="Visa"><rect width="48" height="30" rx="4" fill="#fff" stroke="#e2e8f0"/><text x="24" y="20.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" font-weight="900" font-style="italic" fill="#1a1f71" letter-spacing="0.5">VISA</text></svg><svg viewBox="0 0 48 30" role="img" aria-label="Mastercard"><rect width="48" height="30" rx="4" fill="#fff" stroke="#e2e8f0"/><circle cx="19" cy="15" r="9" fill="#eb001b"/><circle cx="29" cy="15" r="9" fill="#f79e1b"/><path d="M24 7.5a9 9 0 0 1 0 15a9 9 0 0 1 0-15z" fill="#ff5f00"/></svg><svg viewBox="0 0 48 30" role="img" aria-label="QR platba"><rect width="48" height="30" rx="4" fill="#fff" stroke="#e2e8f0"/><g fill="#1e293b"><rect x="15" y="6" width="7" height="7"/><rect x="26" y="6" width="7" height="7"/><rect x="15" y="17" width="7" height="7"/><rect x="27" y="18" width="2" height="2"/><rect x="30" y="21" width="3" height="3"/><rect x="26" y="22" width="2" height="2"/></g><g fill="#fff"><rect x="17" y="8" width="3" height="3"/><rect x="28" y="8" width="3" height="3"/><rect x="17" y="19" width="3" height="3"/></g></svg></span>
+  </div>
+  <div class="cenik-vyhody">
+    <div class="vyhoda"><span class="fajfka">✓</span><span><strong>Vyvažovací závaží jsou v ceně</strong> – nic za ně nedoplácíte.</span></div>
+    <div class="vyhoda"><span class="fajfka">✓</span><span><strong>Stejná cena pro všechny velikosti disků</strong> až do 20″ včetně. Větší kola nepřezouváme.</span></div>
+  </div>
+</div>
+
+<div class="steps" id="steps">
+    <div class="step-item">
+      <div class="step-circle" id="sc1">1</div>
+    </div>
+    <div class="step-line" id="line1"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc2">2</div>
+    </div>
+    <div class="step-line" id="line2"></div>
+    <div class="step-item">
+      <div class="step-circle" id="sc3">3</div>
+    </div>
+  </div>
+  <div class="step-popisek" id="step-popisek">Vyberte datum</div>
+
+  <div id="view-date"></div>
+  <div id="view-time" style="display:none"></div>
+  <div id="view-form" style="display:none"></div>
+  <div id="view-confirm" style="display:none"></div>
+
+</div>
+
+<script>
+// Generuj sloty z rozvrhu (hodiny zaškrtnuté adminem)
+function znacuZnovaRozvrh() {
+  loadGasData(true);
+  renderCalendar();
+}
+
+function getSlotsForDate(dateStr) {
+  const rozvrh = window.GAS_ROZVRH;
+  if (!rozvrh || !rozvrh[dateStr]) return [];
+  return rozvrh[dateStr].map(h => String(h).padStart(2,'0') + ':00');
+}
+
+function fmtDateCZ(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const days = ['Ne','Po','Út','St','Čt','Pá','So'];
+  const dow = days[new Date(y, m-1, d).getDay()];
+  return `${dow} ${d}. ${m}. ${y}`;
+}
+
+function getBooked(dateStr) {
+  return (window.GAS_BOOKED && window.GAS_BOOKED[dateStr]) || [];
+}
+
+const MONTHS = ["Leden","Únor","Březen","Duben","Květen","Červen","Červenec","Srpen","Září","Říjen","Listopad","Prosinec"];
+const DAYS_SHORT = ["Po","Út","St","Čt","Pá","So","Ne"];
+
+let state = {
+  month: new Date().getMonth(),
+  year: new Date().getFullYear(),
+  selDate: null,
+  selTime: null,
+  step: 1,
+  kontakt: { n: '', p: '', e: '', c: '', o: '', u1: false, u2: false },   // vyplněné údaje — přežijí návrat do kalendáře
+};
+
+// Auto-skip prázdného měsíce se smí provést jen jednou, při prvním vykreslení
+// po načtení rozvrhu. Při ruční navigaci šipkami by jinak zákazníka přehazoval
+// nebo zobrazil hlášku bez šipek (slepá ulička).
+let autoSkipHotovo = false;
+
+// Stav odesílání. Během požadavku a po nejistém výsledku se znovu
+// odeslat nesmí — jinak vznikne druhá rezervace.
+let odesilani = false;
+let zamceno = false;
+let zamcenoText = '';
+
+// Auta objednaná v této návštěvě: [{datum, cas, auto}]. Slouží k vyznačení
+// v kalendáři při „Přidat další auto“. Po obnovení stránky se zapomenou.
+let objednanaAuta = [];
+function mojeAuto(ds, cas) {
+  for (let i = 0; i < objednanaAuta.length; i++) {
+    if (objednanaAuta[i].datum === ds && (!cas || objednanaAuta[i].cas === cas)) return i + 1;
+  }
+  return 0;
+}
+
+// ── Měření cesty zákazníka (GA) ──────────────────────────────
+// Každá událost se pošle nejvýš jednou za načtení stránky — čísla v reportu
+// (list GA_prezuti) pak odpovídají počtu zákazníků, ne počtu kliknutí.
+// Při matdev gtag neexistuje a nic se neposílá.
+const MERENO_PREZUTI = {};
+function merPrezuti(nazev) {
+  if (MERENO_PREZUTI[nazev]) return;
+  MERENO_PREZUTI[nazev] = true;
+  try { if (typeof gtag === 'function') gtag('event', nazev); } catch (x) {}
+}
+
+// ── Kontrola překlepu v e-mailu ──────────────────────────────
+// Při překlepu v doméně (seznam.ct, gmaiil.com…) zákazníkovi nepřijde potvrzení
+// ani odkaz na zrušení. Stránka nabídne opravu; e-mail nikdy nemění sama.
+// Nabídka se ukáže až při kliknutí na Potvrdit, ne při opuštění pole — jinak by
+// posunula tlačítko pod prstem a první ťuknutí by se ztratilo.
+const EMAIL_DOMENY = ['seznam.cz', 'email.cz', 'centrum.cz', 'atlas.cz', 'volny.cz', 'post.cz',
+  'tiscali.cz', 'quick.cz', 'gmail.com', 'icloud.com', 'outlook.com', 'outlook.cz',
+  'hotmail.com', 'yahoo.com', 'live.com'];
+// Skutečné domény podobné těm výše — pro ně se oprava nenabízí
+const EMAIL_DOMENY_OK = ['mail.com', 'email.com', 'gmx.com', 'gmx.net', 'gmx.de', 'proton.me',
+  'protonmail.com', 'centrum.sk', 'atlas.sk', 'azet.sk', 'zoznam.sk', 'post.sk', 'live.cz', 'me.com', 'mac.com'];
+// Správná koncovka u schránek, které jinou nemají (gmail.cz → gmail.com)
+const EMAIL_KONCOVKA = { gmail: 'gmail.com', seznam: 'seznam.cz', centrum: 'centrum.cz', icloud: 'icloud.com' };
+
+function vzdalenostTextu(a, b) {   // počet překlepů (vynechané, přidané, záměna, prohození)
+  const d = [];
+  for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+  for (let j = 0; j <= b.length; j++) { d[0][j] = j; }
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const c = a[i-1] === b[j-1] ? 0 : 1;
+      d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + c);
+      if (i > 1 && j > 1 && a[i-1] === b[j-2] && a[i-2] === b[j-1]) d[i][j] = Math.min(d[i][j], d[i-2][j-2] + 1);
+    }
+  }
+  return d[a.length][b.length];
+}
+
+// Vrátí opravený e-mail, nebo '' když je v pořádku / nic podobného nezná.
+function navrhniEmail(email) {
+  const at = email.lastIndexOf('@');
+  if (at < 1) return '';
+  const jmeno = email.slice(0, at);
+  const domena = email.slice(at + 1).toLowerCase().replace(/[.,]+$/, '').replace(/,/g, '.');
+  if (!domena) return '';
+  if (EMAIL_DOMENY.includes(domena) || EMAIL_DOMENY_OK.includes(domena)) {
+    return domena === email.slice(at + 1) ? '' : jmeno + '@' + domena;   // jen tečka/čárka navíc na konci
+  }
+  const prvni = domena.split('.')[0];
+  if (EMAIL_KONCOVKA[prvni]) return jmeno + '@' + EMAIL_KONCOVKA[prvni];
+  let nejlepsi = '', min = 99;
+  for (const d of EMAIL_DOMENY) {
+    const v = vzdalenostTextu(domena, d);
+    if (v < min) { min = v; nejlepsi = d; }
+  }
+  const limit = domena.length >= 9 ? 2 : 1;   // u krátkých domén jen jeden překlep, ať se netrefí do cizí firmy
+  return min <= limit ? jmeno + '@' + nejlepsi : '';
+}
+
+// Ukáže / schová nabídku opravy pod polem e-mailu. Vrací navržený e-mail.
+function ukazNavrhEmailu() {
+  const pole = document.getElementById("f-email");
+  const el = document.getElementById("email-navrh");
+  if (!pole || !el) return '';
+  const navrh = navrhniEmail(pole.value.trim());
+  if (!navrh) { el.style.display = 'none'; return ''; }
+  el.innerHTML = 'Nemáte v e-mailu překlep? Myslíte <button type="button" class="email-navrh-btn" onclick="pouzijNavrhEmailu()">' + escHtml(navrh) + '</button>?';
+  el.dataset.navrh = navrh;
+  el.style.display = 'block';
+  merPrezuti('prezuti_email_preklep');
+  return navrh;
+}
+
+function pouzijNavrhEmailu() {
+  const el = document.getElementById("email-navrh");
+  document.getElementById("f-email").value = el.dataset.navrh || '';
+  el.style.display = 'none';
+  merPrezuti('prezuti_email_opraven');
+  checkForm();
+}
+
+// E-mail, u kterého zákazník nabídku opravy viděl a přesto odeslal — podruhé se nebrzdí
+let emailNavrhVidel = '';
+
+// Telefon do jednotného tvaru: „777 123 456“, s předvolbou „+420 777 123 456“.
+// Zahraniční a neobvyklá čísla se nechají, jak je zákazník napsal.
+function upravTelefon(v) {
+  const t = String(v || '').trim();
+  if (!t) return '';
+  let cislice = t.replace(/\D/g, '');
+  if (cislice.indexOf('00') === 0) cislice = cislice.slice(2);
+  const trojice = c => c.slice(0,3) + ' ' + c.slice(3,6) + ' ' + c.slice(6);
+  if (cislice.length === 12 && cislice.indexOf('420') === 0) return '+420 ' + trojice(cislice.slice(3));
+  if (cislice.length === 9 && !/^\s*(\+|00)/.test(t)) return trojice(cislice);
+  return t;
+}
+// Telefon musí být platné číslo, jinak rezervace neodejde (bez obcházení druhým kliknutím):
+//  - české: 9 číslic začínajících 2–9, smí mít mezery/pomlčky a předvolbu 420, +420, 00420
+//  - zahraniční: jen s předvolbou (+421…, 0049…), 8–15 číslic
+// Nesmysly (dvě čísla s čárkou, písmena, špatná délka) neprojdou.
+function telefonVypadaChybne(t) {
+  const s = String(t || '').trim();
+  if (!s || /[^\d\s+\-().\/]/.test(s)) return true;
+  const c = s.replace(/[\s\-().\/]/g, '');
+  if (/^(?:\+420|00420|420)?[2-9]\d{8}$/.test(c)) return false;
+  if (/^(?:\+|00)(?!420)[1-9]\d{7,14}$/.test(c)) return false;
+  return true;
+}
+// Do rezervace (log, Firestore, SMS): česká čísla jako 9 číslic bez předvolby a mezer
+// (jednotně v tabulce, jde v ní hledat), zahraniční s „+“. Formulář ukazuje čitelný tvar.
+function telefonKUlozeni(t) {
+  var c = String(t || '').replace(/[\s\-().\/]/g, '');
+  var m = c.match(/^(?:\+|00)?420(\d{9})$/);
+  if (m) return m[1];
+  if (/^00\d/.test(c)) return '+' + c.slice(2);
+  return c;
+}
+
+function escHtml(t) {
+  return String(t == null ? '' : t).replace(/[&<>"]/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+  });
+}
+
+function isFullyBooked(year, month, day) {
+  const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const slots = getSlotsForDate(ds);
+  if (slots.length === 0) return false;
+  const booked = getBooked(ds);
+  return slots.every(t => booked.includes(t));
+}
+
+function isWorkingDay(year, month, day) {
+  const ds = `${year}-${String(month+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  const slots = getSlotsForDate(ds);
+  if (slots.length === 0) return false;
+  const today = new Date();
+  const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+  if (isToday) return slots.some(t => !isSlotTooSoon(ds, t));
+  return true;
+}
+
+function isPast(year, month, day) {
+  const today = new Date();
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  return new Date(year, month, day) < t;
+}
+
+// Vrací true, pokud daný měsíc má alespoň jeden volný den (pracovní + ne v minulosti + ne plně obsazený)
+function maMesicVolnyDen(year, month) {
+  const total = new Date(year, month+1, 0).getDate();
+  for (let d = 1; d <= total; d++) {
+    if (isPast(year, month, d)) continue;
+    if (!isWorkingDay(year, month, d)) continue;
+    if (isFullyBooked(year, month, d)) continue;
+    return true;
+  }
+  return false;
+}
+
+// Max 5 týdnů (35 dní) dopředu od dneška
+function getMaxDate() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 35);
+  return d;
+}
+
+// Šipka ‹ — nejdál do aktuálního měsíce
+function lzeNaPredchozi(year, month) {
+  const t = new Date();
+  return year > t.getFullYear() || (year === t.getFullYear() && month > t.getMonth());
+}
+
+// Šipka › — jen pokud první den dalšího měsíce spadá do limitu 35 dní
+function lzeNaDalsi(year, month) {
+  let ny = year, nm = month + 1;
+  if (nm === 12) { nm = 0; ny++; }
+  return new Date(ny, nm, 1) <= getMaxDate();
+}
+
+function fmt(y,m,d) { return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`; }
+
+function updateSteps() {
+  const s = state.step;
+  const popisky = ['Vyberte datum', 'Vyberte čas', 'Kontaktní údaje'];
+  [1,2,3].forEach(i => {
+    const sc = document.getElementById("sc"+i);
+    if (s > i) { sc.style.background="#2563eb"; sc.style.borderColor="#2563eb"; sc.style.color="#fff"; sc.textContent="✓"; }
+    else if (s === i) { sc.style.background="#2563eb"; sc.style.borderColor="#2563eb"; sc.style.color="#fff"; sc.textContent=i; }
+    else { sc.style.background="#fff"; sc.style.borderColor="#e2e8f0"; sc.style.color="#94a3b8"; sc.textContent=i; }
+  });
+  ["line1","line2"].forEach((id,i) => {
+    document.getElementById(id).style.background = s > i+1 ? "#2563eb" : "#e2e8f0";
+  });
+  const p = document.getElementById("step-popisek");
+  if (p) p.textContent = popisky[s-1] || '';
+}
+
+function showView(name) {
+  ["date","time","form","confirm"].forEach(v => {
+    document.getElementById("view-"+v).style.display = v===name ? "block" : "none";
+  });
+  document.getElementById("steps").style.display = name==="confirm" ? "none" : "flex";
+  document.getElementById("main-header").style.display = name==="confirm" ? "none" : "block";
+  // Na potvrzení rezervace nepatří ceník ani popisek kroku
+  document.getElementById("cenik-box").style.display = name==="confirm" ? "none" : "block";
+  document.getElementById("step-popisek").style.display = name==="confirm" ? "none" : "block";
+}
+
+function renderCalendar() {
+  // Dokud se nenačte rozvrh, zobraz loader
+  if (window.GAS_ROZVRH === null) {
+    document.getElementById("view-date").innerHTML = `
+      <div class="card">
+        <div class="cal-loader">
+          <div class="cal-spinner"></div>
+          <div class="cal-loader-text">Načítá se kalendář…</div>
+        </div>
+      </div>`;
+    return;
+  }
+  // Chyba načítání — zobraz hlášku s tlačítkem
+  if (window.GAS_ROZVRH === 'error') {
+    document.getElementById("view-date").innerHTML = `
+      <div class="card" style="text-align:center;padding:24px 16px;">
+        <div style="font-size:32px;margin-bottom:12px;">📡</div>
+        <div style="font-size:15px;font-weight:600;color:#1e293b;margin-bottom:6px;">Nepodařilo se načíst termíny</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:18px;line-height:1.5;">Zkontrolujte připojení k internetu a zkuste to znovu.</div>
+        <button onclick="znacuZnovaRozvrh()" style="padding:12px 24px;background:#2563eb;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;">Zkusit znovu</button>
+      </div>`;
+    return;
+  }
+
+  // Plynulých 5 týdnů od pondělí týdne, ve kterém je první volný den, rozdělených
+  // po měsících (nadpis měsíce, jeho dny, čára). Bez listování šipkami.
+  const TYDNU = 5;
+  const volnyDen = (y, m, d) => !isPast(y, m, d) && isWorkingDay(y, m, d) && !isFullyBooked(y, m, d);
+  const dnes = new Date(); dnes.setHours(0,0,0,0);
+  let prvniVolny = null;
+  for (let k = 0; k < 120 && !prvniVolny; k++) {
+    const t = new Date(dnes); t.setDate(dnes.getDate() + k);
+    if (volnyDen(t.getFullYear(), t.getMonth(), t.getDate())) prvniVolny = t;
+  }
+  if (!prvniVolny) {
+    merPrezuti('prezuti_zadny_termin');
+    document.getElementById("view-date").innerHTML = `
+      <div class="card" style="text-align:center;padding:30px 16px;background:#fef9f0;border:1px solid #f4d68a;color:#8a6d2f;font-weight:600;font-size:14px;line-height:1.5;">
+        Aktuálně není žádný volný termín.<br>Zkuste to prosím později.
+      </div>`;
+    return;
+  }
+  merPrezuti('prezuti_kalendar');
+  const od = new Date(prvniVolny);
+  od.setDate(od.getDate() - ((od.getDay() + 6) % 7));   // pondělí toho týdne
+
+  const bloky = [];
+  for (let i = 0; i < TYDNU * 7; i++) {
+    const den = new Date(od); den.setDate(od.getDate() + i);
+    const posledni = bloky[bloky.length - 1];
+    if (!posledni || posledni.m !== den.getMonth()) bloky.push({ m: den.getMonth(), y: den.getFullYear(), dny: [] });
+    bloky[bloky.length - 1].dny.push(den);
+  }
+
+  let html = `
+    <div id="slot-error-msg" class="slot-error">⚠️ Omlouváme se, tento termín byl právě obsazen. Vyberte prosím jiný čas.</div>
+    <div class="card">`;
+  bloky.forEach((blok, bi) => {
+    if (bi > 0) html += `<div class="cal-oddelovac"></div>`;
+    html += `<div class="cal-nav cal-nav-tydny"><span class="cal-title">${MONTHS[blok.m]} ${blok.y}</span></div>
+      <div class="cal-grid">
+        ${DAYS_SHORT.map(d=>`<div class="cal-day-name">${d}</div>`).join("")}`;
+    const posun = (blok.dny[0].getDay() + 6) % 7;
+    for (let e = 0; e < posun; e++) html += `<div class="cal-day empty"></div>`;
+    blok.dny.forEach(den => {
+      const y = den.getFullYear(), m = den.getMonth(), d = den.getDate();
+      const ds = fmt(y, m, d);
+      const volno = volnyDen(y, m, d);
+      let cls = "cal-day" + (volno ? " available" : " unavailable");
+      if (ds === state.selDate) cls += " selected";
+      if (mojeAuto(ds)) cls += " moje";
+      const onclick = volno ? `onclick="selectDate('${ds}')"` : "";
+      html += `<div class="${cls}" ${onclick}>${d}</div>`;
+    });
+    html += `</div>`;
+  });
+  html += `
+      <div class="cal-legend">
+        <span class="legend-avail">■ Dostupný den</span>
+        ${objednanaAuta.length ? '<span class="legend-moje">■ Vaše objednávka</span>' : ''}
+      </div>
+    </div>`;
+
+  document.getElementById("view-date").innerHTML = html;
+  // Zobrazit slot-error pokud byl nastaven před návratem
+  if (window._slotError) {
+    const el = document.getElementById("slot-error-msg");
+    if (el) { el.style.display = 'block'; }
+    window._slotError = false;
+  }
+}
+
+function isSlotTooSoon(dateStr, timeStr) {
+  const [y,m,d] = dateStr.split("-").map(Number);
+  const [h] = timeStr.split(":").map(Number);
+  const slotTime = new Date(y, m-1, d, h, 0, 0);
+  const now = new Date();
+  const diff = slotTime - now;
+  return diff < 2 * 60 * 60 * 1000; // méně než 2 hodiny
+}
+
+function renderTimeSlots() {
+  const slots = getSlotsForDate(state.selDate);
+  const booked = getBooked(state.selDate);
+
+  let html = `
+    <button class="zpet-btn" onclick="goBack(2)"><span class="zpet-sipka">←</span> Zpět na kalendář</button>
+    <div class="row">
+      <span class="section-title">${fmtDateCZ(state.selDate)}</span>
+    </div>
+    <div class="time-grid">
+  `;
+
+  for (const t of slots) {
+    const isBooked = booked.includes(t);
+    const isTooSoon = isSlotTooSoon(state.selDate, t);
+    const isUnavailable = isBooked || isTooSoon;
+    const isSel = t === state.selTime;
+    let cls = "time-slot";
+    if (isUnavailable) cls += " booked";
+    if (isSel) cls += " selected";
+    const mojeCislo = mojeAuto(state.selDate, t);
+    if (mojeCislo) cls += " moje";
+    const onclick = !isUnavailable ? `onclick="selectTime('${t}')"` : "";
+    let label = "";
+    if (mojeCislo) label = '<span class="booked-label">' + mojeCislo + '. AUTO</span>';
+    else if (isBooked) label = '<span class="booked-label">OBSAZENO</span>';
+    else if (isTooSoon) label = '<span class="booked-label">NELZE</span>';
+    html += `<div class="${cls}" ${onclick}>${t}${label}</div>`;
+  }
+
+  html += `</div>`;
+  document.getElementById("view-time").innerHTML = html;
+}
+
+function renderForm() {
+  const k = state.kontakt || {};
+  document.getElementById("view-form").innerHTML = `
+    <button class="zpet-btn" onclick="goBack(3)"><span class="zpet-sipka">←</span> Změnit čas</button>
+    <div class="row">
+      <span class="section-title">Vaše údaje</span>
+    </div>
+    <div class="summary-bar">
+      <span class="highlight">📅 ${fmtDateCZ(state.selDate)}</span>
+      &nbsp;·&nbsp;
+      <span class="white">🕐 ${state.selTime}</span>
+      &nbsp;·&nbsp;
+      Přezutí (1 hod.)
+    </div>
+    <!-- Skutečný <form> s name/for — Chrome na Androidu podle toho spolehlivěji nabídne
+         uložené jméno, telefon a e-mail. Neodesílá se: odeslání řeší submitForm(). -->
+    <form id="f-rezervace" autocomplete="on" onsubmit="event.preventDefault(); return false;">
+    <div class="field">
+      <label for="f-name">Jméno a příjmení *</label>
+      <input type="text" id="f-name" name="name" placeholder="Jan Novák" value="${escHtml(k.n)}" autocomplete="name" oninput="checkForm()">
+    </div>
+    <div class="field">
+      <label for="f-phone">Telefon *</label>
+      <input type="tel" id="f-phone" name="tel" placeholder="777 000 000" value="${escHtml(k.p)}" autocomplete="tel" oninput="checkForm()" onblur="this.value=upravTelefon(this.value); checkForm()">
+    </div>
+    <div class="field">
+      <label for="f-email">E-mail *</label>
+      <input type="email" id="f-email" name="email" placeholder="jan@email.cz" value="${escHtml(k.e)}" autocomplete="email" inputmode="email" oninput="checkForm()">
+      <div id="email-error" style="color:#dc2626;font-size:12px;margin-top:4px;display:none">Zadejte platný e-mail (např. jan@email.cz)</div>
+      <div id="email-navrh" class="email-navrh"></div>
+    </div>
+    <div class="field">
+      <label for="f-car">Vozidlo *</label>
+      <input type="text" id="f-car" name="vozidlo" placeholder="Škoda Octavia" value="${escHtml(k.c)}" autocomplete="off" oninput="checkForm()">
+    </div>
+    <div class="field">
+      <label>Uskladnění pneumatik <span class="nepovinne">(nepovinné)</span></label>
+      <label class="volba">
+        <input type="checkbox" id="f-mam-ulozene" ${k.u1 ? 'checked' : ''} onchange="checkForm()">
+        <span class="volba-text">Mám u vás uskladněné pneumatiky<small>Připravíme je předem.</small></span>
+      </label>
+      <label class="volba">
+        <input type="checkbox" id="f-chci-ulozit" ${k.u2 ? 'checked' : ''} onchange="checkForm()">
+        <span class="volba-text">Chci u vás uskladnit sundané pneumatiky – <span class="volba-zdarma">zdarma</span></span>
+      </label>
+    </div>
+    <div class="field">
+      <label for="f-note">Poznámka <span class="nepovinne">(nepovinné)</span></label>
+      <textarea id="f-note" name="poznamka" maxlength="500" placeholder="Např. 19&quot; disky, RunFlat, přivezu i rezervu…" oninput="checkForm()">${escHtml(k.o)}</textarea>
+    </div>
+    <div class="form-error" id="form-error"></div>
+    <button type="button" class="submit-btn inactive" id="submit-btn" onclick="submitForm()">Potvrdit rezervaci →</button>
+    </form>
+  `;
+
+  // Po nejistém výsledku zůstává hláška i zamčené tlačítko,
+  // i když se zákazník mezitím vrátí na výběr času a zpět.
+  if (zamceno) {
+    zobrazChybu(zamcenoText);
+    document.getElementById("submit-btn").textContent = 'Odesláno, ověřujeme';
+  }
+  checkForm();
+}
+
+function renderConfirm(name, phone, email, car, mamUlozene, chciUlozit) {
+  document.getElementById("view-confirm").innerHTML = `
+    <div class="confirm">
+      <div class="confirm-icon">✅</div>
+      <div class="confirm-title">Rezervace přijata!</div>
+      <div class="confirm-sub">Na adresu <strong style="color:#1e293b;font-size:16px">${escHtml(email)}</strong> vám zašleme potvrzovací e-mail.<br><span style="font-size:13px;color:#94a3b8">Pro zrušení klikněte na odkaz v emailu.</span></div>
+      <div class="confirm-card">
+        <div>👤 <strong>${escHtml(name)}</strong></div>
+        <div>🚗 ${escHtml(car)}</div>
+        <div style="color:#2563eb">📅 <strong>${fmtDateCZ(state.selDate)} · ${state.selTime}</strong></div>
+        <div style="color:#64748b">🔧 Přezutí pneumatik · 1 hod.</div>
+        ${mamUlozene ? '<div style="color:#64748b">🛞 Uskladněné pneu připravíme</div>' : ''}
+        ${chciUlozit ? '<div style="color:#64748b">🛞 Uskladnění pneumatik (zdarma)</div>' : ''}
+        <div style="color:#64748b;margin-top:4px">📍 Dlouhá Loučka, Šumvaldská 59</div>
+      </div>
+
+      ${objednanaAuta.length > 1 ? '<div class="objednana-auta"><strong>Objednaná auta:</strong><br>' + objednanaAuta.map(function(a, i) { return (i + 1) + '. ' + escHtml(a.auto) + ' – ' + fmtDateCZ(a.datum) + ' · ' + a.cas; }).join('<br>') + '</div>' : ''}
+
+      <button class="dalsi-auto-btn" onclick="pridatDalsiAuto()">+ Přidat další auto</button>
+
+      <div class="srouby-info">🔩 Máte-li na kolech bezpečnostní šrouby, nezapomeňte prosím adaptér (klíč) k nim.</div>
+
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">
+        <button onclick="shareLink()" style="background:var(--blue-light);border:none;color:var(--blue);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:600;white-space:nowrap">Doporučit M&amp;T Servis</button>
+        <button class="new-btn" onclick="window.location.href='index.html'">Nová rezervace</button>
+      </div>
+    </div>
+  `;
+}
+
+function prevMonth() {
+  if (!lzeNaPredchozi(state.year, state.month)) return;
+  if (state.month === 0) { state.month = 11; state.year--; }
+  else state.month--;
+  renderCalendar();
+}
+
+function nextMonth() {
+  if (!lzeNaDalsi(state.year, state.month)) return;
+  if (state.month === 11) { state.month = 0; state.year++; }
+  else state.month++;
+  merPrezuti('prezuti_dalsi_mesic');
+  renderCalendar();
+}
+
+function selectDate(ds) {
+  state.selDate = ds;
+  state.step = 2;
+  updateSteps();
+  renderTimeSlots();
+  showView("time");
+  merPrezuti('rezervace_krok_datum');
+}
+
+function selectTime(t) {
+  state.selTime = t;
+  state.step = 3;
+  updateSteps();
+  renderForm();
+  showView("form");
+  merPrezuti('rezervace_krok_cas');
+}
+
+function goBack(toStep) {
+  // Zpět z výběru času = vybral den, ale žádný čas mu nevyhovoval
+  merPrezuti(toStep === 2 ? 'prezuti_zpet_z_casu' : 'prezuti_zpet_z_formulare');
+  state.step = toStep - 1;
+  updateSteps();
+  if (toStep === 2) { renderCalendar(); showView("date"); }
+  if (toStep === 3) { renderTimeSlots(); showView("time"); }
+}
+
+function zobrazChybu(text) {
+  const el = document.getElementById("form-error");
+  if (!el) return;
+  el.textContent = text || '';
+  el.style.display = text ? 'block' : 'none';
+}
+
+function checkForm() {
+  const n = document.getElementById("f-name").value.trim();
+  const p = document.getElementById("f-phone").value.trim();
+  const e = document.getElementById("f-email").value.trim();
+  const c = document.getElementById("f-car").value.trim();
+  const o = document.getElementById("f-note").value.trim();
+  const u1 = document.getElementById("f-mam-ulozene").checked;
+  const u2 = document.getElementById("f-chci-ulozit").checked;
+  state.kontakt = { n: n, p: p, e: e, c: c, o: o, u1: u1, u2: u2 };
+  const btn = document.getElementById("submit-btn");
+  const emailError = document.getElementById("email-error");
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+  const navrhEl = document.getElementById("email-navrh");
+  if (navrhEl && navrhEl.style.display === 'block' && navrhniEmail(e) !== navrhEl.dataset.navrh) navrhEl.style.display = 'none';
+  if (e && !emailValid) {
+    emailError.style.display = 'block';
+  } else {
+    emailError.style.display = 'none';
+  }
+  if (n && p && e && emailValid && c && !odesilani && !zamceno) { btn.className = "submit-btn active"; }
+  else { btn.className = "submit-btn inactive"; }
+}
+
+// Výsledky odeslání:
+//   status:'ok'                → hotovo
+//   code:'slot_obsazen'        → zpět na kalendář, údaje zůstanou vyplněné
+//   status:'error' + code      → jistě neuloženo, zákazník může opravit a odeslat znovu
+//   cokoli jiného / síť        → NEJISTÉ: rezervace se mohla uložit.
+//                                Neodesílat znovu (duplicita), nahlásit Tomášovi.
+// Odkud zákazník přišel – posílá se s rezervací do sloupce Zdroj v logu rezervací.
+// Žádné osobní údaje: jen UTM z odkazu (kampaň reklamy), nebo doména, ze které přišel.
+// Zjišťuje se při načtení stránky, ať ho nepřepíše návrat z formuláře do kalendáře.
+const ZDROJ_NAVSTEVY = (function () {
+  try {
+    const q = new URLSearchParams(location.search);
+    const utm = ['utm_source', 'utm_medium', 'utm_campaign'].map(k => q.get(k) || '').filter(Boolean);
+    if (utm.length) return utm.join(' / ');
+    if (q.has('fbclid')) return 'facebook (bez UTM)';
+    if (document.referrer) {
+      const host = new URL(document.referrer).hostname.replace(/^www\./, '');
+      if (host === location.hostname.replace(/^www\./, '')) return 'web mat-servis.cz';
+      return 'odkaz z ' + host;
+    }
+  } catch (x) {}
+  return 'přímo / neznámý';
+})();
+
+function submitForm() {
+  if (odesilani || zamceno) return;
+
+  const n = document.getElementById("f-name").value.trim();
+  const telEl = document.getElementById("f-phone");
+  telEl.value = upravTelefon(telEl.value);
+  const p = telEl.value;
+  const e = document.getElementById("f-email").value.trim();
+  const c = document.getElementById("f-car").value.trim();
+  const o = document.getElementById("f-note").value.trim();
+  const u1 = document.getElementById("f-mam-ulozene").checked;
+  const u2 = document.getElementById("f-chci-ulozit").checked;
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+  if (!n || !p || !e || !emailValid || !c) return;
+  if (telefonVypadaChybne(p)) {
+    zobrazChybu('Zadejte prosím platné telefonní číslo – 9 číslic, např. 777 123 456. Zahraniční číslo s předvolbou, např. +421 905 123 456.');
+    telEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  // Překlep v doméně → poprvé zastavit a ukázat nabídku opravy. Když zákazník
+  // e-mail nechá a klikne znovu, odešle se (může mít firemní doménu).
+  if (navrhniEmail(e) && emailNavrhVidel !== e) {
+    emailNavrhVidel = e;
+    ukazNavrhEmailu();
+    document.getElementById("f-email").scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+
+  const datum = state.selDate;
+  const cas = state.selTime;
+
+  odesilani = true;
+  zobrazChybu('');
+  const btn = document.getElementById("submit-btn");
+  btn.textContent = "Odesílám...";
+  btn.className = "submit-btn inactive";
+
+  // Jediny POST na GAS - ten se postara o Firestore zapis, mail zakaznikovi,
+  // notifikaci operatorovi i audit log do sheetu.
+  fetch(GAS_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    body: JSON.stringify({
+      akce: 'prezuti',
+      sluzba: 'Přezutí pneumatik',
+      jmeno: n,
+      telefon: telefonKUlozeni(p),   // do rezervace: česká čísla 9 číslic, ve formuláři s mezerami
+      email: e,
+      auto: c,
+      poznamka: o,
+      mam_uskladnene: u1,
+      chci_uskladnit: u2,
+      datum: datum,
+      cas: cas,
+      sluzby: 'Přezutí pneumatik',
+      cena: '',
+      zdroj: ZDROJ_NAVSTEVY
+    })
+  })
+  // Čte se jako text, ne rovnou r.json() — při nečekané odpovědi
+  // se tak dá nahlásit přesně to, co přišlo.
+  .then(r => r.text())
+  .then(text => {
+    let data = null;
+    try { data = JSON.parse(text); } catch (x) {}
+    odesilani = false;
+
+    if (data && (data.status === 'ok' || data.ok)) {
+      try {
+        if (!window.GAS_BOOKED) window.GAS_BOOKED = {};
+        if (!window.GAS_BOOKED[datum]) window.GAS_BOOKED[datum] = [];
+        window.GAS_BOOKED[datum].push(cas);
+      } catch (x) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
+      objednanaAuta.push({ datum: datum, cas: cas, auto: c });
+      renderConfirm(n, p, e, c, u1, u2);
+      showView("confirm");
+      // Měření dokončené rezervace v GA (při matdev je gtag vypnutý)
+      try {
+        if (typeof gtag === 'function') {
+          gtag('event', 'rezervace_dokoncena', { sluzba: 'prezuti', datum_terminu: datum });
+        }
+      } catch (x) {}
+      return;
+    }
+
+    if (data && data.code === 'slot_obsazen') {
+      merPrezuti('prezuti_termin_obsazen');
+      // Zpět na kalendář — údaje zůstanou v state.kontakt a formulář je znovu vyplní
+      state.selDate = null;
+      state.selTime = null;
+      state.step = 1;
+      window._slotError = true;
+      updateSteps();
+      renderCalendar();
+      showView("date");
+      return;
+    }
+
+    // Server výslovně říká, že neuložil (chyba s kódem) — opakování je bezpečné.
+    if (data && data.status === 'error' && data.code && data.message) {
+      zobrazChybu(data.message);
+      btn.textContent = "Potvrdit rezervaci →";
+      checkForm();
+      return;
+    }
+
+    nejistyVysledek('neocekavana_odpoved', text);
+  })
+  .catch(err => {
+    odesilani = false;
+    nejistyVysledek('sit', String((err && err.message) || err));
+  });
+
+  // Rezervace se mohla uložit. Tlačítko zůstává zablokované,
+  // aby zákazník nevytvořil druhou rezervaci.
+  function nejistyVysledek(typ, detail) {
+    zamceno = true;
+    zamcenoText = 'Nepodařilo se ověřit, jestli rezervace prošla. Prosím neodesílejte ji znovu. ' +
+      'Pokud prošla, do několika minut vám přijde potvrzení na ' + e + ' (zkontrolujte i spam). ' +
+      'Pokud neprošla, ozveme se vám e-mailem.';
+    zobrazChybu(zamcenoText);
+    btn.textContent = 'Odesláno, ověřujeme';
+    btn.className = 'submit-btn inactive';
+
+    try {
+      fetch(GAS_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        body: JSON.stringify({
+          akce: 'klient_chyba', zdroj: 'prezuti', typ: typ,
+          detail: String(detail || '').slice(0, 1000),
+          jmeno: n, telefon: telefonKUlozeni(p), email: e,
+          vin: '', datum: datum || '', cas: cas || ''
+        })
+      }).catch(function(){});
+    } catch (x) {}
+  }
+}
+
+// Další auto: kalendář od začátku, kontakt předvyplněný, vozidlo/uskladnění/poznámka prázdné.
+// Objednané termíny zůstanou vyznačené (objednanaAuta).
+function pridatDalsiAuto() {
+  const k = state.kontakt || {};
+  const posledni = objednanaAuta[objednanaAuta.length - 1];
+  const d = posledni ? new Date(posledni.datum + 'T00:00:00') : new Date();
+  state = { month: d.getMonth(), year: d.getFullYear(), selDate: null, selTime: null, step: 1,
+            kontakt: { n: k.n || '', p: k.p || '', e: k.e || '', c: '', o: '', u1: false, u2: false } };
+  emailNavrhVidel = '';
+  merPrezuti('prezuti_dalsi_auto');
+  updateSteps();
+  renderCalendar();
+  showView("date");
+  window.scrollTo(0, 0);
+}
+
+function resetAll() {
+  state = { month: new Date().getMonth(), year: new Date().getFullYear(), selDate: null, selTime: null, step: 1, kontakt: { n: '', p: '', e: '', c: '', o: '', u1: false, u2: false } };
+  updateSteps();
+  renderCalendar();
+  showView("date");
+}
+
+// Sdílení odkazu
+function shareLink() {
+  const url = window.location.href.split('?')[0];
+  if (navigator.share) {
+    navigator.share({
+      title: 'Přezutí pneumatik – M&T Servis',
+      text: 'Rezervuj si přezutí pneumatik online! 🔧',
+      url: url,
+    });
+  } else {
+    navigator.clipboard.writeText(url).then(() => {
+      alert('Odkaz zkopírován! 🔗');
+    }).catch(() => {
+      prompt('Zkopírujte odkaz:', url);
+    });
+  }
+}
+
+// Inicializace app
+updateSteps();
+renderCalendar();
+showView("date");
+</script>
+
+<div style="text-align:center;padding:16px;border-top:1px solid var(--border);margin-top:8px;font-size:12px;color:#94a3b8">
+  Sledujte nás: <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" style="color:#1877f2;font-weight:600;text-decoration:none">M&T Servis na Facebooku</a>
+  &nbsp;·&nbsp; <a href="mailto:info@mat-servis.cz" style="color:var(--blue);font-weight:600;text-decoration:none">info@mat-servis.cz</a>
+</div>
+
+</body>
+</html>
