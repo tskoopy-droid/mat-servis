@@ -306,25 +306,7 @@
   // Sezóna pro dezén v liště: říjen–březen zima, jinak léto
   (function(){ var m = new Date().getMonth(); document.documentElement.classList.add(m >= 9 || m <= 2 ? 'sezona-zima' : 'sezona-leto'); })();
 </script>
-<script>
-(function(){
-  var p = new URLSearchParams(location.search);
-  if (p.get('matdev') === '1') { try { localStorage.setItem('matdev','1'); } catch(e){} }
-  if (p.get('matdev') === '0') { try { localStorage.removeItem('matdev'); } catch(e){} }
-  var vypnuto = false;
-  try { vypnuto = localStorage.getItem('matdev') === '1'; } catch(e){}
-  if (!vypnuto) {
-    var s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-Z3Z3QHH5T7';
-    document.head.appendChild(s);
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function(){ dataLayer.push(arguments); };
-    gtag('js', new Date());
-    gtag('config', 'G-Z3Z3QHH5T7');
-  }
-})();
-</script>
+<script src="souhlas.js"></script>
 </head>
 <body>
 <script src="menu.js"></script>
