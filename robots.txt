@@ -1,0 +1,9 @@
+User-agent: *
+Disallow: /admin.html
+Disallow: /prehled.html
+Disallow: /uctenka.html
+Disallow: /faktura.html
+Disallow: /zrusit.html
+Disallow: /vin.html
+
+Sitemap: https://mat-servis.cz/sitemap.xml
