@@ -315,25 +315,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .back-btn-cal:active{background:var(--blue-mid);}
   .zpet-sipka{font-size:20px;line-height:1;}
 </style>
-<script>
-(function(){
-  var p = new URLSearchParams(location.search);
-  if (p.get('matdev') === '1') { try { localStorage.setItem('matdev','1'); } catch(e){} }
-  if (p.get('matdev') === '0') { try { localStorage.removeItem('matdev'); } catch(e){} }
-  var vypnuto = false;
-  try { vypnuto = localStorage.getItem('matdev') === '1'; } catch(e){}
-  if (!vypnuto) {
-    var s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-Z3Z3QHH5T7';
-    document.head.appendChild(s);
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function(){ dataLayer.push(arguments); };
-    gtag('js', new Date());
-    gtag('config', 'G-Z3Z3QHH5T7');
-  }
-})();
-</script>
+<script src="souhlas.js"></script>
 </head>
 <body>
 <script src="menu.js"></script>
