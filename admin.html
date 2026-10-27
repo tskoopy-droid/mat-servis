@@ -1241,7 +1241,7 @@ function sBuildMailText(){
 
   // ══ VIN v novém servisu ═══════════════════════════════════════
   // Rozpoznání z fotky a dotazy na zdroje jsou převzaté z vin.html
-  // (stejné akce GAS: vin_ocr, registr, naceneni, olej, allegro).
+  // (stejné akce GAS: vin_ocr, registr, naceneni, olej).
   // VIN je nepovinný — bez něj se zakázka uloží jako dřív.
   const S_VIN_RE=/^[A-HJ-NPR-Z0-9]{17}$/;
   const S_ROK_SEQ='ABCDEFGHJKLMNPRSTVWXY123456789';
@@ -1392,7 +1392,7 @@ function sBuildMailText(){
     const muj=++sVinToken; sVinPosledni=vin; sVinInfo={};
     sAutoRegistr=''; sAutoZnacka=''; sAutoParovani='';
     const box=document.getElementById('s-vin-zdroje');
-    box.innerHTML=[['registr','Registr'],['db','Moje databáze'],['castrol','Castrol'],['allegro','Allegro']].map(z=>
+    box.innerHTML=[['registr','Registr'],['db','Moje databáze'],['castrol','Castrol']].map(z=>
       '<div class="s-zdroj load" id="s-zdroj-'+z[0]+'"><div class="z-n">'+z[1]+'</div><div class="z-t">Načítám…</div></div>').join('');
     const dotaz=(par)=>fetch(GAS_URL+'?vin='+encodeURIComponent(vin)+par,{redirect:'follow'}).then(r=>r.json());
     const aktualni=()=>muj===sVinToken;
@@ -1414,7 +1414,8 @@ function sBuildMailText(){
         sVinInfo.barva=reg.barva||'';
         const radky=[];
         if(reg.kodMotoru)radky.push('Kód motoru: <b>'+sEsc(reg.kodMotoru)+'</b>');
-        if(reg.obsah||reg.palivo)radky.push([reg.obsah?sEsc(reg.obsah)+' cm³':'',sEsc(reg.palivo||'')].filter(Boolean).join(' · '));
+        // Registr dává výkon jako „96 / 4000" (kW / otáčky) — stačí kW.
+        if(reg.obsah||reg.palivo||sVinInfo.vykon)radky.push([reg.obsah?sEsc(reg.obsah)+' cm³':'',sVinInfo.vykon?'<b>'+sEsc(sVinInfo.vykon)+' kW</b>':'',sEsc(reg.palivo||'')].filter(Boolean).join(' · '));
         if(reg.barva)radky.push('Barva: <b>'+sEsc(reg.barva)+'</b>');
         if(reg.rok)radky.push('Rok 1. registrace: <b>'+sEsc(reg.rok)+'</b>');
         if(sVinInfo.rok_vin)radky.push('Modelový rok (z VIN): <b>'+sVinInfo.rok_vin+'</b>');
@@ -1448,15 +1449,6 @@ function sBuildMailText(){
       }else sZdroj('db','none',sEsc(n.duvod||'Nenalezeno'));
     }).catch(()=>{if(aktualni())sZdroj('db','none','Nepodařilo se načíst');});
 
-    dotaz('&action=allegro').then(a=>{
-      if(!aktualni())return; a=a||{};
-      if(a.ok){
-        if(!a.auta||!a.auta.length)return sZdroj('allegro','none','Allegro auto nenašlo');
-        sZdroj('allegro','ok',a.auta.map(x=>'<b>'+sEsc([x.znacka,x.model].filter(Boolean).join(' '))+'</b><br>'+sEsc(x.typ)).join('<hr>'));
-      }else if(a.error){
-        sZdroj('allegro',(a.error==='prihlaseni'||a.error==='blokace')?'warn':'none',sEsc(a.zprava||a.error));
-      }else sZdroj('allegro','none','Allegro není v GAS zapnuté');
-    }).catch(()=>{if(aktualni())sZdroj('allegro','none','Nepodařilo se načíst');});
   }
 
   // Co se k zakázce uloží. Neplatný nebo nenačtený VIN = nic, zakázka jde bez něj.
