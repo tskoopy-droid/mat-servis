@@ -456,6 +456,9 @@ function overVin(vin) {
       var d = [];
       if (data.kodMotoru) d.push('<span>Kód motoru: <b>' + esc(data.kodMotoru) + '</b></span>');
       if (data.obsah)     d.push('<span>' + esc(data.obsah) + ' cm³</span>');
+      // Registr dává výkon jako „96 / 4000" (kW / otáčky) — stačí kW.
+      var kw = data.vykon ? String(data.vykon).split('/')[0].trim() : '';
+      if (kw)             d.push('<span><b>' + esc(kw) + ' kW</b></span>');
       if (data.palivo)    d.push('<span>' + esc(data.palivo) + '</span>');
       if (data.rok) d.push('<br><span>Rok 1. registrace: <b>' + esc(data.rok) + '</b></span>');
       // Stejné pravidlo jako v operátorském mailu: modelový rok z VINu
@@ -482,19 +485,18 @@ function overVin(vin) {
   document.getElementById('over').classList.remove('hidden');
 }
 
-// ══ Zdroje: moje databáze, Castrol, Allegro ══════════════════
+// ══ Zdroje: moje databáze, Castrol ═══════════════════════════
 // Jen pro informaci a porovnání. Každý zdroj se načítá zvlášť —
-// výpadek jednoho (typicky vypršelé přihlášení k Allegru) neblokuje ostatní.
+// výpadek jednoho neblokuje ostatní.
 var ZDROJE = [
   { id: 'db',      nazev: 'Moje databáze' },
-  { id: 'castrol', nazev: 'Castrol' },
-  { id: 'allegro', nazev: 'Allegro' }
+  { id: 'castrol', nazev: 'Castrol' }
 ];
 
 // Převzato z mail_oleje_html_ v GAS — u ostatních značek je rok z 10. znaku nespolehlivý.
 var ZNACKY_S_ROKEM_VE_VIN = /^(SKODA|ŠKODA|VOLKSWAGEN|VW|SEAT|AUDI|HYUNDAI|KIA)/;
 
-// Texty z Castrolu a Allegra jsou cizí data — do HTML jen escapované.
+// Texty z Castrolu jsou cizí data — do HTML jen escapované.
 function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -548,21 +550,6 @@ function nactiZdroje(vin, registr) {
     }
   });
 
-  dotaz('allegro', '&action=allegro', function (a) {
-    if (a.ok) {
-      if (!a.auta || !a.auta.length) return zdrojRadek('allegro', 'none', 'Allegro auto nenašlo');
-      zdrojRadek('allegro', 'ok', a.auta.map(function (x) {
-        return '<b>' + esc([x.znacka, x.model].filter(Boolean).join(' ')) + '</b><br>' + esc(x.typ);
-      }).join('<hr>'));
-    } else if (a.error) {
-      // Vypršelé přihlášení a blokace se řeší ručně — proto výrazně, ne šedě.
-      var trida = (a.error === 'prihlaseni' || a.error === 'blokace') ? 'warn' : 'none';
-      zdrojRadek('allegro', trida, esc(a.zprava || a.error));
-    } else {
-      // Bez řádku action=allegro v doGet vrátí GAS data z registru místo Allegra.
-      zdrojRadek('allegro', 'fail', 'Allegro není v GAS zapnuté (chybí action=allegro v doGet)');
-    }
-  });
 }
 
 function kopiruj() {
