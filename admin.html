@@ -291,6 +291,7 @@
       <div class="tab" id="tab-prezuti" onclick="switchTab('prezuti')">🚙 Přezutí</div>
       <div class="tab" id="tab-oleje" onclick="switchTab('oleje')">🛢️ Oleje</div>
       <div class="tab" id="tab-rozvrh" onclick="switchTab('rozvrh')">📅 Rozvrh</div>
+      <div class="tab" id="tab-sms" onclick="switchTab('sms')">📱 SMS termíny</div>
       <div class="tab" onclick="otevritPrehled()">📋 Přehled</div>
       <div class="tab" onclick="location.href='faktura.html'">📄 Faktura</div>
       <div class="tab" onclick="window.open('uctenka.html?t=AKstNCKhxcTsh1NrtciIfc0HtcSFYyw6','_blank')">🧾 Účtenka</div>
@@ -333,6 +334,26 @@
         <button class="save-btn" id="trzba-save-btn" onclick="saveTrzba()" style="margin-top:12px">Zapsat tržbu</button>
         <div class="save-msg" id="trzba-msg">Zapsáno!</div>
         <div class="trzba-err" id="trzba-err"></div>
+      </div>
+    </div>
+
+    <!-- SMS s volnými termíny -->
+    <div class="card" id="section-sms" style="display:none">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Volné termíny přezutí do SMS</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Po telefonu: vlož číslo zákazníka a odešli. Zákazník odpoví číslem termínu a rezervace se vytvoří sama (24 h).</div>
+      <div class="trzba-form">
+        <label class="trzba-label">Telefon zákazníka <span class="req">*</span></label>
+        <input type="tel" id="sms-tel" class="trzba-field" placeholder="736 778 905" inputmode="tel" autocomplete="off" oninput="smsTelZmena()">
+        <label class="trzba-label">Text SMS <span class="opt">(lze upravit, čísla termínů neměň)</span></label>
+        <textarea id="sms-text" class="trzba-field" rows="9" oninput="smsPocet()" style="resize:vertical"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-top:4px">
+          <span id="sms-pocet"></span>
+          <a href="#" onclick="smsNacti();return false" style="color:var(--blue);font-weight:600">↻ Načíst termíny znovu</a>
+        </div>
+        <div class="trzba-err" id="sms-varovani" style="color:#b45309"></div>
+        <button class="save-btn" id="sms-btn" onclick="smsOdeslat(false)" style="margin-top:12px">Odeslat SMS</button>
+        <div class="save-msg" id="sms-msg"></div>
+        <div class="trzba-err" id="sms-err"></div>
       </div>
     </div>
 
@@ -610,11 +631,12 @@
     currentTab=tab;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     document.getElementById('tab-'+tab).classList.add('active');
-    ['section-rez','section-rozvrh','section-trzba','section-servis'].forEach(id=>
+    ['section-rez','section-rozvrh','section-trzba','section-servis','section-sms'].forEach(id=>
       document.getElementById(id).style.display='none');
     if(tab==='rozvrh'){document.getElementById('section-rozvrh').style.display='block';renderWeekTabs();renderRozvrh();}
     else if(tab==='trzba'){document.getElementById('section-trzba').style.display='block';initTrzbaForm();}
     else if(tab==='servis'){document.getElementById('section-servis').style.display='block';sInit();}
+    else if(tab==='sms'){document.getElementById('section-sms').style.display='block';smsInit();}
     else{
       document.getElementById('section-rez').style.display='block';
       if(dataNactena)renderList();
@@ -659,6 +681,70 @@
       }else showTrzbaErr('Chyba: '+(r.message||r.error||'neznámá'));
     }catch(e){showTrzbaErr('Chyba připojení.');}
     finally{btn.disabled=false;btn.textContent='Zapsat tržbu';}
+  }
+
+  // ── SMS S VOLNÝMI TERMÍNY ──────────────────────────────────
+  // Text sestaví GAS (stejná pravidla jako kalendář na webu). Po 5 minutách
+  // se při otevření záložky načte znovu, ať se neposílají staré termíny.
+  let smsNacteno=0,smsOdesilam=false,smsSloty=[];
+  function smsInit(){
+    if(Date.now()-smsNacteno>5*60*1000)smsNacti();
+    smsTelZmena();
+  }
+  window.smsNacti=async function(){
+    const ta=document.getElementById('sms-text'),varov=document.getElementById('sms-varovani');
+    const token=getToken();if(!token){handleBadToken();return;}
+    ta.value='';ta.placeholder='Načítám termíny…';varov.style.display='none';smsSloty=[];
+    document.getElementById('sms-pocet').textContent='';
+    try{
+      const r=await gasPost({akce:'admin_sms_terminy',token});
+      if(r.error==='bad_token'){handleBadToken();return;}
+      if(!r.ok){ta.placeholder=r.message||'Termíny se nepodařilo načíst.';return;}
+      ta.value=r.text;smsSloty=r.sloty||[];smsNacteno=Date.now();
+      if(!r.volnych){varov.textContent='V nejbližších 5 týdnech není žádný volný termín.';varov.style.display='block';}
+    }catch(e){ta.placeholder='Chyba připojení — zkus „Načíst termíny znovu“.';}
+    smsPocet();
+  }
+  // Odhad počtu SMS (bez diakritiky: 160 znaků, delší zpráva po 153)
+  window.smsPocet=function(){
+    const n=document.getElementById('sms-text').value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').length;
+    document.getElementById('sms-pocet').textContent=n?n+' znaků · '+(n<=160?1:Math.ceil(n/153))+' SMS':'';
+  }
+  function smsCislo(){
+    let c=document.getElementById('sms-tel').value.replace(/[\s\-()./]/g,'');
+    if(c.indexOf('00420')===0)c=c.slice(5);else if(c.indexOf('+420')===0)c=c.slice(4);
+    return c;
+  }
+  window.smsTelZmena=function(){
+    if(smsOdesilam)return;
+    const c=smsCislo();
+    document.getElementById('sms-btn').textContent=/^\d{9}$/.test(c)?'Odeslat na '+c.replace(/(\d{3})(\d{3})(\d{3})/,'$1 $2 $3'):'Odeslat SMS';
+  }
+  window.smsOdeslat=async function(znovu){
+    const err=document.getElementById('sms-err'),msg=document.getElementById('sms-msg');
+    err.style.display='none';msg.style.display='none';
+    const telefon=document.getElementById('sms-tel').value.trim(),text=document.getElementById('sms-text').value.trim();
+    if(!/^\d{9}$/.test(smsCislo())&&telefon.charAt(0)!=='+'){err.textContent='Zadej číslo (9 číslic).';err.style.display='block';document.getElementById('sms-tel').focus();return;}
+    if(!text){err.textContent='Text SMS je prázdný — načti termíny.';err.style.display='block';return;}
+    const token=getToken();if(!token){handleBadToken();return;}
+    const btn=document.getElementById('sms-btn');smsOdesilam=true;btn.disabled=true;btn.textContent='Odesílám…';
+    let znovuPotvrdit=false;
+    try{
+      const r=await gasPost({akce:'admin_sms_terminy',token,telefon,text,sloty:smsSloty,odeslat:true,znovu:!!znovu});
+      if(r.error==='bad_token'){handleBadToken();return;}
+      if(r.ok){
+        msg.textContent='Odesláno na '+r.cislo;msg.style.display='block';
+        document.getElementById('sms-tel').value='';
+      }else if(r.nedavno){
+        znovuPotvrdit=true;
+      }else{err.textContent=r.message||'SMS se nepodařilo odeslat.';err.style.display='block';}
+    }catch(e){
+      // Odpověď nedošla, SMS ale mohla odejít — opakované odeslání hlídá GAS
+      err.textContent='Chyba připojení. SMS možná odešla — zkus odeslat znovu, případný dvojí pokus GAS pozná.';err.style.display='block';
+    }finally{
+      smsOdesilam=false;btn.disabled=false;smsTelZmena();
+    }
+    if(znovuPotvrdit&&confirm('Na toto číslo už termíny před chvílí odešly. Poslat znovu?'))smsOdeslat(true);
   }
 
   // ── ROZVRH ─────────────────────────────────────────────────
