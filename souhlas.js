@@ -42,20 +42,17 @@
   function zavriListu() {
     var l = document.getElementById('mt-souhlas');
     if (l) l.parentNode.removeChild(l);
-    document.body.style.paddingBottom = puvodniOdsazeni;
   }
-  var puvodniOdsazeni = '';
 
   function ukazListu() {
-    if (vyvojar || document.getElementById('mt-souhlas')) return;
+    if (vyvojar || document.getElementById('mt-souhlas')) return document.getElementById('mt-souhlas');
     if (!document.getElementById('mt-souhlas-styl')) {
       var styl = document.createElement('style');
       styl.id = 'mt-souhlas-styl';
       styl.textContent =
-        '#mt-souhlas{position:fixed;left:12px;right:12px;bottom:12px;z-index:950;max-width:460px;margin:0 auto;' +
-        'background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 6px 24px rgba(15,23,42,.14);' +
-        'padding:12px 14px;font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#475569;' +
-        'display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}' +
+        '#mt-souhlas{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 16px 18px;' +
+        'font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:#475569;}' +
+        '#mt-souhlas .mts-in{max-width:640px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;}' +
         '#mt-souhlas p{margin:0;flex:1 1 220px;}' +
         '#mt-souhlas a{color:#1d4ed8;text-decoration:none;font-weight:600;}' +
         '#mt-souhlas .mts-tl{display:flex;gap:8px;margin-left:auto;}' +
@@ -69,23 +66,21 @@
     l.setAttribute('role', 'region');
     l.setAttribute('aria-label', 'Souhlas s cookies');
     l.innerHTML =
-      '<p>Tento web používá cookies ke statistice návštěvnosti. ' +
+      '<div class="mts-in"><p>Tento web používá cookies ke statistice návštěvnosti. ' +
       '<a href="zasady.html#cookies">Více</a></p>' +
       '<div class="mts-tl"><button type="button" class="mts-ne">Nesouhlasím</button>' +
-      '<button type="button" class="mts-ano">Souhlasím</button></div>';
+      '<button type="button" class="mts-ano">Souhlasím</button></div></div>';
     l.querySelector('.mts-ano').onclick = function () { zapis('mt_souhlas', 'ano'); zavriListu(); spustGA(); };
     l.querySelector('.mts-ne').onclick = function () { zapis('mt_souhlas', 'ne'); zastavGA(); zavriListu(); };
     document.body.appendChild(l);
-    // Místo pod stránkou, aby lišta nezakryla poslední tlačítko (dá se doscrollovat nad ni)
-    puvodniOdsazeni = document.body.style.paddingBottom;
-    var dole = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
-    document.body.style.paddingBottom = (dole + l.offsetHeight + 24) + 'px';
+    return l;
   }
 
   // Znovu ukáže lištu (odkaz „Změnit nastavení cookies“ v zásadách)
   window.mtSouhlasZmenit = function () {
     try { localStorage.removeItem('mt_souhlas'); } catch (e) {}
-    ukazListu();
+    var l = ukazListu();
+    if (l && l.scrollIntoView) l.scrollIntoView({ behavior: 'smooth', block: 'end' });
   };
 
   // Nastavení webu z GAS; během jedné návštěvy se zjišťuje jen jednou
@@ -110,8 +105,9 @@
   if (vyvojar) return;
   if (volba === 'ano') { spustGA(); return; }
   if (volba === 'ne') { zastavGA(); return; }
-  if (document.body) ukazListu();
-  else document.addEventListener('DOMContentLoaded', ukazListu);
+  // Lišta patří až na konec stránky → přidat, až je celá stránka načtená
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ukazListu);
+  else ukazListu();
   zjistiRezim(function (vyzadovat) {
     if (!vyzadovat && cti('mt_souhlas') !== 'ne') spustGA();
   });
