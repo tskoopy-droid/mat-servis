@@ -263,7 +263,7 @@
   .email-navrh-btn { background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: var(--blue); text-decoration: underline; cursor: pointer; }
 
   /* Upozornění na bezpečnostní šrouby na potvrzení */
-  .srouby-info { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.5; text-align: left; margin: 0 auto 14px; max-width: 360px; }
+  .srouby-info { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.5; text-align: left; margin: 0 auto 14px; max-width: 360px; display: flex; gap: 10px; align-items: flex-start; }
 
   /* Chybová hláška formuláře — místo alert(), který na mobilu vypadá jako chyba prohlížeče */
   .form-error { display: none; margin: 4px 0 8px; padding: 12px 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; font-size: 13px; color: #dc2626; line-height: 1.5; }
@@ -277,12 +277,25 @@
 
   /* CONFIRM */
   .confirm { text-align: center; padding: 20px 16px; }
-  .confirm-icon { font-size: 48px; margin-bottom: 8px; }
+  .confirm-icon { width: 64px; height: 64px; margin: 4px auto 12px; border-radius: 50%; background: #dcfce7; display: flex; align-items: center; justify-content: center; }
+  .confirm-icon svg { width: 34px; height: 34px; fill: none; stroke: #16a34a; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  /* Čárové ikonky v potvrzení (místo emoji) */
+  .ik { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: #64748b; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .confirm-card .ci { display: flex; align-items: center; gap: 10px; padding: 3px 0; line-height: 1.45; }
+  .confirm-card .ci-modra { color: var(--blue); }
+  .confirm-card .ci-modra .ik { stroke: var(--blue); }
+  .confirm-card .ci-seda { color: #64748b; }
+  .srouby-info .ik { stroke: #b45309; margin-top: 1px; }
+  .sms-stav { display: inline-flex; align-items: center; gap: 8px; border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .sms-stav .ik { stroke: currentColor; }
+  .sms-ok { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+  .sms-chyba { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+  .sms-info { background: #f8fafc; color: #475569; border: 1px solid #e2e8f0; }
   .confirm-title { color: var(--blue); font-size: 22px; font-weight: 700; margin-bottom: 6px; }
   .confirm-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
   .confirm-card { background: var(--white); border: 2px solid var(--blue-mid); border-radius: 14px; padding: 14px 16px; display: inline-block; text-align: left; margin-bottom: 14px; min-width: 260px; font-size: 14px; line-height: 1.9; box-shadow: 0 2px 12px rgba(37,99,235,0.1); }
   .confirm-card .row-item { display: flex; align-items: center; gap: 10px; }
-  .new-btn { background: var(--blue-light); border: none; color: var(--blue); border-radius: 12px; padding: 12px 20px; cursor: pointer; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; transition: background 0.15s; }
+  .new-btn { background: var(--blue-light); border: none; color: var(--blue); border-radius: 12px; padding: 12px 20px; white-space: nowrap; cursor: pointer; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; transition: background 0.15s; }
   .new-btn:active { background: var(--blue-mid); }
 
   /* Lišta s logem a menu jen na této stránce: modrý přechod a otisk pneumatiky vpravo.
@@ -837,27 +850,48 @@ function renderForm() {
   checkForm();
 }
 
-function renderConfirm(name, phone, email, car, mamUlozene, chciUlozit) {
+// Čárové ikonky (24×24, tah) – stejný styl jako kontakty v menu
+const IKONY = {
+  check:  '<path d="M20 6 9 17l-5-5"/>',
+  osoba:  '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  auto:   '<path d="M5 17h14v-5l-2-5H7l-2 5z"/><path d="M5 12h14"/><circle cx="8" cy="17" r="2"/><circle cx="16" cy="17" r="2"/>',
+  kal:    '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+  klic:   '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 0 0 5.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+  kolo:   '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21"/>',
+  misto:  '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+  matice: '<path d="M12 2.5 20.2 7.25v9.5L12 21.5l-8.2-4.75v-9.5z"/><circle cx="12" cy="12" r="3.5"/>',
+  zprava: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/>',
+  pozor:  '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5h.01"/>'
+};
+function ik(nazev) { return '<svg class="ik" viewBox="0 0 24 24" aria-hidden="true">' + IKONY[nazev] + '</svg>'; }
+
+// smsStav: u telefonické objednávky vrací GAS 'odeslana' | 'chyba' | 'vlastni', jinak nic
+function renderConfirm(name, phone, email, car, mamUlozene, chciUlozit, smsStav) {
+  let info;
+  if (smsStav === 'odeslana') info = `<div class="sms-stav sms-ok">${ik('zprava')}Zákazníkovi odešla potvrzovací SMS na ${escHtml(phone)}</div>`;
+  else if (smsStav === 'chyba') info = `<div class="sms-stav sms-chyba">${ik('pozor')}SMS se nepodařilo odeslat – zavolejte zákazníkovi</div>`;
+  else if (smsStav === 'vlastni') info = `<div class="sms-stav sms-info">${ik('zprava')}Zadáno vlastní číslo – SMS se neposílá</div>`;
+  else info = `<div class="confirm-sub">Na adresu <strong style="color:#1e293b;font-size:16px">${escHtml(email)}</strong> vám zašleme potvrzovací e-mail.<br><span style="font-size:13px;color:#94a3b8">Pro zrušení klikněte na odkaz v emailu.</span></div>`;
   document.getElementById("view-confirm").innerHTML = `
     <div class="confirm">
-      <div class="confirm-icon">✅</div>
+      <div class="confirm-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${IKONY.check}</svg></div>
       <div class="confirm-title">Rezervace přijata!</div>
-      <div class="confirm-sub">Na adresu <strong style="color:#1e293b;font-size:16px">${escHtml(email)}</strong> vám zašleme potvrzovací e-mail.<br><span style="font-size:13px;color:#94a3b8">Pro zrušení klikněte na odkaz v emailu.</span></div>
+      ${info}
       <div class="confirm-card">
-        <div>👤 <strong>${escHtml(name)}</strong></div>
-        <div>🚗 ${escHtml(car)}</div>
-        <div style="color:#2563eb">📅 <strong>${fmtDateCZ(state.selDate)} · ${state.selTime}</strong></div>
-        <div style="color:#64748b">🔧 Přezutí pneumatik · 1 hod.</div>
-        ${mamUlozene ? '<div style="color:#64748b">🛞 Uskladněné pneu připravíme</div>' : ''}
-        ${chciUlozit ? '<div style="color:#64748b">🛞 Uskladnění pneumatik (zdarma)</div>' : ''}
-        <div style="color:#64748b;margin-top:4px">📍 Dlouhá Loučka, Šumvaldská 59</div>
+        <div class="ci">${ik('osoba')}<strong>${escHtml(name)}</strong></div>
+        ${car ? `<div class="ci">${ik('auto')}${escHtml(car)}</div>` : ''}
+        <div class="ci ci-modra">${ik('kal')}<strong>${fmtDateCZ(state.selDate)} · ${state.selTime}</strong></div>
+        <div class="ci ci-seda">${ik('klic')}Přezutí pneumatik · 1 hod.</div>
+        ${mamUlozene ? `<div class="ci ci-seda">${ik('kolo')}Uskladněné pneu připravíme</div>` : ''}
+        ${chciUlozit ? `<div class="ci ci-seda">${ik('kolo')}Uskladnění pneumatik (zdarma)</div>` : ''}
+        <div class="ci ci-seda">${ik('misto')}Dlouhá Loučka, Šumvaldská 59</div>
       </div>
 
       ${objednanaAuta.length > 1 ? '<div class="objednana-auta"><strong>Objednaná auta:</strong><br>' + objednanaAuta.map(function(a, i) { return (i + 1) + '. ' + escHtml(a.auto) + ' – ' + fmtDateCZ(a.datum) + ' · ' + a.cas; }).join('<br>') + '</div>' : ''}
 
       <button class="dalsi-auto-btn" onclick="pridatDalsiAuto()">+ Přidat další auto</button>
 
-      <div class="srouby-info">🔩 Máte-li na kolech bezpečnostní šrouby, nezapomeňte prosím adaptér (klíč) k nim.</div>
+      <div class="srouby-info">${ik('matice')}<span>Máte-li na kolech bezpečnostní šrouby, nezapomeňte prosím adaptér (klíč) k nim.</span></div>
 
       <div style="display:flex;gap:10px;justify-content:center;margin-bottom:12px">
         <button onclick="shareLink()" style="background:var(--blue-light);border:none;color:var(--blue);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:13px;font-family:'Inter',sans-serif;font-weight:600;white-space:nowrap">Doporučit M&amp;T Servis</button>
@@ -1037,8 +1071,9 @@ function submitForm() {
         window.GAS_BOOKED[datum].push(cas);
       } catch (x) {}   // jen lokální značka obsazenosti, úspěch nesmí shodit
       objednanaAuta.push({ datum: datum, cas: cas, auto: c });
-      renderConfirm(n, p, e, c, u1, u2);
+      renderConfirm(n, p, e, c, u1, u2, data.sms);
       showView("confirm");
+      window.scrollTo(0, 0);   // potvrzení od začátku i s logem
       // Měření dokončené rezervace v GA (při matdev je gtag vypnutý)
       try {
         if (typeof gtag === 'function') {
