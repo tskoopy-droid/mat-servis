@@ -185,6 +185,15 @@
   .cal-day.available { background: var(--blue-light); border-color: var(--blue-mid); color: var(--blue-dark); cursor: pointer; font-weight: 600; }
   .cal-day.available:active { background: var(--blue-mid); }
   .cal-day.fully-booked { background: #fee2e2; border-color: #fecaca; color: #dc2626; cursor: not-allowed; font-weight: 600; }
+  /* Plně obsazený den: šedý se štítkem PLNO, po ťuknutí hláška s nejbližším volným dnem */
+  .cal-grid .cal-day { min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+  .cal-day.plno { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: pointer; }
+  .cal-day small { font-size: 8.5px; font-weight: 600; letter-spacing: .2px; text-transform: uppercase; margin-top: 2px; }
+  .cal-dnes { box-shadow: inset 0 0 0 1px #94a3b8; }
+  .legend-plno { color: #94a3b8; font-weight: 600; }
+  .cal-nevypsano { text-align: center; font-size: 13px; color: #94a3b8; padding: 6px 0 2px; }
+  .plny-den-msg { display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; font-size: 14px; color: #334155; line-height: 1.5; margin-bottom: 14px; }
+  .plny-den-msg button { margin-top: 8px; background: var(--blue-light); border: 1px solid var(--blue-mid); color: var(--blue-dark); border-radius: 10px; padding: 8px 14px; font: 600 14px 'Inter', sans-serif; cursor: pointer; }
   .cal-day.selected { background: var(--blue) !important; border-color: var(--blue) !important; color: #fff !important; font-weight: 700; }
   .cal-nav-tydny { justify-content: center; margin-bottom: 8px; }
   .cal-oddelovac { border-top: 2px solid var(--border); margin: 16px 0 14px; }
@@ -675,10 +684,10 @@ function renderCalendar() {
     return;
   }
 
-  // Plynulých 5 týdnů od pondělí týdne, ve kterém je první volný den, rozdělených
-  // po měsících (nadpis měsíce, jeho dny, čára). Bez listování šipkami.
-  const TYDNU = 5;
+  // Kalendář od pondělí tohoto týdne, aby byly vidět i plně obsazené dny před prvním volným.
+  // Nejméně 5 týdnů a vždy ještě 4 týdny od prvního volného dne. Rozdělený po měsících, bez listování.
   const volnyDen = (y, m, d) => !isPast(y, m, d) && isWorkingDay(y, m, d) && !isFullyBooked(y, m, d);
+  const plnyDen = (y, m, d) => !isPast(y, m, d) && getSlotsForDate(fmt(y, m, d)).length > 0 && isFullyBooked(y, m, d);
   const dnes = new Date(); dnes.setHours(0,0,0,0);
   let prvniVolny = null;
   for (let k = 0; k < 120 && !prvniVolny; k++) {
@@ -694,8 +703,12 @@ function renderCalendar() {
     return;
   }
   merPrezuti('prezuti_kalendar');
-  const od = new Date(prvniVolny);
-  od.setDate(od.getDate() - ((od.getDay() + 6) % 7));   // pondělí toho týdne
+  const pondeli = d => { const x = new Date(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; };
+  const od = pondeli(dnes);
+  const tydnuDoVolneho = Math.round((pondeli(prvniVolny) - od) / (7 * 864e5));
+  const TYDNU = Math.min(Math.max(5, tydnuDoVolneho + 4), 12);
+  // Poslední den s vypsaným rozvrhem — měsíc za ním dostane větu „zatím nejsou vypsané“
+  const posledniRozvrh = Object.keys(window.GAS_ROZVRH || {}).sort().pop() || '';
 
   const bloky = [];
   for (let i = 0; i < TYDNU * 7; i++) {
@@ -707,29 +720,38 @@ function renderCalendar() {
 
   let html = `
     <div id="slot-error-msg" class="slot-error">⚠️ Omlouváme se, tento termín byl právě obsazen. Vyberte prosím jiný čas.</div>
-    <div class="card">`;
+    <div class="card">
+      <div id="plny-den-msg" class="plny-den-msg" role="status"></div>`;
   bloky.forEach((blok, bi) => {
     if (bi > 0) html += `<div class="cal-oddelovac"></div>`;
-    html += `<div class="cal-nav cal-nav-tydny"><span class="cal-title">${MONTHS[blok.m]} ${blok.y}</span></div>
-      <div class="cal-grid">
+    html += `<div class="cal-nav cal-nav-tydny"><span class="cal-title">${MONTHS[blok.m]} ${blok.y}</span></div>`;
+    const prvni = blok.dny[0];
+    if (fmt(prvni.getFullYear(), prvni.getMonth(), prvni.getDate()) > posledniRozvrh) {
+      html += `<div class="cal-nevypsano">Termíny na ${MONTHS[blok.m].toLowerCase()} zatím nejsou vypsané</div>`;
+      return;
+    }
+    html += `<div class="cal-grid">
         ${DAYS_SHORT.map(d=>`<div class="cal-day-name">${d}</div>`).join("")}`;
-    const posun = (blok.dny[0].getDay() + 6) % 7;
+    const posun = (prvni.getDay() + 6) % 7;
     for (let e = 0; e < posun; e++) html += `<div class="cal-day empty"></div>`;
     blok.dny.forEach(den => {
       const y = den.getFullYear(), m = den.getMonth(), d = den.getDate();
       const ds = fmt(y, m, d);
       const volno = volnyDen(y, m, d);
-      let cls = "cal-day" + (volno ? " available" : " unavailable");
+      const plno = !volno && !mojeAuto(ds) && plnyDen(y, m, d);
+      let cls = "cal-day" + (volno ? " available" : plno ? " plno" : " unavailable");
       if (ds === state.selDate) cls += " selected";
       if (mojeAuto(ds)) cls += " moje";
-      const onclick = volno ? `onclick="selectDate('${ds}')"` : "";
-      html += `<div class="${cls}" ${onclick}>${d}</div>`;
+      if (den.getTime() === dnes.getTime()) cls += " cal-dnes";
+      const onclick = volno ? `onclick="selectDate('${ds}')"` : plno ? `onclick="plnyDenKlik('${ds}')"` : "";
+      html += `<div class="${cls}" ${onclick}>${d}${plno ? '<small>plno</small>' : ''}</div>`;
     });
     html += `</div>`;
   });
   html += `
       <div class="cal-legend">
-        <span class="legend-avail">■ Dostupný den</span>
+        <span class="legend-avail">■ Volný den</span>
+        <span class="legend-plno">■ Plno</span>
         ${objednanaAuta.length ? '<span class="legend-moje">■ Vaše objednávka</span>' : ''}
       </div>
     </div>`;
@@ -914,6 +936,35 @@ function nextMonth() {
   else state.month++;
   merPrezuti('prezuti_dalsi_mesic');
   renderCalendar();
+}
+
+// Ťuknutí na plně obsazený den: hláška s nejbližším volným dnem (nejdřív po něm, jinak kterýkoli)
+function plnyDenKlik(ds) {
+  const el = document.getElementById("plny-den-msg");
+  if (!el) return;
+  const dny = ['V neděli','V pondělí','V úterý','Ve středu','Ve čtvrtek','V pátek','V sobotu'];
+  const dnyKratce = ['ne','po','út','st','čt','pá','so'];
+  const [y, m, d] = ds.split('-').map(Number);
+  const den = new Date(y, m - 1, d);
+  let volny = null;
+  const dnes = new Date(); dnes.setHours(0,0,0,0);
+  for (const start of [den, dnes]) {
+    for (let k = 1; k < 120 && !volny; k++) {
+      const t = new Date(start); t.setDate(start.getDate() + k);
+      if (!isPast(t.getFullYear(), t.getMonth(), t.getDate()) && isWorkingDay(t.getFullYear(), t.getMonth(), t.getDate())
+          && !isFullyBooked(t.getFullYear(), t.getMonth(), t.getDate())) volny = t;
+    }
+    if (volny) break;
+  }
+  let html = `${dny[den.getDay()]} ${d}. ${m}. už je plno.`;
+  if (volny) {
+    const vs = fmt(volny.getFullYear(), volny.getMonth(), volny.getDate());
+    const vkdy = dnyKratce[volny.getDay()] + ' ' + volny.getDate() + '. ' + (volny.getMonth() + 1) + '.';
+    html += ` Nejbližší volný termín: <strong>${vkdy}</strong><br><button type="button" onclick="selectDate('${vs}')">Vybrat ${vkdy}</button>`;
+  }
+  el.innerHTML = html;
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function selectDate(ds) {
