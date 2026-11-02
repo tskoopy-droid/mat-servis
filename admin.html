@@ -863,9 +863,9 @@
             <button class="archiv-btn" style="flex:1" onclick="archivovat('${r.id}','${r.col}','${r.typ}')">✓ Archivovat</button>
             <button class="archiv-btn" style="flex:1;background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="fakturovat('${r.id}','${r.col}')">🧾 Fakturovat</button>
           </div>
-          <div style="display:flex;gap:8px;width:100%">
-            <button class="archiv-btn neprisel-btn" style="flex:1;background:#fef3c7;color:#92400e;border-color:#fde68a" onclick="neprisel('${r.id}','${r.col}')">🚫 Nepřišel</button>
-            <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
+          <div style="display:flex;justify-content:space-between;width:100%">
+            <button class="zrusit-btn neprisel-btn" style="background:#fef3c7;border-color:#fde68a" title="Nepřišel" aria-label="Nepřišel" onclick="neprisel('${r.id}','${r.col}')">🚫</button>
+            <button class="zrusit-btn" title="Zrušit (STORNO)" aria-label="Zrušit" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
           </div>
         </div>`:`
         <div class="archiv-row" style="justify-content:space-between">
@@ -1104,7 +1104,7 @@
     const token=getToken();if(!token){handleBadToken();return;}
     if(!confirm('Zákazník nepřišel?\nRezervace zmizí ze seznamu a v tabulce se označí NEPŘIŠEL.'))return;
     const itemEl=document.getElementById('rez-'+id),btn=itemEl.querySelector('.neprisel-btn');
-    btn.disabled=true;btn.textContent='Ukládám...';
+    btn.disabled=true;btn.textContent='…';
     try{
       const r=await gasPost({akce:'admin_neprisel',token,id,col});
       if(r.error==='bad_token'){handleBadToken();return;}
@@ -1115,8 +1115,8 @@
         document.getElementById('stat-servis').textContent=allData.filter(x=>x.typ==='servis').length;
         itemEl.innerHTML=`<div class="archived-msg" style="background:#fef3c7;border-color:#fde68a;color:#92400e">🚫 Označeno: nepřišel</div>`;
         setTimeout(()=>renderList(),2000);
-      }else{btn.disabled=false;btn.textContent='🚫 Nepřišel';alert('Chyba: '+(r.message||r.error||'neznámá'));}
-    }catch(e){btn.disabled=false;btn.textContent='🚫 Nepřišel';alert('Chyba připojení.');}
+      }else{btn.disabled=false;btn.textContent='🚫';alert('Chyba: '+(r.message||r.error||'neznámá'));}
+    }catch(e){btn.disabled=false;btn.textContent='🚫';alert('Chyba připojení.');}
   }
 
   window.fakturovat=function(id,col){
