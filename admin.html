@@ -894,7 +894,7 @@
           ${r.cena_celkem?'<br>💰 '+fmtKc(r.cena_celkem)+' Kč':''}
           ${r.sluzby?'<br>🔧 '+r.sluzby:''}
           ${r.cena?'<br>💰 '+r.cena:''}
-          ${r.uskladneni?'<br>🛞 '+r.uskladneni:''}
+          ${r.uskladneni?'<br>🛞 <strong>Pneu: '+escHtml(r.uskladneni.charAt(0).toLowerCase()+r.uskladneni.slice(1))+'</strong>':''}
           ${r.poznamka?'<br>📝 '+r.poznamka:''}
         </div>
         ${(r.naceneni_detail||r.vin)?`<button class="nac-toggle" onclick="otevriNac('${r.id}')">🔍 Detail nacenění</button>`:''}
