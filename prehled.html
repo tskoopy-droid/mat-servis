@@ -51,6 +51,7 @@
   .slot-info { flex: 1; min-width: 0; }
   .slot-jmeno { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .slot-auto { font-size: 11px; color: var(--text-muted); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot-pneu { font-size: 11px; font-weight: 700; color: #92400e; margin-top: 2px; }
   .slot-typ { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 8px; white-space: nowrap; flex-shrink: 0; }
   .slot-typ.prezuti { background: #dbeafe; color: var(--blue-dark); }
   .slot-typ.oleje { background: #fed7aa; color: var(--orange); }
@@ -250,6 +251,7 @@ function render() {
         html += '<div class="slot-info">';
         html += '<div class="slot-jmeno">' + esc(hlavni) + '</div>';
         html += '<div class="slot-auto">' + esc(podradek) + '</div>';
+        if (r.uskladneni) html += '<div class="slot-pneu">🛞 ' + esc(pneuText(r.uskladneni)) + '</div>';
         html += '</div>';
         html += '<div class="slot-typ ' + r.typ + '">' + typLabel(r.typ) + '</div>';
         html += '</div>';
@@ -272,6 +274,12 @@ function esc(s) {
   return String(s || '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// „Má u nás uskladněné – připravit“ → „Pneu: má u nás uskladněné – připravit“
+function pneuText(s) {
+  s = String(s || '');
+  return 'Pneu: ' + s.charAt(0).toLowerCase() + s.slice(1);
 }
 
 function typNazev(typ) {
@@ -298,6 +306,7 @@ function zobrazDetail(idx) {
   radek('Vozidlo', r.auto);
   if (r.typ === 'servis' && r.sluzby) radek('Úkon', r.sluzby);
   if (r.typ === 'prezuti' && r.sluzby) radek('Služby', r.sluzby);
+  if (r.uskladneni) radek('Pneu', pneuText(r.uskladneni).replace(/^Pneu: /, ''));
   if (r.poznamka) radek('Poznámka', r.poznamka);
 
   document.getElementById('modal-body').innerHTML = html;
