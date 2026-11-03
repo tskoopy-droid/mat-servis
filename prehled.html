@@ -140,6 +140,29 @@ function fmtCas(c) {
   return parts[0].padStart(2, '0') + ':' + (parts[1] || '00').padStart(2, '0');
 }
 
+// Poslední načtený rozvrh v telefonu → po otevření se ukáže hned, čerstvá data se doplní.
+// Starší než 24 h se nepoužije; při neplatném kódu se smaže.
+var PAMET_KLIC = 'mt_rozvrh_pamet';
+var PAMET_MAX_MS = 24 * 60 * 60 * 1000;
+
+function pametNacti() {
+  try {
+    var p = JSON.parse(localStorage.getItem(PAMET_KLIC) || 'null');
+    if (!p || p.token !== TOKEN || !p.data || Date.now() - p.cas > PAMET_MAX_MS) return null;
+    return p;
+  } catch (e) { return null; }
+}
+function pametUloz(d) {
+  try { localStorage.setItem(PAMET_KLIC, JSON.stringify({ token: TOKEN, cas: Date.now(), data: d })); } catch (e) {}
+}
+function pametSmaz() {
+  try { localStorage.removeItem(PAMET_KLIC); } catch (e) {}
+}
+function fmtHodiny(ms) {
+  var d = new Date(ms);
+  return d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
 function nactiData() {
   if (!TOKEN) {
     document.getElementById('content').innerHTML = '<div class="err">Chybí přístupový token v URL.</div>';
@@ -150,24 +173,37 @@ function nactiData() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d && d.error === 'bad_token') {
+        pametSmaz();
+        data = null;
         document.getElementById('content').innerHTML = '<div class="err">Neplatný přístupový token.</div>';
         document.getElementById('header-sub').textContent = 'Neautorizováno';
         return;
       }
       if (!d || !d.ok) {
-        document.getElementById('content').innerHTML = '<div class="err">Nepodařilo se načíst data.</div>';
-        document.getElementById('header-sub').textContent = 'Chyba';
+        // Když už je zobrazený rozvrh z paměti, nechat ho a chybu ukázat jen nahoře
+        if (!data) document.getElementById('content').innerHTML = '<div class="err">Nepodařilo se načíst data.</div>';
+        document.getElementById('header-sub').textContent = data ? '⚠ Nepodařilo se obnovit – starší data' : 'Chyba';
         return;
       }
       data = d;
+      pametUloz(d);
       document.getElementById('header-sub').textContent = 'Aktualizováno právě teď';
       render();
     })
     .catch(function() {
-      document.getElementById('content').innerHTML = '<div class="err">Chyba připojení. Zkuste to znovu.</div>';
-      document.getElementById('header-sub').textContent = 'Chyba spojení';
+      if (!data) document.getElementById('content').innerHTML = '<div class="err">Chyba připojení. Zkuste to znovu.</div>';
+      document.getElementById('header-sub').textContent = data ? '⚠ Bez spojení – starší data' : 'Chyba spojení';
     });
 }
+
+// Hned po otevření ukázat poslední známý stav (než dorazí čerstvá data)
+(function () {
+  var p = TOKEN ? pametNacti() : null;
+  if (!p) return;
+  data = p.data;
+  document.getElementById('header-sub').textContent = 'Stav z ' + fmtHodiny(p.cas) + ' · načítám aktuální…';
+  render();
+})();
 
 function prevWeek() {
   if (weekOffset > -1) { weekOffset--; render(); }
