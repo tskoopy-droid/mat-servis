@@ -67,6 +67,8 @@
   #s-trzba { -moz-appearance:textfield; }
   #s-trzba::-webkit-outer-spin-button,#s-trzba::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
   .trzba-suffix { color:var(--text-muted); font-size:14px; font-weight:600; padding:0 4px; }
+  .sez-obd { flex:1; padding:10px 8px; border-radius:10px; border:2px solid #e2e8f0; background:#fff; font-size:13px; font-weight:600; font-family:'Inter',sans-serif; color:#475569; cursor:pointer; }
+  .sez-obd.active { border-color:var(--blue); background:#eff6ff; color:#1d4ed8; }
   .archiv-btn { background:var(--green-light); color:var(--green); border:2px solid var(--green-mid); border-radius:10px; padding:10px 14px; font-size:13px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; white-space:nowrap; }
   .archiv-btn:active { background:#bbf7d0; }
   .archiv-btn:disabled { opacity:0.5; cursor:not-allowed; }
@@ -362,9 +364,17 @@
       <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px">Připomínka sezóny – SMS</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px">Zákazníkům, kteří objednali po telefonu nebo přes SMS automat a nemají e-mail (ostatní dostanou e-mail z Brevo). Posílá se postupně z tvého telefonu: jen 9–19 h, nejvýš 40 denně, s náhodnými rozestupy.</div>
       <div class="trzba-form">
-        <label class="trzba-label">Text SMS <span class="opt">(bez háčků, vždy s možností STOP)</span></label>
-        <textarea id="sez-text" class="trzba-field" rows="4" oninput="sezPocet()" style="resize:vertical"></textarea>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="sez-pocet"></div>
+        <label class="trzba-label">Období</label>
+        <div style="display:flex;gap:8px">
+          <button type="button" class="sez-obd" id="sez-obd-jaro" onclick="sezObdobi('jaro')">🌱 Jaro – na letní</button>
+          <button type="button" class="sez-obd" id="sez-obd-podzim" onclick="sezObdobi('podzim')">🍂 Podzim – na zimní</button>
+        </div>
+        <label class="trzba-label" style="margin-top:12px">Text SMS <span class="opt">(bez háčků, vždy s možností STOP)</span></label>
+        <textarea id="sez-text" class="trzba-field" rows="4" oninput="sezPocet(true)" style="resize:vertical"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-top:4px">
+          <span id="sez-pocet"></span>
+          <a href="#" id="sez-ulozit" onclick="sezUlozit();return false" style="color:var(--blue);font-weight:600">💾 Uložit text</a>
+        </div>
         <div id="sez-stav" style="margin-top:14px;font-size:13px;line-height:1.6;background:#f8fafc;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:10px 12px">Načítám…</div>
         <button class="save-btn" id="sez-btn" onclick="sezOdeslat()" style="margin-top:12px">Odeslat</button>
         <button class="save-btn" id="sez-pokr" onclick="sezPokracovat()" style="margin-top:8px;display:none">Pokračovat v rozesílce</button>
@@ -768,22 +778,33 @@
   // ── SMS PŘIPOMÍNKA SEZÓNY ──────────────────────────────────
   // GAS sestaví seznam (telefon / SMS automat, bez e-mailu, bez odhlášených),
   // admin se zeptá na počet a spustí postupné posílání (sms_pripominky.gs).
-  let sezTextUpraven=false;
+  // Dva texty: jaro (na letní) a podzim (na zimní); výchozí období podle měsíce.
+  let sezTexty={jaro:'',podzim:''},sezVybrana='',sezUpraveno={jaro:false,podzim:false};
   function sezInit(){sezVolej({krok:'stav'});}
-  window.sezPocet=function(){
-    sezTextUpraven=true;
-    const n=document.getElementById('sez-text').value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().length;
-    document.getElementById('sez-pocet').textContent=n?n+' znaků · '+(n<=160?1:Math.ceil(n/153))+' SMS na kontakt':'';
+  window.sezObdobi=function(o){
+    if(sezVybrana)sezTexty[sezVybrana]=document.getElementById('sez-text').value;
+    sezVybrana=o;
+    document.getElementById('sez-obd-jaro').classList.toggle('active',o==='jaro');
+    document.getElementById('sez-obd-podzim').classList.toggle('active',o==='podzim');
+    document.getElementById('sez-text').value=sezTexty[o]||'';
+    sezPocet(false);
+  }
+  window.sezPocet=function(zmena){
+    if(zmena&&sezVybrana){sezUpraveno[sezVybrana]=true;sezTexty[sezVybrana]=document.getElementById('sez-text').value;}
+    const n=document.getElementById('sez-text').value.normalize('NFD').replace(/[̀-ͯ]/g,'').trim().length;
+    document.getElementById('sez-pocet').textContent=(n?n+' znaků · '+(n<=160?1:Math.ceil(n/153))+' SMS na kontakt':'')+(sezVybrana&&sezUpraveno[sezVybrana]?' · neuloženo':'');
   }
   function sezZobraz(st){
     if(!st)return;
-    if(!sezTextUpraven){document.getElementById('sez-text').value=st.text||'';sezPocet();sezTextUpraven=false;}
+    if(st.texty){['jaro','podzim'].forEach(o=>{if(!sezUpraveno[o])sezTexty[o]=st.texty[o]||'';});}
+    if(!sezVybrana)sezObdobi(st.sezona||'jaro');else sezObdobi(sezVybrana);
     let h='';
     if(st.bezi)h+='<b style="color:#15803d">▶ Rozesílka běží</b><br>';
     if(st.celkem){
       h+='Odesláno <b>'+st.odeslano+'</b> z '+st.celkem+(st.ceka?' · čeká '+st.ceka:'')+(st.chyby?' · <span style="color:#b91c1c">chyby '+st.chyby+'</span>':'');
       if(st.posledni)h+='<br>Poslední odeslaná: '+st.posledni;
       if(!st.bezi&&st.ceka)h+='<br><span style="color:#b45309">Rozesílka je zastavená.</span>';
+      if(st.bezi||st.ceka)h+='<br><span style="color:var(--text-muted)">Posílá se: „'+escHtml(st.text||'')+'“</span>';
     }else h+='Zatím nic neodesláno.';
     document.getElementById('sez-stav').innerHTML=h;
     document.getElementById('sez-btn').style.display=st.bezi?'none':'block';
@@ -800,19 +821,32 @@
       sezZobraz(r.stav);return r;
     }catch(e){err.textContent='Chyba připojení.';err.style.display='block';return null;}
   }
+  function sezKontrola(text){
+    if(!/\bSTOP\b/i.test(text)){const err=document.getElementById('sez-err');err.textContent='V textu musí být možnost odhlášení, např. „Nechcete SMS? Odpovezte STOP“.';err.style.display='block';return false;}
+    return true;
+  }
+  window.sezUlozit=async function(){
+    const msg=document.getElementById('sez-msg');msg.style.display='none';
+    const text=document.getElementById('sez-text').value.trim();
+    if(!sezKontrola(text))return;
+    const o=sezVybrana;sezUpraveno[o]=false;
+    const r=await sezVolej({krok:'ulozit_text',sezona:o,text});
+    if(r&&r.ok){msg.textContent='Text pro '+(o==='jaro'?'jaro':'podzim')+' uložen.';msg.style.display='block';}else sezUpraveno[o]=true;
+    sezPocet(false);
+  }
   function sezDni(n){const d=Math.ceil(n/40);return d<=1?'během dne':'asi '+d+' dny';}
   window.sezOdeslat=async function(){
-    const msg=document.getElementById('sez-msg'),err=document.getElementById('sez-err');msg.style.display='none';
+    const msg=document.getElementById('sez-msg');msg.style.display='none';
     const text=document.getElementById('sez-text').value.trim();
-    if(!/\bSTOP\b/i.test(text)){err.textContent='V textu musí být možnost odhlášení, např. „Nechcete SMS? Odpovezte STOP“.';err.style.display='block';return;}
-    const btn=document.getElementById('sez-btn');btn.disabled=true;btn.textContent='Počítám kontakty…';
-    const r=await sezVolej({krok:'pripravit',text});
+    if(!sezKontrola(text))return;
+    const o=sezVybrana,btn=document.getElementById('sez-btn');btn.disabled=true;btn.textContent='Počítám kontakty…';
+    sezUpraveno[o]=false;
+    const r=await sezVolej({krok:'pripravit',sezona:o,text});
     btn.disabled=false;btn.textContent='Odeslat';
-    if(!r||!r.ok)return;
-    sezTextUpraven=false;
+    if(!r||!r.ok){sezUpraveno[o]=true;return;}
     if(!r.pocet){alert('Není komu poslat – žádný zákazník z telefonu / SMS automatu bez e-mailu.');return;}
-    const odp=prompt('Opravdu poslat SMS '+r.pocet+' kontaktům?\n\nOdchází postupně z tvého telefonu (9–19 h, max 40 denně) – potrvá to '+sezDni(r.pocet)+'.\nTelefon musí být zapnutý a s internetem.\n\nPro potvrzení napiš: ANO ROZESLAT SMS','');
-    const norm=String(odp||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
+    const odp=prompt('Opravdu poslat SMS '+r.pocet+' kontaktům? ('+(o==='jaro'?'jaro – na letní':'podzim – na zimní')+')\n\nOdchází postupně z tvého telefonu (9–19 h, max 40 denně) – potrvá to '+sezDni(r.pocet)+'.\nTelefon musí být zapnutý a s internetem.\n\nPro potvrzení napiš: ANO ROZESLAT SMS','');
+    const norm=String(odp||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim().toUpperCase();
     if(norm!=='ANO ROZESLAT SMS'){
       msg.textContent=odp===null?'Nic se neodeslalo.':'Nic se neodeslalo – potvrzení nesouhlasí (napiš přesně ANO ROZESLAT SMS).';msg.style.display='block';return;
     }
