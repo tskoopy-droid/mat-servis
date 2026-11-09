@@ -33,14 +33,14 @@
 
   var html = `
 <nav class="mtm-bar" aria-label="Hlavní menu">
-  <a class="mtm-znacka" href="index.html"><img src="logo.png" alt="M&amp;T Servis" width="141" height="68"></a>
+  <a class="mtm-znacka" href="/"><img src="logo.png" alt="M&amp;T Servis" width="141" height="68"></a>
   <button class="mtm-btn" type="button" aria-label="Otevřít menu" aria-expanded="false" aria-controls="mtm-panel" onclick="mtmOtevri()"><span class="mtm-ikona" aria-hidden="true">☰</span> Menu</button>
 </nav>
 <div id="mtm-obal">
   <div class="mtm-zaves" onclick="mtmZavri()"></div>
   <aside class="mtm-panel" id="mtm-panel" aria-hidden="true" aria-label="Menu">
     <div class="mtm-hlava">Menu <button class="mtm-zavrit" type="button" aria-label="Zavřít menu" onclick="mtmZavri()">✕</button></div>
-    <a class="mtm-odkaz" href="index.html">Úvod</a>
+    <a class="mtm-odkaz" href="/">Úvod</a>
     <div class="mtm-sekce">Služby</div>
     <a class="mtm-odkaz" href="prezuti.html">Přezutí pneumatik</a>
     <a class="mtm-odkaz" href="oleje.html">Výměna oleje</a>
@@ -68,7 +68,7 @@
   var stranka = (location.pathname.split('/').pop() || 'index.html').replace(/\.html$/, '') || 'index';
   var odkazy = document.querySelectorAll('#mtm-panel .mtm-odkaz');
   for (var i = 0; i < odkazy.length; i++) {
-    if (odkazy[i].getAttribute('href').replace(/\.html$/, '') === stranka) odkazy[i].classList.add('mtm-aktivni');
+    if ((odkazy[i].getAttribute('href') === '/' ? 'index' : odkazy[i].getAttribute('href').replace(/\.html$/, '')) === stranka) odkazy[i].classList.add('mtm-aktivni');
   }
 })();
 function mtmOtevri() {
