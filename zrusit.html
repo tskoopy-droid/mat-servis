@@ -36,7 +36,7 @@
 <div class="header">
   <div class="header-text">
     <div class="header-sub">Zrušení rezervace</div>
-    <div class="header-sub-small">Online objednávka · <a href="index.html" style="color:var(--blue);text-decoration:none">← Zpět</a><br>Dlouhá Loučka, Šumvaldská 59</div>
+    <div class="header-sub-small">Online objednávka · <a href="/" style="color:var(--blue);text-decoration:none">← Zpět</a><br>Dlouhá Loučka, Šumvaldská 59</div>
   </div>
 </div>
 <div class="wrap" style="margin:20px auto">
@@ -54,7 +54,7 @@
     <div class="sub">Opravdu chcete zrušit tuto rezervaci?</div>
     <div class="card" id="rez-detail"></div>
     <button class="btn-cancel" id="btn-confirm" onclick="cancelNow()">Ano, zrušit rezervaci</button>
-    <a href="index.html" class="btn-back">Ne, zpět na rezervace</a>
+    <a href="/" class="btn-back">Ne, zpět na rezervace</a>
   </div>
 
   <!-- Úspěch -->
@@ -62,7 +62,7 @@
     <div class="icon">✅</div>
     <div class="title">Rezervace zrušena</div>
     <div class="sub">Vaše rezervace byla úspěšně zrušena.</div>
-    <a href="index.html" class="btn-back" style="margin-top:8px">Nová rezervace</a>
+    <a href="/" class="btn-back" style="margin-top:8px">Nová rezervace</a>
   </div>
 
   <!-- Stará rezervace / bez tokenu -->
@@ -72,7 +72,7 @@
     <div class="sub">Pro zrušení této rezervace napište na <strong>info@mat-servis.cz</strong> nebo zavolejte.</div>
     <a href="mailto:info@mat-servis.cz?subject=Zrušení%20rezervace" class="btn-mail">✉️ Napsat e-mail</a>
     <a href="tel:+420731885825" class="btn-mail" style="background:#10b981">📞 Zavolat 731 885 825</a>
-    <a href="index.html" class="btn-back">Zpět na rezervace</a>
+    <a href="/" class="btn-back">Zpět na rezervace</a>
   </div>
 
   <!-- Chyba obecná -->
@@ -80,7 +80,7 @@
     <div class="icon">⚠️</div>
     <div class="title">Rezervace nenalezena</div>
     <div class="sub" id="error-message">Rezervace již byla zrušena nebo odkaz není platný.</div>
-    <a href="index.html" class="btn-back" style="margin-top:8px">Zpět na rezervace</a>
+    <a href="/" class="btn-back" style="margin-top:8px">Zpět na rezervace</a>
   </div>
 
   <!-- Rate limit -->
@@ -89,7 +89,7 @@
     <div class="title">Příliš mnoho pokusů</div>
     <div class="sub">Z bezpečnostních důvodů je zrušení dočasně zablokováno. Zkuste to prosím za 10 minut, nebo napište na info@mat-servis.cz.</div>
     <a href="mailto:info@mat-servis.cz?subject=Zrušení%20rezervace" class="btn-mail">✉️ Napsat e-mail</a>
-    <a href="index.html" class="btn-back">Zpět</a>
+    <a href="/" class="btn-back">Zpět</a>
   </div>
 
   <div class="footer">
