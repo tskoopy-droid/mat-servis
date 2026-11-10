@@ -1049,6 +1049,31 @@ const ZDROJ_NAVSTEVY = (function () {
   return 'přímo / neznámý';
 })();
 
+// Měření doby odeslání rezervace → list „Měření“, sloupce Odeslání (s) a Server (s).
+// odeslani_ms = od kliknutí po odpověď (to, co zákazník vidí jako „Odesílám...“),
+// server_ms   = jak dlouho běžela funkce zpracujPrezuti v GAS (posílá ho GAS v odpovědi).
+// vysledek: 'ok' | 'obsazeno' | 'chyba' | 'nejiste' | 'sit'. Při matdev se nic neposílá.
+function merOdeslani(odeslaniMs, serverMs, vysledek) {
+  try {
+    if (localStorage.getItem('matdev') === '1') return;
+  } catch (x) {}
+  try {
+    const data = JSON.stringify({
+      akce: 'mereni_kalendar',
+      stranka: 'prezuti odesl' + (vysledek && vysledek !== 'ok' ? ' ' + vysledek : ''),
+      odeslani_ms: Math.round(odeslaniMs),
+      server_ms: typeof serverMs === 'number' ? serverMs : undefined,
+      chyba: vysledek !== 'ok' && vysledek !== 'obsazeno',
+      mobil: /Mobi|Android|iPhone/i.test(navigator.userAgent),
+      sit: (navigator.connection && navigator.connection.effectiveType) || '',
+      z_reklamy: /utm_source=facebook|fbclid=/.test(location.search)
+    });
+    if (!(navigator.sendBeacon && navigator.sendBeacon(GAS_URL, data))) {
+      fetch(GAS_URL, { method: 'POST', mode: 'no-cors', keepalive: true, body: data }).catch(function(){});
+    }
+  } catch (x) {}   // měření nesmí nikdy rozbít odeslání
+}
+
 function submitForm() {
   if (odesilani || zamceno) return;
 
@@ -1085,6 +1110,7 @@ function submitForm() {
   const btn = document.getElementById("submit-btn");
   btn.textContent = "Odesílám...";
   btn.className = "submit-btn inactive";
+  const odeslaniStart = performance.now();
 
   // Jediny POST na GAS - ten se postara o Firestore zapis, mail zakaznikovi,
   // notifikaci operatorovi i audit log do sheetu.
@@ -1115,8 +1141,11 @@ function submitForm() {
     let data = null;
     try { data = JSON.parse(text); } catch (x) {}
     odesilani = false;
+    const odeslaniMs = performance.now() - odeslaniStart;
+    const serverMs = data && typeof data.server_ms === 'number' ? data.server_ms : undefined;
 
     if (data && (data.status === 'ok' || data.ok)) {
+      merOdeslani(odeslaniMs, serverMs, 'ok');
       try {
         if (!window.GAS_BOOKED) window.GAS_BOOKED = {};
         if (!window.GAS_BOOKED[datum]) window.GAS_BOOKED[datum] = [];
@@ -1136,6 +1165,7 @@ function submitForm() {
     }
 
     if (data && data.code === 'slot_obsazen') {
+      merOdeslani(odeslaniMs, serverMs, 'obsazeno');
       merPrezuti('prezuti_termin_obsazen');
       // Zpět na kalendář — údaje zůstanou v state.kontakt a formulář je znovu vyplní
       state.selDate = null;
@@ -1150,16 +1180,19 @@ function submitForm() {
 
     // Server výslovně říká, že neuložil (chyba s kódem) — opakování je bezpečné.
     if (data && data.status === 'error' && data.code && data.message) {
+      merOdeslani(odeslaniMs, serverMs, 'chyba');
       zobrazChybu(data.message);
       btn.textContent = "Potvrdit rezervaci →";
       checkForm();
       return;
     }
 
+    merOdeslani(odeslaniMs, serverMs, 'nejiste');
     nejistyVysledek('neocekavana_odpoved', text);
   })
   .catch(err => {
     odesilani = false;
+    merOdeslani(performance.now() - odeslaniStart, undefined, 'sit');
     nejistyVysledek('sit', String((err && err.message) || err));
   });
 
