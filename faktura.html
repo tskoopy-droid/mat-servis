@@ -119,10 +119,13 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   @keyframes spin { to { transform:rotate(360deg); } }
 
   /* ===== PRINT ===== */
+  @page { size:A4; margin:0; }
   @media print {
-    body { background:#fff; padding:0; }
+    /* min-height:100vh = přesně výška stránky → prohlížeč přidával prázdnou 2. stranu */
+    html, body { background:#fff; padding:0; margin:0; min-height:0 !important; height:auto !important; }
     #app, #gate { display:none !important; }
     #faktura-print { display:block !important; }
+    .print-page { width:100%; break-after:avoid; page-break-after:avoid; }
   }
   #faktura-print { display:none; }
   .print-page { width:210mm; min-height:0; padding:14mm; font-family:'Inter',Arial,sans-serif; font-size:9pt; color:#1e293b; }
