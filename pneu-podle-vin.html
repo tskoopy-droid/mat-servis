@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="favicon-192.png">
+<meta name="theme-color" content="#17496e">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pneu a kola podle VIN – rozměry z technického průkazu | M&amp;T Servis</title>
+<link rel="canonical" href="https://mat-servis.cz/pneu-podle-vin.html">
+<meta name="description" content="Zadejte VIN a zjistěte, jaké pneumatiky a ráfky má vaše auto zapsané v technickém průkazu – včetně všech povolených alternativ. Data z registru vozidel ČR, zdarma.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mat-servis.cz/pneu-podle-vin.html">
+<meta property="og:site_name" content="M&amp;T Servis">
+<meta property="og:locale" content="cs_CZ">
+<meta property="og:title" content="Pneu a kola podle VIN">
+<meta property="og:description" content="Všechny rozměry pneumatik a ráfků z technického průkazu podle VIN. Zdarma, z registru vozidel ČR.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --blue:#2563eb; --blue-dark:#1d4ed8; --blue-light:#eff6ff; --blue-mid:#bfdbfe;
+    --navy:#17496e; --green:#16a34a; --green-light:#f0fdf4; --amber:#b45309; --amber-light:#fffbeb;
+    --red:#dc2626; --red-light:#fef2f2;
+    --border:#e2e8f0; --text:#1e293b; --text-muted:#64748b; --white:#fff; --bg:#f1f5f9;
+  }
+  body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; }
+  .container { max-width:560px; margin:0 auto; padding:20px 16px 48px; }
+
+  .hero { text-align:center; margin:4px 0 20px; }
+  .hero h1 { font-size:24px; font-weight:700; line-height:1.25; margin-bottom:8px; }
+  .hero p { font-size:14px; color:var(--text-muted); line-height:1.6; }
+
+  .card { background:var(--white); border:1px solid var(--border); border-radius:18px; padding:18px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.05); margin-bottom:14px; }
+  .card h2 { font-size:13px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:12px; }
+
+  @keyframes vinSpin { to { transform:rotate(360deg); } }
+  .section-title { font-size:18px; font-weight:700; text-align:center; margin-bottom:6px; }
+  .section-sub { font-size:13px; color:var(--text-muted); line-height:1.55; text-align:center; margin-bottom:6px; }
+  .vin-cam-btn { width:100%; margin:10px 0 16px; padding:14px 18px; background:var(--blue-light); border:2px solid var(--blue-mid);
+    border-radius:14px; color:var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+    font:700 15px 'Inter',sans-serif; }
+  .vin-cam-btn:active { background:var(--blue-mid); }
+  .vin-cam-btn:disabled { opacity:.7; cursor:wait; }
+  .vin-cam-btn svg { width:20px; height:20px; stroke:var(--blue); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .vin-input { width:100%; padding:14px 16px; border:2px solid var(--border); border-radius:14px; font:600 15px 'Inter',sans-serif;
+    color:var(--text); letter-spacing:.06em; text-transform:uppercase; outline:none; transition:border-color .2s; }
+  .vin-input:focus { border-color:var(--blue); }
+  .vin-input::placeholder { color:#cbd5e1; font-weight:400; letter-spacing:.02em; font-size:13px; }
+  .vin-nacist { width:100%; margin-top:12px; padding:15px; background:var(--blue); border:none; border-radius:14px; color:#fff;
+    font:700 16px 'Inter',sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .vin-nacist:disabled { background:#94a3b8; cursor:wait; }
+  .vin-nacist svg { width:20px; height:20px; stroke:#fff; fill:none; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; }
+  .chyba { display:none; margin-top:12px; padding:12px 14px; background:var(--red-light); border:1px solid #fecaca;
+    border-radius:12px; color:var(--red); font-size:13px; line-height:1.5; }
+  .chyba.vidno { display:block; }
+
+  .cam-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:flex-end; justify-content:center; }
+  .cam-modal-overlay.open { display:flex; }
+  .cam-modal { background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 32px; width:100%; max-width:480px; }
+  .cam-modal-title { font-size:16px; font-weight:700; margin-bottom:16px; text-align:center; }
+  .cam-option { display:flex; align-items:center; gap:14px; padding:16px; border-radius:14px; border:2px solid var(--border); margin-bottom:10px;
+    cursor:pointer; font:600 15px 'Inter',sans-serif; color:var(--text); background:#fff; width:100%; }
+  .cam-option:active { background:#f1f5f9; }
+  .cam-option svg { width:24px; height:24px; stroke:var(--blue); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .cam-cancel { margin-top:6px; width:100%; padding:14px; border:none; border-radius:14px; background:#f1f5f9; font:600 15px 'Inter',sans-serif; cursor:pointer; color:#64748b; }
+
+  #vysledek { display:none; }
+  .auto-hlava { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .auto-nazev { font-size:21px; font-weight:700; line-height:1.2; }
+  .auto-sub { font-size:13px; color:var(--text-muted); margin-top:4px; }
+  .auto-vin { font-size:12px; letter-spacing:.06em; color:var(--text-muted); margin-top:6px; font-variant-numeric:tabular-nums; }
+  .stitek { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.03em; white-space:nowrap; }
+  .st-modra { background:var(--blue-light); color:var(--blue-dark); }
+  .st-zelena { background:var(--green-light); color:var(--green); }
+  .st-zluta { background:var(--amber-light); color:var(--amber); }
+  .st-cervena { background:var(--red-light); color:var(--red); }
+  .st-seda { background:#f1f5f9; color:#475569; }
+
+  .zakladni { padding:12px 14px; border-radius:12px; background:var(--blue-light); border:1px solid var(--blue-mid); margin-bottom:6px; }
+  .zakladni .pn { font-size:18px; font-weight:700; }
+  .zakladni .rf { font-size:14px; color:var(--text-muted); margin-top:2px; }
+  .zakladni .osa { font-size:11px; font-weight:700; color:var(--blue-dark); text-transform:uppercase; letter-spacing:.05em; margin-bottom:2px; }
+
+  .skupina { font-size:12px; font-weight:700; color:var(--navy); margin:14px 0 6px; }
+  .kolo { padding:10px 12px; border:1px solid var(--border); border-radius:12px; margin-bottom:6px; background:#fff; }
+  .kolo .pn { font-size:15px; font-weight:700; }
+  .kolo .rf { font-size:13px; color:var(--text-muted); margin-top:1px; }
+  .kolo .stitky { display:flex; flex-wrap:wrap; gap:4px; margin-top:5px; }
+  .kolo .stitky:empty { display:none; }
+  .kolo .podm { font-size:12px; color:var(--amber); margin-top:4px; }
+
+  .poznamky { margin-top:12px; padding:10px 12px; background:var(--amber-light); border:1px solid #fde68a; border-radius:10px;
+    font-size:13px; line-height:1.5; color:#78350f; }
+  .poznamky p + p { margin-top:6px; }
+
+  details.zapis { margin-top:12px; border:1px solid var(--border); border-radius:10px; }
+  details.zapis summary { padding:10px 12px; font-size:13px; font-weight:600; color:var(--blue-dark); cursor:pointer; }
+  details.zapis pre { padding:0 12px 12px; font:12.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace; white-space:pre-wrap; word-break:break-word; color:#334155; }
+  details.zapis .zapis-pozn { padding:0 12px 12px; font-size:12px; color:var(--text-muted); }
+
+  .prezuti { display:flex; align-items:center; gap:14px; margin-top:14px; padding:12px 14px; border-radius:14px;
+    background:var(--navy); color:#fff; text-decoration:none; box-shadow:0 4px 14px rgba(23,73,110,.28); }
+  .prezuti:active { transform:scale(.99); }
+  .prezuti .logo { background:#fff; border-radius:10px; padding:4px 6px; line-height:0; flex-shrink:0; }
+  .prezuti .logo img { height:40px; width:auto; display:block; }
+  .prezuti .txt { flex:1; }
+  .prezuti .t1 { font-size:16px; font-weight:700; }
+  .prezuti .t2 { font-size:12.5px; opacity:.85; margin-top:2px; }
+  .prezuti .sipka { font-size:22px; font-weight:700; }
+
+  .stk { display:none; margin-bottom:14px; padding:16px 18px; border-radius:18px; border:2px solid #fbbf24; background:var(--amber-light); }
+  .stk.vidno { display:block; }
+  .stk.propadla { border-color:#f87171; background:var(--red-light); }
+  .stk .t1 { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--amber); }
+  .stk.propadla .t1 { color:var(--red); }
+  .stk .t2 { font-size:22px; font-weight:700; margin-top:4px; }
+  .stk .t3 { font-size:14px; color:#475569; margin-top:4px; line-height:1.5; }
+
+  .auto-logo { height:44px; width:auto; max-width:90px; object-fit:contain; flex-shrink:0; }
+
+  table.data { width:100%; border-collapse:collapse; }
+  table.data th, table.data td { text-align:left; padding:8px 0; font-size:14px; border-bottom:1px solid #f1f5f9; vertical-align:top; }
+  table.data th { color:var(--text-muted); font-weight:500; width:46%; padding-right:10px; }
+  table.data td { font-weight:600; }
+  table.data tr:last-child th, table.data tr:last-child td { border-bottom:none; }
+  .prazdne { color:#cbd5e1; font-weight:400; }
+
+  .pravni { font-size:12px; color:var(--text-muted); line-height:1.6; margin:4px 2px 24px; }
+
+  .obsah h2 { font-size:18px; font-weight:700; margin:26px 0 8px; }
+  .obsah h3 { font-size:15px; font-weight:700; margin:16px 0 6px; }
+  .obsah p, .obsah li { font-size:14px; line-height:1.7; color:#334155; }
+  .obsah ul { padding-left:20px; margin:6px 0; }
+  .obsah .priklad { font:700 20px 'Inter',sans-serif; letter-spacing:.02em; text-align:center; padding:14px; background:#fff;
+    border:1px solid var(--border); border-radius:12px; margin:10px 0; }
+  .obsah a { color:var(--blue-dark); font-weight:600; }
+  .footer { text-align:center; padding:20px; font-size:12px; color:var(--text-muted); }
+</style>
+<script src="souhlas.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "Jak zjistím rozměr pneumatik podle VIN?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Zadejte 17místný VIN do formuláře na této stránce. Rozměry pneumatik a ráfků se načtou z registru silničních vozidel ČR – stejně jak jsou zapsané v technickém průkazu, včetně povolených alternativ."}},
+    {"@type": "Question", "name": "Kde najdu VIN svého auta?",
+     "acceptedAnswer": {"@type": "Answer", "text": "VIN je v osvědčení o registraci (malém technickém průkazu) v kolonce E, na štítku ve dveřním sloupku a obvykle i pod čelním sklem na straně řidiče."}},
+    {"@type": "Question", "name": "Proč nestačí rozměr pneu podle modelu auta?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Stejný model se vyrábí s různými motory, brzdami a výbavou a každá verze může mít schválené jiné rozměry kol. Přehledy podle modelu proto ukazují i kola, která na konkrétní auto nepatří. VIN určí přesně vaše vozidlo."}},
+    {"@type": "Question", "name": "Mohu dát na auto pneu, které nejsou v technickém průkazu?",
+     "acceptedAnswer": {"@type": "Answer", "text": "Rozměr kol musí odpovídat technickému průkazu nebo dokladu výrobce. Index nosnosti a rychlosti nesmí být nižší než zapsaný; u zimních pneumatik je nižší rychlostní index možný jen za podmínek uvedených v TP nebo v předpisech."}}
+  ]
+}
+</script>
+</head>
+<body>
+<script src="menu.js"></script>
+
+<main class="container">
+  <div class="hero">
+    <h1>Pneu a kola podle VIN</h1>
+    <p>Zjistěte, jaké pneumatiky a ráfky má vaše auto zapsané v technickém průkazu – včetně všech povolených alternativ. Data z registru vozidel ČR, zdarma.</p>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Zadejte VIN kód vozidla</div>
+    <div class="section-sub">VIN najdete na zadní straně malého technického průkazu (kolonka E) nebo za předním sklem u volantu.</div>
+    <div class="section-sub">VIN můžete naskenovat pomocí fotoaparátu — stačí vyfotit nebo vybrat z galerie a pole se vyplní automaticky, nebo ho zadejte ručně níže.</div>
+    <button type="button" class="vin-cam-btn" id="camBtn">
+      <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Skenovat VIN
+    </button>
+    <form id="vinForm" autocomplete="off">
+      <input id="vinInput" class="vin-input" type="text" maxlength="17" placeholder="např. VSSZZZ1MZ2R033594" aria-label="VIN vozidla" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button id="vinBtn" class="vin-nacist" type="submit">Načíst
+        <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </button>
+    </form>
+    <div class="chyba" id="chyba" role="alert"></div>
+
+    <div class="cam-modal-overlay" id="camModal">
+      <div class="cam-modal">
+        <div class="cam-modal-title">Naskenovat VIN</div>
+        <button type="button" class="cam-option" id="camFoto">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Fotoaparát
+        </button>
+        <button type="button" class="cam-option" id="camGalerie">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Galerie
+        </button>
+        <button type="button" class="cam-cancel" id="camZrusit">Zrušit</button>
+      </div>
+    </div>
+    <input type="file" id="inputFotoaparat" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="inputGalerie" accept="image/*" style="display:none">
+  </div>
+
+  <div id="vysledek">
+    <div class="card">
+      <div class="auto-hlava">
+        <img class="auto-logo" id="autoLogo" alt="" style="display:none" onerror="this.style.display='none'">
+        <div style="flex:1">
+          <div class="auto-nazev" id="autoNazev"></div>
+          <div class="auto-sub" id="autoSub"></div>
+          <div class="auto-vin" id="autoVin"></div>
+        </div>
+        <span class="stitek" id="autoStav"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Kola a pneumatiky</h2>
+      <div id="kolaZakladni"></div>
+      <div id="kolaAlternativy"></div>
+      <div class="poznamky" id="kolaPoznamky" style="display:none"></div>
+      <details class="zapis" id="kolaZapis">
+        <summary>Zobrazit zápis z technického průkazu</summary>
+        <pre id="kolaZapisText"></pre>
+        <p class="zapis-pozn">Text je převzatý z registru vozidel tak, jak byl zapsán. Registrační značky a čísla dokladů jsou skryté.</p>
+      </details>
+      <a class="prezuti" id="prezutiOdkaz" href="prezuti.html">
+        <span class="logo"><img src="logo.png" alt="M&amp;T Servis" width="83" height="40"></span>
+        <span class="txt"><span class="t1" style="display:block">Objednat přezutí</span><span class="t2" style="display:block">M&amp;T Servis · online rezervace bez volání</span></span>
+        <span class="sipka">›</span>
+      </a>
+    </div>
+
+    <!-- STK do 3 měsíců. Objednání STK zatím není — až bude, přidá se sem tlačítko. -->
+    <div class="stk" id="stkBox">
+      <div class="t1" id="stkNadpis"></div>
+      <div class="t2" id="stkDatum"></div>
+      <div class="t3" id="stkText"></div>
+    </div>
+
+    <div class="card">
+      <h2>Vozidlo</h2>
+      <table class="data" id="tabVozidlo"></table>
+    </div>
+
+    <div class="card">
+      <h2>Tažné zařízení</h2>
+      <table class="data" id="tabTazne"></table>
+    </div>
+
+    <div class="card">
+      <h2>Registrace a STK</h2>
+      <table class="data" id="tabRegistrace"></table>
+    </div>
+
+    <p class="pravni">Údaje pocházejí z Registru silničních vozidel ČR (dataovozidlech.cz). Alternativní rozměry jsou strojově vyčtené ze zápisu v TP, proto u&nbsp;nich vždy platí původní znění zápisu a podmínky v něm uvedené. Informace jsou orientační, za správnost dat v&nbsp;registru neručíme.</p>
+  </div>
+
+  <section class="obsah">
+    <h2>Proč hledat pneu podle VIN a ne podle modelu</h2>
+    <p>Stejný model auta se vyrábí s různými motory, brzdami a stupni výbavy. Každá verze může mít v technickém průkazu schválené jiné rozměry kol. Přehledy „pneu podle modelu“ proto ukazují i kola, která na vaše auto nepatří – třeba 15" ráfky, které se nevejdou přes větší brzdy. VIN určí konkrétní vozidlo, a tím i rozměry, které jsou pro něj opravdu zapsané.</p>
+
+    <h2>Jak číst rozměr pneumatiky</h2>
+    <div class="priklad">205/55 R16 91V</div>
+    <ul>
+      <li><strong>205</strong> – šířka pneumatiky v milimetrech</li>
+      <li><strong>55</strong> – výška bočnice v procentech šířky (profil)</li>
+      <li><strong>R</strong> – radiální konstrukce (<strong>ZR</strong> pro vysoké rychlosti)</li>
+      <li><strong>16</strong> – průměr ráfku v palcích</li>
+      <li><strong>91</strong> – index nosnosti (91 = 615 kg na pneumatiku)</li>
+      <li><strong>V</strong> – index rychlosti (V = do 240 km/h)</li>
+    </ul>
+    <p>Další značky: <strong>XL</strong> / <strong>REINF</strong> – zesílená pneumatika, <strong>C</strong> – pneumatika pro dodávky (dvojí index nosnosti, např. 107/105), <strong>M+S</strong> – zimní nebo celoroční pneumatika.</p>
+
+    <h2>Jak číst rozměr ráfku</h2>
+    <div class="priklad">6.5J×16 ET50</div>
+    <ul>
+      <li><strong>6.5</strong> – šířka ráfku v palcích</li>
+      <li><strong>J</strong> – tvar okraje ráfku</li>
+      <li><strong>16</strong> – průměr v palcích</li>
+      <li><strong>ET50</strong> – zális v milimetrech, tedy jak hluboko kolo „sedí“ v podběhu. Jiný zális mění rozchod a může způsobit drhnutí kola.</li>
+    </ul>
+
+    <h2>Časté otázky</h2>
+    <h3>Mohu dát na auto pneu, které nejsou v technickém průkazu?</h3>
+    <p>Rozměr kol musí odpovídat technickému průkazu nebo dokladu výrobce. Index nosnosti a rychlosti nesmí být nižší než zapsaný. U zimních pneumatik je nižší rychlostní index možný jen za podmínek uvedených v TP nebo v předpisech – v zápisu to bývá vidět jako „pro max. rychlost … km/h“.</p>
+    <h3>Proč mají některá auta jiná kola vpředu a vzadu?</h3>
+    <p>U sportovních a výkonnějších vozů (BMW, Mercedes, Porsche) bývají vzadu širší kola. Takové kombinace jsou na stránce označené jako přední a zadní náprava a kupují se v páru.</p>
+    <h3>Potřebujete přezout?</h3>
+    <p>Přezutí pneumatik v Dlouhé Loučce si můžete <a href="prezuti.html">zarezervovat online</a> bez volání.</p>
+  </section>
+</main>
+
+<div class="footer">M&amp;T Servis · Šumvaldská 59, Dlouhá Loučka</div>
+
+<script>
+(function () {
+  var GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
+  var LIMIT_MS = 25000;
+
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('vinForm'), input = $('vinInput'), btn = $('vinBtn'), chyba = $('chyba');
+  var aktualni = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function cislo(n, jednotka) {
+    if (n == null || n === '') return '';
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ').replace('.', ',') + (jednotka ? ' ' + jednotka : '');
+  }
+  function ukazChybu(t) { chyba.textContent = t; chyba.classList.add('vidno'); }
+  function udalost(nazev, data) { try { if (window.gtag) window.gtag('event', nazev, data || {}); } catch (e) {} }
+
+  function radky(tab, seznam) {
+    tab.innerHTML = seznam.map(function (r) {
+      return '<tr><th>' + esc(r[0]) + '</th><td>' + (r[1] ? r[1] : '<span class="prazdne">neuvedeno</span>') + '</td></tr>';
+    }).join('');
+  }
+
+  function stitky(p) {
+    var s = [];
+    if (!p) return '';
+    if (p.zimni) s.push('<span class="stitek st-modra">M+S zimní</span>');
+    if (p.xl) s.push('<span class="stitek st-seda">XL zesílená</span>');
+    if (p.c) s.push('<span class="stitek st-seda">C dodávková</span>');
+    return s.join('');
+  }
+  function textRafku(rafky) {
+    if (!rafky || !rafky.length) return 'ráfek neuveden';
+    return 'ráfek ' + rafky.map(function (r) { return r.text; }).join(' nebo ');
+  }
+
+  // ── Kola ─────────────────────────────────────────────────────
+  function vykresliKola(k) {
+    var html = '';
+    var hlavni = (k.stejneNapravy || k.hlavni.length === 1) ? [k.hlavni[0]] : k.hlavni;
+    hlavni.forEach(function (h) {
+      var osa = hlavni.length === 1 ? 'Základní rozměr'
+              : (h.naprava === 1 ? 'Přední' : h.naprava === 2 ? 'Zadní' : h.naprava + '.') + ' náprava';
+      html += '<div class="zakladni"><div class="osa">' + osa + '</div>' +
+        '<div class="pn">' + esc(h.pneu ? h.pneu.text : h.text) + '</div>' +
+        '<div class="rf">' + esc(h.rafek ? 'ráfek ' + h.rafek.text : '') + '</div></div>';
+    });
+    $('kolaZakladni').innerHTML = html;
+
+    // alternativy seskupené podle průměru
+    var alt = k.alternativy.filter(function (a) { return a.pneu || (a.rafky && a.rafky.length); });
+    var out = '';
+    if (alt.length) {
+      out += '<p class="skupina" style="margin-top:16px">Povolené alternativy (' + alt.length + ')</p>';
+      var skupiny = {};
+      alt.forEach(function (a) {
+        var d = a.pneu ? a.pneu.prumer : a.rafky[0].prumer;
+        (skupiny[d] = skupiny[d] || []).push(a);
+      });
+      Object.keys(skupiny).sort(function (x, y) { return x - y; }).forEach(function (d) {
+        out += '<p class="skupina">' + esc(d) + '" kola</p>';
+        skupiny[d].forEach(function (a) {
+          var osa = a.naprava === 'přední' ? '<span class="stitek st-zluta">jen přední náprava</span>'
+                  : a.naprava === 'zadní' ? '<span class="stitek st-zluta">jen zadní náprava</span>' : '';
+          out += '<div class="kolo">' +
+            '<div class="pn">' + esc(a.pneu ? a.pneu.text : 'Ráfek bez uvedené pneumatiky') + '</div>' +
+            '<div class="rf">' + esc(textRafku(a.rafky)) + '</div>' +
+            '<div class="stitky">' + stitky(a.pneu) + osa + '</div>' +
+            (a.podminka ? '<div class="podm">' + esc(a.podminka) + '</div>' : '') +
+            '</div>';
+        });
+      });
+    } else {
+      out = '<p class="skupina" style="margin-top:14px;color:var(--text-muted);font-weight:500">V technickém průkazu nejsou zapsané žádné alternativní rozměry.</p>';
+    }
+    $('kolaAlternativy').innerHTML = out;
+
+    var pozn = $('kolaPoznamky');
+    if (k.poznamky && k.poznamky.length) {
+      pozn.innerHTML = k.poznamky.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('');
+      pozn.style.display = '';
+    } else pozn.style.display = 'none';
+
+    var zapis = k.hlavni.map(function (h) { return 'Náprava ' + h.naprava + ': ' + h.text.replace(/;$/, ''); }).join('\n');
+    if (k.zapisTp) zapis += '\n\nDalší záznamy:\n' + k.zapisTp;
+    $('kolaZapisText').textContent = zapis;
+    $('kolaZapis').open = false;
+  }
+
+  $('prezutiOdkaz').addEventListener('click', function () { udalost('pneu_vin_prezuti'); });
+
+  // ── Logo značky (jen ty, které na webu jsou; jinak skryté) ───
+  var LOGA_VOZU = [
+    [/SKODA|ŠKODA/, 'logoskoda.png'], [/VOLKSWAGEN|^VW$/, 'logovw.png'], [/SEAT/, 'logoseat.png'],
+    [/AUDI/, 'logoaudi.png'], [/PEUGEOT/, 'logopeugeot.png'], [/CITRO/, 'logocitroen.png'],
+    [/OPEL|VAUXHALL/, 'logoopel.png'], [/RENAULT/, 'logorenault.png'], [/DACIA/, 'logodacia.png'],
+    [/^MG\b|MORRIS GARAGES/, 'logomg.png'], [/FIAT/, 'logofiat.png'], [/\bKIA\b/, 'logokia.png'],
+    [/HYUNDAI/, 'logohyundai.png'], [/FORD/, 'logoford.png'], [/TOYOTA/, 'logotoyota.png'],
+    [/\bBMW\b/, 'logobmw.png']
+  ];
+  function nastavLogo(znacka) {
+    var img = $('autoLogo'), t = String(znacka || '').toUpperCase().trim(), soubor = null;
+    for (var i = 0; i < LOGA_VOZU.length; i++) if (LOGA_VOZU[i][0].test(t)) { soubor = LOGA_VOZU[i][1]; break; }
+    if (!soubor) { img.style.display = 'none'; img.removeAttribute('src'); return; }
+    img.src = soubor; img.alt = znacka; img.style.display = '';
+  }
+
+  // ── STK do 3 měsíců ──────────────────────────────────────────
+  function nastavStk(d) {
+    var box = $('stkBox');
+    box.className = 'stk';
+    if (!d.stkDoIso) return;
+    var dny = Math.ceil((new Date(d.stkDoIso + 'T23:59:59') - new Date()) / 86400000);
+    if (dny > 92) return;
+    if (dny < 0) {
+      box.classList.add('propadla');
+      $('stkNadpis').textContent = 'STK propadlá';
+      $('stkText').textContent = 'Platnost technické prohlídky skončila před ' + (-dny) + ' dny. S vozidlem bez platné STK nesmíte jezdit.';
+    } else {
+      $('stkNadpis').textContent = 'Blíží se STK';
+      $('stkText').textContent = dny === 0 ? 'Platnost technické prohlídky končí dnes.'
+        : 'Platnost technické prohlídky končí za ' + dny + ' ' + (dny === 1 ? 'den' : dny < 5 ? 'dny' : 'dní') + '.';
+    }
+    $('stkDatum').textContent = d.stkDo;
+    box.classList.add('vidno');
+  }
+
+  // ── Ostatní údaje ────────────────────────────────────────────
+  function vykresli(d) {
+    aktualni = d;
+    $('autoNazev').textContent = (d.znacka + ' ' + d.model).trim() || 'Vozidlo';
+    $('autoSub').textContent = [d.druh, d.motor.objem ? cislo(d.motor.objem, 'cm³') : '', d.motor.vykonKw ? cislo(d.motor.vykonKw, 'kW') : '', d.motor.palivo].filter(Boolean).join(' · ');
+    $('autoVin').textContent = 'VIN ' + d.vin;
+    var stav = $('autoStav');
+    var provoz = /PROVOZ/.test(d.stav);
+    stav.textContent = provoz ? 'v provozu' : (d.stav || '').toLowerCase();
+    stav.className = 'stitek ' + (provoz ? 'st-zelena' : 'st-cervena');
+    stav.style.display = d.stav ? '' : 'none';
+
+    nastavLogo(d.znacka);
+    vykresliKola(d.kola);
+    nastavStk(d);
+    $('prezutiOdkaz').href = 'prezuti.html?' + new URLSearchParams({ vin: d.vin, utm_source: 'web', utm_medium: 'pneu-podle-vin' }).toString();
+
+    var m = d.motor, s = d.spotreba;
+    var vykon = m.vykonKw ? cislo(m.vykonKw, 'kW') + ' (' + m.vykonK + ' k)' + (m.otacky ? ' při ' + cislo(m.otacky) + ' ot./min' : '') : '';
+    var spotreba = '';
+    if (s) {
+      var c = [];
+      if (s.mesto) c.push('město ' + cislo(s.mesto));
+      if (s.mimo) c.push('mimo město ' + cislo(s.mimo));
+      if (s.kombinovana) c.push('kombinovaná ' + cislo(s.kombinovana));
+      spotreba = c.length ? esc(c.join(' · ')) + ' l/100&nbsp;km' : '';
+      if (/elekt/.test(m.palivo)) spotreba = '';
+    }
+    radky($('tabVozidlo'), [
+      ['Značka', esc(d.znacka)],
+      ['Model', esc(d.model)],
+      ['Kód motoru', esc(m.kod)],
+      ['Výkon', esc(vykon)],
+      ['Objem motoru', m.objem ? esc(cislo(m.objem, 'cm³')) : ''],
+      ['Palivo', esc(m.palivo)],
+      ['Emisní norma', esc(m.emise)],
+      ['Spotřeba', spotreba],
+      ['Poháněná náprava', esc(d.pohon)],
+      ['Provozní hmotnost', d.hmotnost.provozni ? esc(cislo(d.hmotnost.provozni, 'kg')) : ''],
+      ['Největší povolená hmotnost', d.hmotnost.celkova ? esc(cislo(d.hmotnost.celkova, 'kg')) : '']
+    ]);
+
+    var t = d.tazne;
+    radky($('tabTazne'), [
+      ['Tažné zařízení v TP', t.zapsane ? 'zapsané' + (t.nazev ? ' – ' + esc(t.nazev) : '') : 'nezapsané'],
+      ['Brzděný přívěs', t.brzdeny ? esc(cislo(t.brzdeny, 'kg')) : ''],
+      ['Nebrzděný přívěs', t.nebrzdeny ? esc(cislo(t.nebrzdeny, 'kg')) : ''],
+      ['Svislé zatížení koule', t.svisleZatizeni ? esc(cislo(t.svisleZatizeni, 'kg')) : '']
+    ]);
+
+    var stk = esc(d.stkDo);
+    if (d.stkDoIso) {
+      var dny = Math.ceil((new Date(d.stkDoIso + 'T23:59:59') - new Date()) / 86400000);
+      if (dny < 0) stk += ' <span class="stitek st-cervena">propadlá</span>';
+      else if (dny <= 92) stk += ' <span class="stitek st-zluta">za ' + dny + ' dní</span>';
+    }
+    var reg = [['První registrace', esc(d.registrace.prvni)]];
+    if (d.registrace.prvniCr && d.registrace.prvniCr !== d.registrace.prvni) reg.push(['První registrace v ČR', esc(d.registrace.prvniCr)]);
+    reg.push(['STK platná do', stk]);
+    radky($('tabRegistrace'), reg);
+
+    $('vysledek').style.display = 'block';
+    $('vysledek').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── Načtení ──────────────────────────────────────────────────
+  function nacti(vin) {
+    chyba.classList.remove('vidno');
+    if (vin.length !== 17) return ukazChybu('VIN musí mít přesně 17 znaků.');
+    if (/[IOQ]/.test(vin)) return ukazChybu('VIN nesmí obsahovat písmena I, O ani Q – pravděpodobně jde o 1 nebo 0.');
+    if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)) return ukazChybu('VIN obsahuje nepovolené znaky.');
+
+    btn.disabled = true; btn.innerHTML = 'Načítám… ' + SVG_SPIN_BILY;
+    var ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+    var casovac = ctrl ? setTimeout(function () { ctrl.abort(); }, LIMIT_MS) : null;
+
+    fetch(GAS_URL + '?action=vozidlo&vin=' + encodeURIComponent(vin), { redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { udalost('pneu_vin_nenalezen'); return ukazChybu(d.error); }
+        udalost('pneu_vin_nalezen', { znacka: d.znacka });
+        vykresli(d);
+        try { history.replaceState(null, '', '?vin=' + vin); } catch (e) {}
+      })
+      .catch(function () { ukazChybu('Nepodařilo se načíst data z registru. Zkuste to prosím znovu.'); })
+      .then(function () { clearTimeout(casovac); btn.disabled = false; btn.innerHTML = 'Načíst ' + SVG_SIPKA; });
+  }
+
+  var SVG_SIPKA = '<svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
+  var SVG_SPIN_BILY = '<svg viewBox="0 0 24 24" style="animation:vinSpin .8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
+
+  // ── Skenování VIN z fotky (stejně jako oleje.html: GAS akce vin_ocr → Google Vision) ──
+  var FOTO_MAX_PX = 1600;
+  var camBtn = $('camBtn'), camModal = $('camModal');
+  var SVG_CAM = '<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var SVG_SPIN = '<svg viewBox="0 0 24 24" style="animation:vinSpin .8s linear infinite;stroke-width:2.5"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
+
+  camBtn.addEventListener('click', function () {
+    if (!navigator.maxTouchPoints) $('inputGalerie').click();
+    else camModal.classList.add('open');
+  });
+  camModal.addEventListener('click', function (e) { if (e.target === camModal) camModal.classList.remove('open'); });
+  $('camZrusit').addEventListener('click', function () { camModal.classList.remove('open'); });
+  $('camFoto').addEventListener('click', function () { camModal.classList.remove('open'); $('inputFotoaparat').click(); });
+  $('camGalerie').addEventListener('click', function () { camModal.classList.remove('open'); $('inputGalerie').click(); });
+  $('inputFotoaparat').addEventListener('change', function () { zpracujFotku(this); });
+  $('inputGalerie').addEventListener('change', function () { zpracujFotku(this); });
+
+  function zmensiFotku(soubor) {
+    return new Promise(function (hotovo) {
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var k = Math.min(1, FOTO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
+          if (k === 1) { hotovo(ev.target.result.split(',')[1]); return; }
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          hotovo(c.toDataURL('image/jpeg', 0.92).split(',')[1]);
+        };
+        img.onerror = function () { hotovo(ev.target.result.split(',')[1]); };   // HEIC apod. beze změny
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(soubor);
+    });
+  }
+
+  function najdiVin(text) {
+    var m = text.match(/VIN\)[^\w]*([A-HJ-NPR-Z0-9]{17})/i) || text.match(/\bE[.:]\s*([A-HJ-NPR-Z0-9]{17})/i);
+    if (m) return m[1];
+    var kandidati = (text.replace(/\s/g, '').replace(/[IOQ]/g, '').match(/[A-HJ-NPR-Z0-9]{17}/g) || [])
+      .filter(function (k) { return (k.match(/[0-9]/g) || []).length >= 4; });
+    kandidati.sort(function (a, b) { return (b.match(/[0-9]/g) || []).length - (a.match(/[0-9]/g) || []).length; });
+    return kandidati[0] || null;
+  }
+
+  function zpracujFotku(vstup) {
+    if (!vstup.files || !vstup.files[0]) return;
+    chyba.classList.remove('vidno');
+    camBtn.innerHTML = SVG_SPIN + ' Rozpoznávám…';
+    camBtn.disabled = true;
+    function konec() { camBtn.innerHTML = SVG_CAM + ' Skenovat VIN'; camBtn.disabled = false; vstup.value = ''; }
+    zmensiFotku(vstup.files[0]).then(function (base64) {
+      return fetch(GAS_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ akce: 'vin_ocr', obrazek: base64 }) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          konec();
+          if (data && data.error) {
+            udalost('pneu_vin_sken_neuspech');
+            return ukazChybu((data.error.message || 'Rozpoznání se nepodařilo.') + ' VIN můžete zadat ručně.');
+          }
+          var text = '';
+          try { text = data.responses[0].fullTextAnnotation.text || ''; } catch (e) {}
+          var vin = najdiVin(text);
+          if (vin) { udalost('pneu_vin_sken_ok'); input.value = vin.toUpperCase(); input.focus(); }
+          else { udalost('pneu_vin_sken_neuspech'); ukazChybu('VIN nebyl na fotografii nalezen. Zkuste znovu s ostřejším záběrem.'); }
+        });
+    }).catch(function () {
+      konec();
+      udalost('pneu_vin_sken_neuspech');
+      ukazChybu('Chyba při rozpoznávání textu. Zkuste to znovu.');
+    });
+  }
+
+  input.addEventListener('input', function () {
+    var p = input.selectionStart;
+    input.value = input.value.toUpperCase().replace(/\s/g, '');
+    try { input.setSelectionRange(p, p); } catch (e) {}
+  });
+  form.addEventListener('submit', function (e) { e.preventDefault(); nacti(input.value.trim().toUpperCase()); });
+
+  var q = new URLSearchParams(location.search).get('vin');
+  if (q) { input.value = q.toUpperCase(); nacti(input.value); }
+})();
+</script>
+</body>
+</html>
