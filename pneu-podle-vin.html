@@ -111,13 +111,35 @@
   .prezuti .t2 { font-size:12.5px; opacity:.85; margin-top:2px; }
   .prezuti .sipka { font-size:22px; font-weight:700; }
 
-  .stk { display:none; margin-bottom:14px; padding:16px 18px; border-radius:18px; border:2px solid #fbbf24; background:var(--amber-light); }
+  .stk { display:none; margin-top:10px; padding:16px 18px; border-radius:14px; border:2px solid #fbbf24; background:var(--amber-light); }
+  .stk.klid { padding:12px 14px; border:1px solid var(--border); background:#f8fafc; }
+  .stk.klid .t1 { color:var(--text-muted); }
+  .stk.klid .t2 { font-size:17px; }
+  .stk.klid .t3 { display:none; }
   .stk.vidno { display:block; }
   .stk.propadla { border-color:#f87171; background:var(--red-light); }
   .stk .t1 { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--amber); }
   .stk.propadla .t1 { color:var(--red); }
   .stk .t2 { font-size:22px; font-weight:700; margin-top:4px; }
   .stk .t3 { font-size:14px; color:#475569; margin-top:4px; line-height:1.5; }
+
+  .stk-btn { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:12px; background:var(--amber);
+    color:#fff; font:700 15px 'Inter',sans-serif; cursor:pointer; }
+  .stk.propadla .stk-btn { background:var(--red); }
+  .stk.klid .stk-btn, .stk.klid .stk-info { display:none; }
+  .stk-info { display:none; margin-top:12px; padding:14px; background:#fff; border:1px solid var(--border); border-radius:12px; }
+  .stk-info.vidno { display:block; }
+  .stk-info p { font-size:14px; line-height:1.5; }
+  .stk-info ul { list-style:none; margin:10px 0; }
+  .stk-info li { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:14px; }
+  .stk-info li:last-child { border-bottom:none; }
+  .stk-info li span { color:var(--text-muted); }
+  .stk-info .stk-mensi { font-size:13px; color:var(--text-muted); }
+  .stk-kontakt { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+  .stk-kontakt a { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border-radius:12px;
+    background:var(--blue-light); border:1.5px solid var(--blue-mid); color:var(--blue-dark); font-weight:700; font-size:15px; text-decoration:none; }
+  .stk-kontakt a:first-child { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .stk-kontakt svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
   .auto-logo { height:44px; width:auto; max-width:90px; object-fit:contain; flex-shrink:0; }
 
@@ -225,13 +247,30 @@
         <span class="txt"><span class="t1" style="display:block">Objednat přezutí</span><span class="t2" style="display:block">M&amp;T Servis · online rezervace bez volání</span></span>
         <span class="sipka">›</span>
       </a>
-    </div>
 
-    <!-- STK do 3 měsíců. Objednání STK zatím není — až bude, přidá se sem tlačítko. -->
-    <div class="stk" id="stkBox">
-      <div class="t1" id="stkNadpis"></div>
-      <div class="t2" id="stkDatum"></div>
-      <div class="t3" id="stkText"></div>
+      <!-- STK: vždy pod přezutím; do 4 měsíců výrazně s nabídkou, jinak jen datum. Objednání STK zatím není — až bude, přidá se sem tlačítko. -->
+      <div class="stk" id="stkBox">
+        <div class="t1" id="stkNadpis"></div>
+        <div class="t2" id="stkDatum"></div>
+        <div class="t3" id="stkText"></div>
+        <button type="button" class="stk-btn" id="stkBtn" aria-expanded="false">Připravit na STK</button>
+        <div class="stk-info" id="stkInfo">
+          <p>Zkontrolujeme vůz, opravíme závady a zajistíme STK.</p>
+          <ul>
+            <li><span>Opravy</span><strong>dle rozsahu</strong></li>
+            <li><span>STK</span><strong>4&nbsp;000&nbsp;Kč</strong></li>
+          </ul>
+          <p class="stk-mensi">Podrobnosti domluvíme po telefonu nebo e-mailem.</p>
+          <div class="stk-kontakt">
+            <a href="tel:+420731885825" id="stkTel">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>
+              731 885 825</a>
+            <a href="mailto:info@mat-servis.cz" id="stkMail">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+              info@mat-servis.cz</a>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -336,6 +375,8 @@
     hlavni.forEach(function (h) {
       var osa = hlavni.length === 1 ? 'Základní rozměr'
               : (h.naprava === 1 ? 'Přední' : h.naprava === 2 ? 'Zadní' : h.naprava + '.') + ' náprava';
+      var palce = h.pneu ? h.pneu.prumer : (h.rafek ? h.rafek.prumer : '');
+      if (palce) osa += ' · ' + palce + '" kola';
       html += '<div class="zakladni"><div class="osa">' + osa + '</div>' +
         '<div class="pn">' + esc(h.pneu ? h.pneu.text : h.text) + '</div>' +
         '<div class="rf">' + esc(h.rafek ? 'ráfek ' + h.rafek.text : '') + '</div></div>';
@@ -400,14 +441,18 @@
     img.src = soubor; img.alt = znacka; img.style.display = '';
   }
 
-  // ── STK do 3 měsíců ──────────────────────────────────────────
+  // ── STK: do 4 měsíců výrazně s nabídkou, jinak obyčejná dlaždice ──
+  var STK_PRED_DNY = 122;
   function nastavStk(d) {
     var box = $('stkBox');
     box.className = 'stk';
     if (!d.stkDoIso) return;
     var dny = Math.ceil((new Date(d.stkDoIso + 'T23:59:59') - new Date()) / 86400000);
-    if (dny > 92) return;
-    if (dny < 0) {
+    if (dny > STK_PRED_DNY) {
+      box.classList.add('klid');
+      $('stkNadpis').textContent = 'STK platná do';
+      $('stkText').textContent = '';
+    } else if (dny < 0) {
       box.classList.add('propadla');
       $('stkNadpis').textContent = 'STK propadlá';
       $('stkText').textContent = 'Platnost technické prohlídky skončila před ' + (-dny) + ' dny. S vozidlem bez platné STK nesmíte jezdit.';
@@ -417,8 +462,19 @@
         : 'Platnost technické prohlídky končí za ' + dny + ' ' + (dny === 1 ? 'den' : dny < 5 ? 'dny' : 'dní') + '.';
     }
     $('stkDatum').textContent = d.stkDo;
+    $('stkInfo').classList.remove('vidno');
+    $('stkBtn').setAttribute('aria-expanded', 'false');
+    $('stkMail').href = 'mailto:info@mat-servis.cz?subject=' + encodeURIComponent('STK – ' + (d.znacka + ' ' + d.model).trim() + ', VIN ' + d.vin);
     box.classList.add('vidno');
   }
+
+  $('stkBtn').addEventListener('click', function () {
+    var info = $('stkInfo'), otevreno = info.classList.toggle('vidno');
+    this.setAttribute('aria-expanded', otevreno ? 'true' : 'false');
+    if (otevreno) udalost('pneu_vin_stk_info');
+  });
+  $('stkTel').addEventListener('click', function () { udalost('pneu_vin_stk_telefon'); });
+  $('stkMail').addEventListener('click', function () { udalost('pneu_vin_stk_mail'); });
 
   // ── Ostatní údaje ────────────────────────────────────────────
   function vykresli(d) {
@@ -474,7 +530,7 @@
     if (d.stkDoIso) {
       var dny = Math.ceil((new Date(d.stkDoIso + 'T23:59:59') - new Date()) / 86400000);
       if (dny < 0) stk += ' <span class="stitek st-cervena">propadlá</span>';
-      else if (dny <= 92) stk += ' <span class="stitek st-zluta">za ' + dny + ' dní</span>';
+      else if (dny <= STK_PRED_DNY) stk += ' <span class="stitek st-zluta">za ' + dny + ' dní</span>';
     }
     var reg = [['První registrace', esc(d.registrace.prvni)]];
     if (d.registrace.prvniCr && d.registrace.prvniCr !== d.registrace.prvni) reg.push(['První registrace v ČR', esc(d.registrace.prvniCr)]);
