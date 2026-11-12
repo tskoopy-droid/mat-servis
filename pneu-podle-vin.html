@@ -28,7 +28,32 @@
   body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; }
   .container { max-width:560px; margin:0 auto; padding:20px 16px 48px; }
 
-  .hero { text-align:center; margin:4px 0 20px; }
+  .hero { position:relative; text-align:center; margin:4px 0 20px; padding:18px 12px 4px; }
+  .hero-kolo { width:64px; height:64px; display:block; margin:0 auto 10px; filter:drop-shadow(0 4px 10px rgba(23,73,110,.25)); }
+  .hero h1 span { color:#7cb94a; }
+
+  /* Otisk dezénu nahoře na kartách — stejný vzor jako lišta (léto/zima). */
+  .card.dezen { position:relative; overflow:hidden; padding-top:26px; }
+  .card.dezen::before { content:""; position:absolute; left:0; right:0; top:0; height:10px; opacity:.14; background-repeat:repeat-x;
+    background-size:auto 48px; background-position:0 -2px; }
+  .sezona-leto .card.dezen::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='96' viewBox='0 0 24 96'%3E%3Cg fill='%2317496e'%3E%3Cpolygon points='-19.8,0.0 -0.2,0.0 2.8,18.0 -16.8,18.0'/%3E%3Cline x1='-9.5' y1='3' x2='-7.5' y2='15' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='4.2,0.0 23.8,0.0 26.8,18.0 7.2,18.0'/%3E%3Cline x1='14.5' y1='3' x2='16.5' y2='15' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='28.2,0.0 47.8,0.0 50.8,18.0 31.2,18.0'/%3E%3Cline x1='38.5' y1='3' x2='40.5' y2='15' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='0.0,24.0 6.0,24.0 10.0,34.0 12.2,34.0 8.2,24.0 24.0,24.0 24.0,40.0 0.0,40.0'/%3E%3Cpolygon points='0.0,46.0 24.0,46.0 24.0,58.0 17.2,58.0 20.2,50.0 18.0,50.0 15.0,58.0 0.0,58.0'/%3E%3Cpolygon points='0.0,64.0 9.0,64.0 13.0,73.0 15.2,73.0 11.2,64.0 24.0,64.0 24.0,78.0 0.0,78.0'/%3E%3Cpolygon points='-16.8,84.0 2.8,84.0 0.8,96.0 -18.8,96.0'/%3E%3Cline x1='-7.3' y1='86' x2='-8.7' y2='94' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='7.2,84.0 26.8,84.0 24.8,96.0 5.2,96.0'/%3E%3Cline x1='16.7' y1='86' x2='15.3' y2='94' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='31.2,84.0 50.8,84.0 48.8,96.0 29.2,96.0'/%3E%3Cline x1='40.7' y1='86' x2='39.3' y2='94' stroke='%23fff' stroke-width='1.1'/%3E%3C/g%3E%3C/svg%3E"); }
+  .sezona-zima .card.dezen::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='96' viewBox='0 0 22 96'%3E%3Cg fill='%2317496e'%3E%3Cpolygon points='-20.0,0.0 -2.0,0.0 2.0,15.0 -16.0,15.0'/%3E%3Cline x1='-10.5' y1='2' x2='-7.5' y2='13' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='2.0,0.0 20.0,0.0 24.0,15.0 6.0,15.0'/%3E%3Cline x1='11.5' y1='2' x2='14.5' y2='13' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='24.0,0.0 42.0,0.0 46.0,15.0 28.0,15.0'/%3E%3Cline x1='33.5' y1='2' x2='36.5' y2='13' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='-16.4,19.0 2.4,19.0 12.4,45.0 -6.4,45.0'/%3E%3Cline x1='-5.8' y1='22' x2='1.8' y2='42' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='5.6,19.0 24.4,19.0 34.4,45.0 15.6,45.0'/%3E%3Cline x1='16.2' y1='22' x2='23.8' y2='42' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='27.6,19.0 46.4,19.0 56.4,45.0 37.6,45.0'/%3E%3Cline x1='38.2' y1='22' x2='45.8' y2='42' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='-6.4,51.0 12.4,51.0 2.4,77.0 -16.4,77.0'/%3E%3Cline x1='1.8' y1='54' x2='-5.8' y2='74' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='15.6,51.0 34.4,51.0 24.4,77.0 5.6,77.0'/%3E%3Cline x1='23.8' y1='54' x2='16.2' y2='74' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='37.6,51.0 56.4,51.0 46.4,77.0 27.6,77.0'/%3E%3Cline x1='45.8' y1='54' x2='38.2' y2='74' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='-20.0,81.0 -2.0,81.0 -6.0,96.0 -24.0,96.0'/%3E%3Cline x1='-11.5' y1='83' x2='-14.5' y2='94' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='2.0,81.0 20.0,81.0 16.0,96.0 -2.0,96.0'/%3E%3Cline x1='10.5' y1='83' x2='7.5' y2='94' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='24.0,81.0 42.0,81.0 38.0,96.0 20.0,96.0'/%3E%3Cline x1='32.5' y1='83' x2='29.5' y2='94' stroke='%23fff' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E"); }
+  .card h2 .ik { display:inline-block; width:15px; height:15px; vertical-align:-2px; margin-right:6px; }
+  .skupina .palec { display:inline-flex; align-items:center; gap:6px; padding:3px 10px 3px 4px; border-radius:999px;
+    background:var(--blue-light); color:var(--navy); }
+  .skupina .palec svg { width:16px; height:16px; }
+
+
+  /* Lišta s logem a menu jen na této stránce: modrý přechod a otisk pneumatiky vpravo.
+     Říjen–březen zimní (směrový) dezén, duben–září letní (asymetrický) – třídu nastaví skript níže.
+     Dezén je vektor přímo v kódu, nic se nestahuje. */
+  body .mtm-bar { background: linear-gradient(135deg, #fff 0%, #fff 40%, #dbeafe 100%); border-bottom-color: #bfdbfe; overflow: hidden; }
+  body .mtm-bar > * { position: relative; z-index: 1; }
+  body .mtm-bar::before { content: ""; position: absolute; z-index: 0; width: 420px; height: 96px; right: -175px; top: 6px;
+    transform: rotate(-24deg); opacity: 0.16; pointer-events: none; background-repeat: repeat-x;
+    -webkit-mask: linear-gradient(90deg, transparent, #000 25%, #000 80%, transparent); mask: linear-gradient(90deg, transparent, #000 25%, #000 80%, transparent); }
+  .sezona-leto .mtm-bar::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='96' viewBox='0 0 24 96'%3E%3Cg fill='%2317496e'%3E%3Cpolygon points='-19.8,0.0 -0.2,0.0 2.8,18.0 -16.8,18.0'/%3E%3Cline x1='-9.5' y1='3' x2='-7.5' y2='15' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='4.2,0.0 23.8,0.0 26.8,18.0 7.2,18.0'/%3E%3Cline x1='14.5' y1='3' x2='16.5' y2='15' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='28.2,0.0 47.8,0.0 50.8,18.0 31.2,18.0'/%3E%3Cline x1='38.5' y1='3' x2='40.5' y2='15' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='0.0,24.0 6.0,24.0 10.0,34.0 12.2,34.0 8.2,24.0 24.0,24.0 24.0,40.0 0.0,40.0'/%3E%3Cpolygon points='0.0,46.0 24.0,46.0 24.0,58.0 17.2,58.0 20.2,50.0 18.0,50.0 15.0,58.0 0.0,58.0'/%3E%3Cpolygon points='0.0,64.0 9.0,64.0 13.0,73.0 15.2,73.0 11.2,64.0 24.0,64.0 24.0,78.0 0.0,78.0'/%3E%3Cpolygon points='-16.8,84.0 2.8,84.0 0.8,96.0 -18.8,96.0'/%3E%3Cline x1='-7.3' y1='86' x2='-8.7' y2='94' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='7.2,84.0 26.8,84.0 24.8,96.0 5.2,96.0'/%3E%3Cline x1='16.7' y1='86' x2='15.3' y2='94' stroke='%23fff' stroke-width='1.1'/%3E%3Cpolygon points='31.2,84.0 50.8,84.0 48.8,96.0 29.2,96.0'/%3E%3Cline x1='40.7' y1='86' x2='39.3' y2='94' stroke='%23fff' stroke-width='1.1'/%3E%3C/g%3E%3C/svg%3E"); background-size: 24px 96px; }
+  .sezona-zima .mtm-bar::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='96' viewBox='0 0 22 96'%3E%3Cg fill='%2317496e'%3E%3Cpolygon points='-20.0,0.0 -2.0,0.0 2.0,15.0 -16.0,15.0'/%3E%3Cline x1='-10.5' y1='2' x2='-7.5' y2='13' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='2.0,0.0 20.0,0.0 24.0,15.0 6.0,15.0'/%3E%3Cline x1='11.5' y1='2' x2='14.5' y2='13' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='24.0,0.0 42.0,0.0 46.0,15.0 28.0,15.0'/%3E%3Cline x1='33.5' y1='2' x2='36.5' y2='13' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='-16.4,19.0 2.4,19.0 12.4,45.0 -6.4,45.0'/%3E%3Cline x1='-5.8' y1='22' x2='1.8' y2='42' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='5.6,19.0 24.4,19.0 34.4,45.0 15.6,45.0'/%3E%3Cline x1='16.2' y1='22' x2='23.8' y2='42' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='27.6,19.0 46.4,19.0 56.4,45.0 37.6,45.0'/%3E%3Cline x1='38.2' y1='22' x2='45.8' y2='42' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='-6.4,51.0 12.4,51.0 2.4,77.0 -16.4,77.0'/%3E%3Cline x1='1.8' y1='54' x2='-5.8' y2='74' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='15.6,51.0 34.4,51.0 24.4,77.0 5.6,77.0'/%3E%3Cline x1='23.8' y1='54' x2='16.2' y2='74' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='37.6,51.0 56.4,51.0 46.4,77.0 27.6,77.0'/%3E%3Cline x1='45.8' y1='54' x2='38.2' y2='74' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='-20.0,81.0 -2.0,81.0 -6.0,96.0 -24.0,96.0'/%3E%3Cline x1='-11.5' y1='83' x2='-14.5' y2='94' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='2.0,81.0 20.0,81.0 16.0,96.0 -2.0,96.0'/%3E%3Cline x1='10.5' y1='83' x2='7.5' y2='94' stroke='%23fff' stroke-width='1.2'/%3E%3Cpolygon points='24.0,81.0 42.0,81.0 38.0,96.0 20.0,96.0'/%3E%3Cline x1='32.5' y1='83' x2='29.5' y2='94' stroke='%23fff' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E"); background-size: 22px 96px; }
   .hero h1 { font-size:24px; font-weight:700; line-height:1.25; margin-bottom:8px; }
   .hero p { font-size:14px; color:var(--text-muted); line-height:1.6; }
 
@@ -71,7 +96,7 @@
   .auto-hlava { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
   .auto-nazev { font-size:21px; font-weight:700; line-height:1.2; }
   .auto-sub { font-size:13px; color:var(--text-muted); margin-top:4px; }
-  .auto-vin { font-size:12px; letter-spacing:.06em; color:var(--text-muted); margin-top:6px; font-variant-numeric:tabular-nums; }
+  .auto-vin { overflow-wrap:anywhere; font-size:12px; letter-spacing:.06em; color:var(--text-muted); margin-top:6px; font-variant-numeric:tabular-nums; }
   .stitek { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.03em; white-space:nowrap; }
   .st-modra { background:var(--blue-light); color:var(--blue-dark); }
   .st-zelena { background:var(--green-light); color:var(--green); }
@@ -111,21 +136,20 @@
   .prezuti .t2 { font-size:12.5px; opacity:.85; margin-top:2px; }
   .prezuti .sipka { font-size:22px; font-weight:700; }
 
-  .stk { display:none; margin-top:10px; padding:16px 18px; border-radius:14px; border:2px solid #fbbf24; background:var(--amber-light); }
-  .stk.klid { padding:12px 14px; border:1px solid var(--border); background:#f8fafc; }
+  .stk { display:none; margin-top:14px; padding:16px 18px; border-radius:14px; border:2px solid var(--blue-mid); background:var(--blue-light); }
+  .stk.klid { padding:10px 14px; border:1px solid var(--border); background:#f8fafc; }
   .stk.klid .t1 { color:var(--text-muted); }
   .stk.klid .t2 { font-size:17px; }
   .stk.klid .t3 { display:none; }
   .stk.vidno { display:block; }
-  .stk.propadla { border-color:#f87171; background:var(--red-light); }
-  .stk .t1 { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--amber); }
+  .stk.propadla { border-color:#fecaca; background:var(--red-light); }
+  .stk .t1 { font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--blue-dark); }
   .stk.propadla .t1 { color:var(--red); }
-  .stk .t2 { font-size:22px; font-weight:700; margin-top:4px; }
+  .stk .t2 { font-size:22px; font-weight:700; margin-top:4px; color:var(--navy); }
   .stk .t3 { font-size:14px; color:#475569; margin-top:4px; line-height:1.5; }
 
-  .stk-btn { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:12px; background:var(--amber);
+  .stk-btn { display:block; width:100%; margin-top:12px; padding:12px; border:none; border-radius:12px; background:var(--navy);
     color:#fff; font:700 15px 'Inter',sans-serif; cursor:pointer; }
-  .stk.propadla .stk-btn { background:var(--red); }
   .stk.klid .stk-btn, .stk.klid .stk-info { display:none; }
   .stk-info { display:none; margin-top:12px; padding:14px; background:#fff; border:1px solid var(--border); border-radius:12px; }
   .stk-info.vidno { display:block; }
@@ -141,7 +165,7 @@
   .stk-kontakt a:first-child { background:var(--blue); border-color:var(--blue); color:#fff; }
   .stk-kontakt svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
-  .auto-logo { height:44px; width:auto; max-width:90px; object-fit:contain; flex-shrink:0; }
+  .auto-logo { height:36px; width:auto; max-width:60px; object-fit:contain; flex-shrink:0; }
 
   table.data { width:100%; border-collapse:collapse; }
   table.data th, table.data td { text-align:left; padding:8px 0; font-size:14px; border-bottom:1px solid #f1f5f9; vertical-align:top; }
@@ -161,6 +185,7 @@
   .obsah a { color:var(--blue-dark); font-weight:600; }
   .footer { text-align:center; padding:20px; font-size:12px; color:var(--text-muted); }
 </style>
+<script>(function(){ var m = new Date().getMonth(); document.documentElement.classList.add(m >= 9 || m <= 2 ? 'sezona-zima' : 'sezona-leto'); })();</script>
 <script src="souhlas.js"></script>
 <script type="application/ld+json">
 {
@@ -184,11 +209,23 @@
 
 <main class="container">
   <div class="hero">
-    <h1>Pneu a kola podle VIN</h1>
+    <svg class="hero-kolo" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="30" fill="#17496e"/>
+      <circle cx="32" cy="32" r="30" fill="none" stroke="#0f3350" stroke-width="4" stroke-dasharray="3 3"/>
+      <circle cx="32" cy="32" r="19" fill="#e2e8f0"/>
+      <circle cx="32" cy="32" r="19" fill="none" stroke="#bfdbfe" stroke-width="2"/>
+      <g stroke="#94a3b8" stroke-width="3.2" stroke-linecap="round">
+        <line x1="32" y1="18" x2="32" y2="27"/><line x1="45.3" y1="27.7" x2="36.8" y2="30.4"/>
+        <line x1="40.2" y1="43.3" x2="34.9" y2="36"/><line x1="23.8" y1="43.3" x2="29.1" y2="36"/>
+        <line x1="18.7" y1="27.7" x2="27.2" y2="30.4"/>
+      </g>
+      <circle cx="32" cy="32" r="5" fill="#7cb94a"/>
+    </svg>
+    <h1>Pneu a kola <span>podle VIN</span></h1>
     <p>Zjistěte, jaké pneumatiky a ráfky má vaše auto zapsané v technickém průkazu – včetně všech povolených alternativ. Data z registru vozidel ČR, zdarma.</p>
   </div>
 
-  <div class="card">
+  <div class="card dezen">
     <div class="section-title">Zadejte VIN kód vozidla</div>
     <div class="section-sub">VIN najdete na zadní straně malého technického průkazu (kolonka E) nebo za předním sklem u volantu.</div>
     <div class="section-sub">VIN můžete naskenovat pomocí fotoaparátu — stačí vyfotit nebo vybrat z galerie a pole se vyplní automaticky, nebo ho zadejte ručně níže.</div>
@@ -223,32 +260,15 @@
     <div class="card">
       <div class="auto-hlava">
         <img class="auto-logo" id="autoLogo" alt="" style="display:none" onerror="this.style.display='none'">
-        <div style="flex:1">
+        <div style="flex:1;min-width:0">
           <div class="auto-nazev" id="autoNazev"></div>
           <div class="auto-sub" id="autoSub"></div>
           <div class="auto-vin" id="autoVin"></div>
         </div>
         <span class="stitek" id="autoStav"></span>
       </div>
-    </div>
 
-    <div class="card">
-      <h2>Kola a pneumatiky</h2>
-      <div id="kolaZakladni"></div>
-      <div id="kolaAlternativy"></div>
-      <div class="poznamky" id="kolaPoznamky" style="display:none"></div>
-      <details class="zapis" id="kolaZapis">
-        <summary>Zobrazit zápis z technického průkazu</summary>
-        <pre id="kolaZapisText"></pre>
-        <p class="zapis-pozn">Text je převzatý z registru vozidel tak, jak byl zapsán. Registrační značky a čísla dokladů jsou skryté.</p>
-      </details>
-      <a class="prezuti" id="prezutiOdkaz" href="prezuti.html">
-        <span class="logo"><img src="logo.png" alt="M&amp;T Servis" width="83" height="40"></span>
-        <span class="txt"><span class="t1" style="display:block">Objednat přezutí</span><span class="t2" style="display:block">M&amp;T Servis · online rezervace bez volání</span></span>
-        <span class="sipka">›</span>
-      </a>
-
-      <!-- STK: vždy pod přezutím; do 4 měsíců výrazně s nabídkou, jinak jen datum. Objednání STK zatím není — až bude, přidá se sem tlačítko. -->
+      <!-- STK: nahoře v kartě vozu; do 4 měsíců výrazně s nabídkou, jinak jen datum. Objednání STK zatím není — až bude, přidá se sem tlačítko. -->
       <div class="stk" id="stkBox">
         <div class="t1" id="stkNadpis"></div>
         <div class="t2" id="stkDatum"></div>
@@ -271,6 +291,24 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="card dezen">
+      <h2><svg class="ik" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#17496e"/><circle cx="12" cy="12" r="6.5" fill="#e2e8f0"/><circle cx="12" cy="12" r="2.2" fill="#7cb94a"/></svg>Kola a pneumatiky</h2>
+      <div id="kolaZakladni"></div>
+      <div id="kolaAlternativy"></div>
+      <div class="poznamky" id="kolaPoznamky" style="display:none"></div>
+      <details class="zapis" id="kolaZapis">
+        <summary>Zobrazit zápis z technického průkazu</summary>
+        <pre id="kolaZapisText"></pre>
+        <p class="zapis-pozn">Text je převzatý z registru vozidel tak, jak byl zapsán. Registrační značky a čísla dokladů jsou skryté.</p>
+      </details>
+      <a class="prezuti" id="prezutiOdkaz" href="prezuti.html">
+        <span class="logo"><img src="logo.png" alt="M&amp;T Servis" width="83" height="40"></span>
+        <span class="txt"><span class="t1" style="display:block">Objednat přezutí</span><span class="t2" style="display:block">M&amp;T Servis · online rezervace bez volání</span></span>
+        <span class="sipka">›</span>
+      </a>
+
     </div>
 
     <div class="card">
@@ -394,7 +432,7 @@
         (skupiny[d] = skupiny[d] || []).push(a);
       });
       Object.keys(skupiny).sort(function (x, y) { return x - y; }).forEach(function (d) {
-        out += '<p class="skupina">' + esc(d) + '" kola</p>';
+        out += '<p class="skupina"><span class="palec"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="#17496e"/><circle cx="12" cy="12" r="6.5" fill="#e2e8f0"/><circle cx="12" cy="12" r="2.2" fill="#7cb94a"/></svg>' + esc(d) + '" kola</span></p>';
         skupiny[d].forEach(function (a) {
           var osa = a.naprava === 'přední' ? '<span class="stitek st-zluta">jen přední náprava</span>'
                   : a.naprava === 'zadní' ? '<span class="stitek st-zluta">jen zadní náprava</span>' : '';
