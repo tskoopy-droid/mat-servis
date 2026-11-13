@@ -92,6 +92,29 @@
   .cam-option:active { background:#f1f5f9; }
   .cam-option svg { width:24px; height:24px; stroke:var(--blue); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
   .cam-cancel { margin-top:6px; width:100%; padding:14px; border:none; border-radius:14px; background:#f1f5f9; font:600 15px 'Inter',sans-serif; cursor:pointer; color:#64748b; }
+  /* Karta vozu a STK – stejně jako pneu-podle-vin.html */
+  .auto { display:none; margin:12px 0 14px; padding:14px; border:1px solid var(--border); border-radius:14px; background:#f8fafc; }
+  .auto.vidno { display:block; }
+  .auto-hlava { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .auto-logo { height:36px; width:auto; max-width:60px; object-fit:contain; flex-shrink:0; }
+  .auto-nazev { font-size:19px; font-weight:700; line-height:1.2; }
+  .auto-sub { font-size:13px; color:var(--text-muted); margin-top:4px; }
+  .auto-nacitam { font-size:13px; color:var(--text-muted); display:flex; align-items:center; gap:8px; }
+  .auto-nacitam svg { width:16px; height:16px; stroke:var(--blue); fill:none; stroke-width:2.5; animation:vinSpin .8s linear infinite; }
+  .stitek { display:inline-block; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.03em; white-space:nowrap; }
+  .st-zelena { background:var(--green-light); color:var(--green); }
+  .st-cervena { background:var(--red-light); color:var(--red); }
+  .stk { display:none; margin-top:12px; padding:12px 14px; border-radius:12px; border:2px solid var(--blue-mid); background:var(--blue-light); }
+  .stk.vidno { display:block; }
+  .stk.klid { padding:9px 12px; border:1px solid var(--border); background:#fff; }
+  .stk.klid .t1 { color:var(--text-muted); }
+  .stk.klid .t2 { font-size:16px; }
+  .stk.klid .t3 { display:none; }
+  .stk.propadla { border-color:#fecaca; background:var(--red-light); }
+  .stk .t1 { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--blue-dark); }
+  .stk.propadla .t1 { color:var(--red); }
+  .stk .t2 { font-size:20px; font-weight:700; margin-top:3px; color:#17496e; }
+  .stk .t3 { font-size:13.5px; color:#475569; margin-top:4px; line-height:1.5; }
   .past { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
   .odeslat { width:100%; padding:15px; background:var(--blue); border:none; border-radius:14px; color:#fff;
     font:700 16px 'Inter',sans-serif; cursor:pointer; }
@@ -166,6 +189,24 @@
         </button>
         <input id="pVin" name="vin" type="text" maxlength="17" placeholder="např. TMBJJ7NE8J0123456" autocomplete="off" autocorrect="off" spellcheck="false" required>
         <div class="napoveda">Vyfoťte technický průkaz (kolonka E) nebo štítek za předním sklem – VIN se vyplní sám. Nebo ho napište ručně (17 znaků).</div>
+        <div class="auto" id="auto" aria-live="polite">
+          <div class="auto-nacitam" id="autoNacitam"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg> Načítám vozidlo z registru…</div>
+          <div id="autoObsah" style="display:none">
+            <div class="auto-hlava">
+              <img class="auto-logo" id="autoLogo" alt="" style="display:none" onerror="this.style.display='none'">
+              <div style="flex:1;min-width:0">
+                <div class="auto-nazev" id="autoNazev"></div>
+                <div class="auto-sub" id="autoSub"></div>
+              </div>
+              <span class="stitek" id="autoStav"></span>
+            </div>
+            <div class="stk" id="stkBox">
+              <div class="t1" id="stkNadpis"></div>
+              <div class="t2" id="stkDatum"></div>
+              <div class="t3" id="stkText"></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="field">
         <label for="pEmail">E-mail</label>
@@ -225,6 +266,86 @@
 
   function ukazChybu(text) { chyba.textContent = text; chyba.classList.add('vidno'); try { chyba.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
   function mer(nazev) { try { if (typeof gtag === 'function') gtag('event', nazev, { sluzba: 'autoservis' }); } catch (e) {} }
+
+  // ── Vozidlo z registru a STK (stejně jako pneu-podle-vin.html: GAS akce vozidlo) ──
+  var LOGA_VOZU = [
+    [/SKODA|ŠKODA/, 'logoskoda.png'], [/VOLKSWAGEN|^VW$/, 'logovw.png'], [/SEAT/, 'logoseat.png'],
+    [/AUDI/, 'logoaudi.png'], [/PEUGEOT/, 'logopeugeot.png'], [/CITRO/, 'logocitroen.png'],
+    [/OPEL|VAUXHALL/, 'logoopel.png'], [/RENAULT/, 'logorenault.png'], [/DACIA/, 'logodacia.png'],
+    [/^MG\b|MORRIS GARAGES/, 'logomg.png'], [/FIAT/, 'logofiat.png'], [/\bKIA\b/, 'logokia.png'],
+    [/HYUNDAI/, 'logohyundai.png'], [/FORD/, 'logoford.png'], [/TOYOTA/, 'logotoyota.png'],
+    [/\bBMW\b/, 'logobmw.png']
+  ];
+  var STK_PRED_DNY = 122;
+  var nactenyVin = '', nacitanyVin = '';
+
+  function cislo(n, jednotka) {
+    var t = String(n).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0');
+    return jednotka ? t + '\u00a0' + jednotka : t;
+  }
+  function nastavLogo(znacka) {
+    var img = $('autoLogo'), t = String(znacka || '').toUpperCase().trim(), soubor = null;
+    for (var i = 0; i < LOGA_VOZU.length; i++) if (LOGA_VOZU[i][0].test(t)) { soubor = LOGA_VOZU[i][1]; break; }
+    if (!soubor) { img.style.display = 'none'; img.removeAttribute('src'); return; }
+    img.src = soubor; img.alt = znacka; img.style.display = '';
+  }
+  function nastavStk(d) {
+    var box = $('stkBox');
+    box.className = 'stk';
+    if (!d.stkDoIso) return;
+    var dny = Math.ceil((new Date(d.stkDoIso + 'T23:59:59') - new Date()) / 86400000);
+    if (dny > STK_PRED_DNY) {
+      box.classList.add('klid');
+      $('stkNadpis').textContent = 'STK platná do';
+      $('stkText').textContent = '';
+    } else if (dny < 0) {
+      box.classList.add('propadla');
+      $('stkNadpis').textContent = 'STK propadlá';
+      $('stkText').textContent = 'Platnost technické prohlídky skončila před ' + (-dny) + ' dny. Chcete auto připravit na STK? Napište to do poptávky.';
+    } else {
+      $('stkNadpis').textContent = 'Blíží se STK';
+      $('stkText').textContent = (dny === 0 ? 'Platnost technické prohlídky končí dnes.'
+        : 'Platnost technické prohlídky končí za ' + dny + ' ' + (dny === 1 ? 'den' : dny < 5 ? 'dny' : 'dní') + '.')
+        + ' Chcete auto připravit na STK? Napište to do poptávky.';
+    }
+    $('stkDatum').textContent = d.stkDo;
+    box.classList.add('vidno');
+  }
+  function skryjAuto() { $('auto').classList.remove('vidno'); nactenyVin = ''; }
+
+  function nactiVozidlo(vin) {
+    if (vin === nactenyVin || vin === nacitanyVin) return;
+    nacitanyVin = vin;
+    $('auto').classList.add('vidno');
+    $('autoNacitam').style.display = '';
+    $('autoObsah').style.display = 'none';
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var casovac = setTimeout(function () { if (ctrl) ctrl.abort(); }, LIMIT_MS);
+    fetch(GAS_URL + '?action=vozidlo&vin=' + encodeURIComponent(vin), { redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        clearTimeout(casovac);
+        if (nacitanyVin !== vin || $('pVin').value !== vin) return;   // mezitím jiný VIN
+        nacitanyVin = '';
+        // Vůz se nenašel: poptávku to neblokuje, jen se karta skryje.
+        if (!d || d.error) { skryjAuto(); mer('autoservis_vin_nenalezen'); return; }
+        nactenyVin = vin;
+        $('autoNazev').textContent = ((d.znacka || '') + ' ' + (d.model || '')).trim() || 'Vozidlo';
+        var m = d.motor || {};
+        var rok = d.registrace && d.registrace.prvni ? String(d.registrace.prvni).slice(-4) : '';
+        $('autoSub').textContent = [rok, m.objem ? cislo(m.objem, 'cm³') : '', m.vykonKw ? cislo(m.vykonKw, 'kW') : '', m.palivo, m.kod].filter(Boolean).join(' · ');
+        var stav = $('autoStav'), provoz = /PROVOZ/.test(d.stav || '');
+        stav.textContent = provoz ? 'v provozu' : String(d.stav || '').toLowerCase();
+        stav.className = 'stitek ' + (provoz ? 'st-zelena' : 'st-cervena');
+        stav.style.display = d.stav ? '' : 'none';
+        nastavLogo(d.znacka);
+        nastavStk(d);
+        $('autoNacitam').style.display = 'none';
+        $('autoObsah').style.display = '';
+        mer('autoservis_vin_nalezen');
+      })
+      .catch(function () { clearTimeout(casovac); if (nacitanyVin === vin) { nacitanyVin = ''; skryjAuto(); } });
+  }
 
   // ── Vyfocení VIN (stejně jako pneu-podle-vin.html: GAS akce vin_ocr → Google Vision) ──
   var FOTO_MAX_PX = 1600;
@@ -290,7 +411,7 @@
           var text = '';
           try { text = data.responses[0].fullTextAnnotation.text || ''; } catch (e) {}
           var vin = najdiVin(text);
-          if (vin) { mer('autoservis_vin_sken_ok'); $('pVin').value = vin.toUpperCase(); $('pEmail').focus(); }
+          if (vin) { mer('autoservis_vin_sken_ok'); $('pVin').value = vin.toUpperCase(); nactiVozidlo($('pVin').value); $('pEmail').focus(); }
           else { mer('autoservis_vin_sken_neuspech'); ukazChybu('VIN nebyl na fotografii nalezen. Zkuste znovu s ostřejším záběrem, nebo ho napište ručně.'); }
         });
     }).catch(function () {
@@ -303,6 +424,8 @@
   $('pVin').addEventListener('input', function () {
     var v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (v !== this.value) this.value = v;
+    if (/^[A-HJ-NPR-Z0-9]{17}$/.test(v)) nactiVozidlo(v);
+    else if (nactenyVin || nacitanyVin) { nacitanyVin = ''; skryjAuto(); }
   });
 
   form.addEventListener('submit', function (e) {
