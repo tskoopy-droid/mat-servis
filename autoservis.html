@@ -76,6 +76,22 @@
   .field input::placeholder, .field textarea::placeholder { color:#cbd5e1; font-weight:400; }
   #pVin { text-transform:uppercase; letter-spacing:.06em; font-weight:600; }
   .napoveda { font-size:12px; color:var(--text-muted); margin-top:5px; line-height:1.45; }
+  @keyframes vinSpin { to { transform:rotate(360deg); } }
+  .vin-cam-btn { width:100%; margin:0 0 10px; padding:13px 18px; background:var(--blue-light); border:2px solid var(--blue-mid);
+    border-radius:12px; color:var(--blue); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+    font:700 15px 'Inter',sans-serif; }
+  .vin-cam-btn:active { background:var(--blue-mid); }
+  .vin-cam-btn:disabled { opacity:.7; cursor:wait; }
+  .vin-cam-btn svg { width:20px; height:20px; stroke:var(--blue); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .cam-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:flex-end; justify-content:center; }
+  .cam-modal-overlay.open { display:flex; }
+  .cam-modal { background:#fff; border-radius:20px 20px 0 0; padding:24px 20px 32px; width:100%; max-width:480px; }
+  .cam-modal-title { font-size:16px; font-weight:700; margin-bottom:16px; text-align:center; }
+  .cam-option { display:flex; align-items:center; gap:14px; padding:16px; border-radius:14px; border:2px solid var(--border); margin-bottom:10px;
+    cursor:pointer; font:600 15px 'Inter',sans-serif; color:var(--text); background:#fff; width:100%; }
+  .cam-option:active { background:#f1f5f9; }
+  .cam-option svg { width:24px; height:24px; stroke:var(--blue); fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex-shrink:0; }
+  .cam-cancel { margin-top:6px; width:100%; padding:14px; border:none; border-radius:14px; background:#f1f5f9; font:600 15px 'Inter',sans-serif; cursor:pointer; color:#64748b; }
   .past { position:absolute; left:-9999px; width:1px; height:1px; overflow:hidden; }
   .odeslat { width:100%; padding:15px; background:var(--blue); border:none; border-radius:14px; color:#fff;
     font:700 16px 'Inter',sans-serif; cursor:pointer; }
@@ -90,11 +106,12 @@
   .footer { text-align:center; padding:20px; font-size:12px; color:var(--text-muted); }
   .footer a { color:#1877f2; font-weight:600; text-decoration:none; }
 
-  /* Lišta s logem stejně jako na úvodu: modrý přechod a jemný vzor matic zprava. */
+  /* Lišta s logem jen na této stránce: modrý přechod a jemný vzor nářadí zprava
+     (klíče, šroubováky, matice). Vzor je vektor přímo v kódu, nic se nestahuje. */
   body .mtm-bar { background: linear-gradient(135deg, #fff 0%, #fff 40%, #dbeafe 100%); border-bottom-color: #bfdbfe; overflow: hidden; }
   body .mtm-bar > * { position: relative; z-index: 1; }
-  body .mtm-bar::before { content: ""; position: absolute; z-index: 0; inset: 0; opacity: 0.13; pointer-events: none;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='42' viewBox='0 0 48 42'%3E%3Cg fill='none' stroke='%2317496e' stroke-width='2'%3E%3Cpath d='M19.8 15.0 L12.0 19.5 L4.2 15.0 L4.2 6.0 L12.0 1.5 L19.8 6.0 Z'/%3E%3Ccircle cx='12' cy='10.5' r='4'/%3E%3Cpath d='M43.8 36.0 L36.0 40.5 L28.2 36.0 L28.2 27.0 L36.0 22.5 L43.8 27.0 Z'/%3E%3Ccircle cx='36' cy='31.5' r='4'/%3E%3C/g%3E%3C/svg%3E") 0 0/32px 28px;
+  body .mtm-bar::before { content: ""; position: absolute; z-index: 0; inset: 0; opacity: 0.16; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20width%3D%2772%27%20height%3D%2748%27%20viewBox%3D%270%200%2072%2048%27%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%2317496e%27%20stroke-width%3D%271.6%27%20stroke-linejoin%3D%27round%27%3E%3Cg%20transform%3D%27translate(10%2010)%20rotate(30)%20scale(0.85)%27%3E%3Cpath%20d%3D%27M-3.2%20-7%20A6%206%200%201%200%203.2%20-7%20L1.6%20-4%20L-1.6%20-4%20Z%27%2F%3E%3Cpath%20d%3D%27M-1.6%20-1.6%20L-1.6%209%20M1.6%20-1.6%20L1.6%209%27%2F%3E%3Ccircle%20cx%3D%270%27%20cy%3D%2712.5%27%20r%3D%273.6%27%2F%3E%3Ccircle%20cx%3D%270%27%20cy%3D%2712.5%27%20r%3D%271.4%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate(34%2014)%20rotate(-35)%27%3E%3Crect%20x%3D%27-2.2%27%20y%3D%272%27%20width%3D%274.4%27%20height%3D%279%27%20rx%3D%271.6%27%2F%3E%3Cpath%20d%3D%27M0%202%20L0%20-10%20M-1%20-10%20L1%20-10%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate(58%2012)%27%3E%3Cpath%20d%3D%27M7%200%20L3.5%206.1%20L-3.5%206.1%20L-7%200%20L-3.5%20-6.1%20L3.5%20-6.1%20Z%27%2F%3E%3Ccircle%20r%3D%272.8%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate(14%2038)%27%3E%3Cpath%20d%3D%27M7%200%20L3.5%206.1%20L-3.5%206.1%20L-7%200%20L-3.5%20-6.1%20L3.5%20-6.1%20Z%27%2F%3E%3Ccircle%20r%3D%272.8%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate(46%2034)%20rotate(-25)%20scale(0.85)%27%3E%3Cpath%20d%3D%27M-3.2%20-7%20A6%206%200%201%200%203.2%20-7%20L1.6%20-4%20L-1.6%20-4%20Z%27%2F%3E%3Cpath%20d%3D%27M-1.6%20-1.6%20L-1.6%209%20M1.6%20-1.6%20L1.6%209%27%2F%3E%3Ccircle%20cx%3D%270%27%20cy%3D%2712.5%27%20r%3D%273.6%27%2F%3E%3Ccircle%20cx%3D%270%27%20cy%3D%2712.5%27%20r%3D%271.4%27%2F%3E%3C%2Fg%3E%3Cg%20transform%3D%27translate(66%2038)%20rotate(40)%27%3E%3Crect%20x%3D%27-2.2%27%20y%3D%272%27%20width%3D%274.4%27%20height%3D%279%27%20rx%3D%271.6%27%2F%3E%3Cpath%20d%3D%27M0%202%20L0%20-10%20M-1%20-10%20L1%20-10%27%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E") 0 0/54px 36px;
     -webkit-mask: linear-gradient(110deg, transparent 35%, #000 80%); mask: linear-gradient(110deg, transparent 35%, #000 80%); }
 </style>
 <script src="souhlas.js"></script>
@@ -144,8 +161,11 @@
     <form id="poptavkaForm" novalidate>
       <div class="field">
         <label for="pVin">VIN vozidla</label>
+        <button type="button" class="vin-cam-btn" id="camBtn">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Vyfotit VIN
+        </button>
         <input id="pVin" name="vin" type="text" maxlength="17" placeholder="např. TMBJJ7NE8J0123456" autocomplete="off" autocorrect="off" spellcheck="false" required>
-        <div class="napoveda">17 znaků – v malém technickém průkazu (kolonka E) nebo za předním sklem u volantu.</div>
+        <div class="napoveda">Vyfoťte technický průkaz (kolonka E) nebo štítek za předním sklem – VIN se vyplní sám. Nebo ho napište ručně (17 znaků).</div>
       </div>
       <div class="field">
         <label for="pEmail">E-mail</label>
@@ -163,6 +183,20 @@
       <button id="pOdeslat" class="odeslat" type="submit">Odeslat k nacenění</button>
       <div class="chyba" id="pChyba" role="alert"></div>
     </form>
+    <div class="cam-modal-overlay" id="camModal">
+      <div class="cam-modal">
+        <div class="cam-modal-title">Vyfotit VIN</div>
+        <button type="button" class="cam-option" id="camFoto">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Fotoaparát
+        </button>
+        <button type="button" class="cam-option" id="camGalerie">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Galerie
+        </button>
+        <button type="button" class="cam-cancel" id="camZrusit">Zrušit</button>
+      </div>
+    </div>
+    <input type="file" id="inputFotoaparat" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="inputGalerie" accept="image/*" style="display:none">
     <div class="hotovo" id="pHotovo" role="status">✓ Poptávka odeslána.<span>Cenu pošleme obvykle do týdne. Potvrzení jsme vám poslali e-mailem.</span></div>
   </section>
 </main>
@@ -189,8 +223,82 @@
   var $ = function (id) { return document.getElementById(id); };
   var form = $('poptavkaForm'), btn = $('pOdeslat'), chyba = $('pChyba');
 
-  function ukazChybu(text) { chyba.textContent = text; chyba.classList.add('vidno'); }
+  function ukazChybu(text) { chyba.textContent = text; chyba.classList.add('vidno'); try { chyba.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {} }
   function mer(nazev) { try { if (typeof gtag === 'function') gtag('event', nazev, { sluzba: 'autoservis' }); } catch (e) {} }
+
+  // ── Vyfocení VIN (stejně jako pneu-podle-vin.html: GAS akce vin_ocr → Google Vision) ──
+  var FOTO_MAX_PX = 1600;
+  var camBtn = $('camBtn'), camModal = $('camModal');
+  var SVG_CAM = '<svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>';
+  var SVG_SPIN = '<svg viewBox="0 0 24 24" style="animation:vinSpin .8s linear infinite;stroke-width:2.5"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>';
+
+  camBtn.addEventListener('click', function () {
+    if (!navigator.maxTouchPoints) $('inputGalerie').click();
+    else camModal.classList.add('open');
+  });
+  camModal.addEventListener('click', function (e) { if (e.target === camModal) camModal.classList.remove('open'); });
+  $('camZrusit').addEventListener('click', function () { camModal.classList.remove('open'); });
+  $('camFoto').addEventListener('click', function () { camModal.classList.remove('open'); $('inputFotoaparat').click(); });
+  $('camGalerie').addEventListener('click', function () { camModal.classList.remove('open'); $('inputGalerie').click(); });
+  $('inputFotoaparat').addEventListener('change', function () { zpracujFotku(this); });
+  $('inputGalerie').addEventListener('change', function () { zpracujFotku(this); });
+
+  function zmensiFotku(soubor) {
+    return new Promise(function (hotovo) {
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var k = Math.min(1, FOTO_MAX_PX / Math.max(img.naturalWidth, img.naturalHeight));
+          if (k === 1) { hotovo(ev.target.result.split(',')[1]); return; }
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          hotovo(c.toDataURL('image/jpeg', 0.92).split(',')[1]);
+        };
+        img.onerror = function () { hotovo(ev.target.result.split(',')[1]); };   // HEIC apod. beze změny
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(soubor);
+    });
+  }
+
+  function najdiVin(text) {
+    var m = text.match(/VIN\)[^\w]*([A-HJ-NPR-Z0-9]{17})/i) || text.match(/\bE[.:]\s*([A-HJ-NPR-Z0-9]{17})/i);
+    if (m) return m[1];
+    var kandidati = (text.replace(/\s/g, '').replace(/[IOQ]/g, '').match(/[A-HJ-NPR-Z0-9]{17}/g) || [])
+      .filter(function (k) { return (k.match(/[0-9]/g) || []).length >= 4; });
+    kandidati.sort(function (a, b) { return (b.match(/[0-9]/g) || []).length - (a.match(/[0-9]/g) || []).length; });
+    return kandidati[0] || null;
+  }
+
+  function zpracujFotku(vstup) {
+    if (!vstup.files || !vstup.files[0]) return;
+    chyba.classList.remove('vidno');
+    camBtn.innerHTML = SVG_SPIN + ' Rozpoznávám…';
+    camBtn.disabled = true;
+    function konec() { camBtn.innerHTML = SVG_CAM + ' Vyfotit VIN'; camBtn.disabled = false; vstup.value = ''; }
+    zmensiFotku(vstup.files[0]).then(function (base64) {
+      return fetch(GAS_URL, { method: 'POST', redirect: 'follow', body: JSON.stringify({ akce: 'vin_ocr', obrazek: base64 }) })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          konec();
+          if (data && data.error) {
+            mer('autoservis_vin_sken_neuspech');
+            return ukazChybu((data.error.message || 'Rozpoznání se nepodařilo.') + ' VIN můžete zadat ručně.');
+          }
+          var text = '';
+          try { text = data.responses[0].fullTextAnnotation.text || ''; } catch (e) {}
+          var vin = najdiVin(text);
+          if (vin) { mer('autoservis_vin_sken_ok'); $('pVin').value = vin.toUpperCase(); $('pEmail').focus(); }
+          else { mer('autoservis_vin_sken_neuspech'); ukazChybu('VIN nebyl na fotografii nalezen. Zkuste znovu s ostřejším záběrem, nebo ho napište ručně.'); }
+        });
+    }).catch(function () {
+      konec();
+      mer('autoservis_vin_sken_neuspech');
+      ukazChybu('Chyba při rozpoznávání textu. Zkuste to znovu, nebo VIN napište ručně.');
+    });
+  }
 
   $('pVin').addEventListener('input', function () {
     var v = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
