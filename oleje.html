@@ -390,7 +390,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
       <div id="loadingText" style="font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:10px;display:none;">Castrol</div>
       <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
     </div>
-    <div class="kategorie-item" id="katStandard" onclick="vyberKategorii('standard')" style="display:none;">
+    <div class="kategorie-item" id="katStandard" role="button" tabindex="0" onclick="vyberKategorii('standard')" style="display:none;">
       <div class="kategorie-header">
         <div class="kategorie-check" id="chkKatStandard"></div>
         <div class="kategorie-nazev">Standard <span class="doporucujeme-badge">Doporučujeme</span></div>
@@ -398,7 +398,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
       </div>
       <div class="kategorie-popis">Nejlepší péče pro maximální životnost motoru a turbodmychadla. Častější výměna brání usazování nečistot a udržuje motor v kondici jako u nového vozu.</div>
     </div>
-    <div class="kategorie-item" id="katLL" onclick="vyberKategorii('ll')" style="display:none;">
+    <div class="kategorie-item" id="katLL" role="button" tabindex="0" onclick="vyberKategorii('ll')" style="display:none;">
       <div class="kategorie-header">
         <div class="kategorie-check" id="chkKatLL"></div>
         <div class="kategorie-nazev">Long Life</div>
@@ -459,7 +459,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
       <div class="section-title">Vzduchový filtr <span class="volitelne-stitek">Volitelné</span></div>
     </div>
     <div class="sekce-popis">Průchodný filtr znamená nižší spotřebu a plný výkon motoru. Výměnou každých 30 000 km zajistíte, že motor nebude zbytečně namáhán kvůli nedostatku vzduchu.</div>
-    <div class="sluzba-item" id="slVzduch" onclick="vyberSluzbu('vzduch', true)">
+    <div class="sluzba-item" id="slVzduch" role="button" tabindex="0" onclick="vyberSluzbu('vzduch', true)">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkVzduch"></div>
         <div class="sluzba-hlavni" id="nazevVzduch"><span class="sluzba-name">Vzduchový filtr</span></div>
@@ -469,7 +469,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
         <span class="sluzba-cena" id="cenaVzduch">—</span>
       </div>
     </div>
-    <div class="sluzba-item" id="slVzduchNe" style="margin-top:10px;" onclick="vyberSluzbu('vzduch', false)">
+    <div class="sluzba-item" id="slVzduchNe" role="button" tabindex="0" style="margin-top:10px;" onclick="vyberSluzbu('vzduch', false)">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkVzduchNe"></div>
         <div class="sluzba-hlavni"><span class="sluzba-name">Bez vzduchového filtru</span></div>
@@ -498,7 +498,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
       <div class="section-title">Palivový filtr <span class="volitelne-stitek">Volitelné</span></div>
     </div>
     <div class="sekce-popis">Klíčová ochrana pro citlivé a drahé vstřikovače před nečistotami v naftě. Výměna v rozmezí 30 000–60 000 km je nejlevnější pojistkou proti náhlým poruchám palivového systému a špatným startům.</div>
-    <div class="sluzba-item" id="slPalivo" onclick="vyberSluzbu('palivo', true)">
+    <div class="sluzba-item" id="slPalivo" role="button" tabindex="0" onclick="vyberSluzbu('palivo', true)">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkPalivo"></div>
         <div class="sluzba-hlavni" id="nazevPalivo"><span class="sluzba-name">Palivový filtr</span></div>
@@ -508,7 +508,7 @@ window.GAS_NACTENO.then(odesliMereniOleje);
         <span class="sluzba-cena" id="cenaPalivo">—</span>
       </div>
     </div>
-    <div class="sluzba-item" id="slPalivoNe" style="margin-top:10px;" onclick="vyberSluzbu('palivo', false)">
+    <div class="sluzba-item" id="slPalivoNe" role="button" tabindex="0" style="margin-top:10px;" onclick="vyberSluzbu('palivo', false)">
       <div class="sluzba-left">
         <div class="sluzba-check" id="chkPalivoNe"></div>
         <div class="sluzba-hlavni"><span class="sluzba-name">Bez palivového filtru</span></div>
@@ -1039,7 +1039,7 @@ function dlazdiceKabiny(index, nazev, cena, vybrano, znacka, odrazky) {
       '</ul></div>';
   }
   return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
-         'style="margin-bottom:10px;" onclick="vyberKabinu(' + index + ')">' +
+         'style="margin-bottom:10px;" role="button" tabindex="0" onclick="vyberKabinu(' + index + ')">' +
          '<div class="sluzba-left">' +
          '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
          '<div class="sluzba-hlavni">' +
@@ -1697,7 +1697,7 @@ function renderCalendar() {
       var y = den.getFullYear(), m = den.getMonth(), d2 = den.getDate();
       var ds = fmtD(y, m, d2); var avail = isAvailable(y, m, d2); var sel = ds === calState.selDate;
       var cls = 'cal-day' + (avail ? ' available' : ' unavailable') + (sel ? ' selected' : '');
-      var oc = avail ? ' onclick="selectCalDate(\'' + ds + '\')"' : '';
+      var oc = avail ? ' onclick="selectCalDate(\'' + ds + '\')" role="button" tabindex="0" aria-label="' + fmtDateCZ(ds) + ' – volný den' + (sel ? ', vybráno' : '') + '"' : '';
       html += '<div class="' + cls + '"' + oc + '>' + d2 + '</div>';
     });
     html += '</div>';
@@ -1728,7 +1728,7 @@ function renderTimeSlots(ds) {
   slots.forEach(function(t) {
     var isB=booked.includes(t); var isSel=t===calState.selTime&&ds===calState.selDate;
     var cls='time-slot'+(isB?' booked':'')+(isSel?' selected':'');
-    var oc=isB?'':' onclick="selectCalTime(\''+t+'\')"';
+    var oc=isB?'':' onclick="selectCalTime(\''+t+'\')" role="button" tabindex="0" aria-label="'+fmtDateCZ(ds)+', '+t+' – volno'+(isSel?', vybráno':'')+'"';
     var label=isB?'<span class="booked-label">OBSAZENO</span>':'';
     html+='<div class="'+cls+'"'+oc+'>'+t+label+'</div>';
   });
