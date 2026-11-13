@@ -745,7 +745,12 @@ function renderCalendar() {
       if (mojeAuto(ds)) cls += " moje";
       if (den.getTime() === dnes.getTime()) cls += " cal-dnes";
       const onclick = volno ? `onclick="selectDate('${ds}')"` : plno ? `onclick="plnyDenKlik('${ds}')"` : "";
-      html += `<div class="${cls}" ${onclick}>${d}${plno ? '<small>plno</small>' : ''}</div>`;
+      // role/tabindex/aria-label: den je pro asistenty (AI agent, čtečka) i klávesnici tlačítko.
+      // Vzhled se nemění; Enter/mezerník obslouží menu.js.
+      const tlacitko = (volno || plno)
+        ? ` role="button" tabindex="0" aria-label="${fmtDateCZ(ds)} – ${volno ? 'volný den' : 'plno'}${ds === state.selDate ? ', vybráno' : ''}"`
+        : "";
+      html += `<div class="${cls}" ${onclick}${tlacitko}>${d}${plno ? '<small>plno</small>' : ''}</div>`;
     });
     html += `</div>`;
   });
@@ -802,7 +807,8 @@ function renderTimeSlots() {
     if (mojeCislo) label = '<span class="booked-label">' + mojeCislo + '. AUTO</span>';
     else if (isBooked) label = '<span class="booked-label">OBSAZENO</span>';
     else if (isTooSoon) label = '<span class="booked-label">NELZE</span>';
-    html += `<div class="${cls}" ${onclick}>${t}${label}</div>`;
+    const tlacitko = !isUnavailable ? ` role="button" tabindex="0" aria-label="${fmtDateCZ(state.selDate)}, ${t} – volno${isSel ? ', vybráno' : ''}"` : "";
+    html += `<div class="${cls}" ${onclick}${tlacitko}>${t}${label}</div>`;
   }
 
   html += `</div>`;
