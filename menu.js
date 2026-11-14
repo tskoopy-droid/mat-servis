@@ -27,9 +27,6 @@
   .mtm-radek { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
   .mtm-ik { width: 17px; height: 17px; flex-shrink: 0; fill: none; stroke: #64748b; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .mtm-kontakt-nadpis { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #64748b; margin-bottom: 2px; }
-  .mtm-doba { align-items: flex-start; line-height: 1.4; padding: 5px 0; color: #1e293b; font-weight: 600; }
-  .mtm-doba .mtm-ik { margin-top: 1px; }
-  .mtm-doba small { display: block; font-size: 12px; font-weight: 500; color: #64748b; }
   body.mtm-zamceno { overflow: hidden; }
 `;
   document.head.appendChild(styl);
@@ -53,13 +50,13 @@
     <a class="mtm-odkaz" href="dilenska-prirucka.html">Strojírenské tabulky</a>
     <a class="mtm-odkaz" href="zavitove-tabulky.html">Závitové tabulky</a>
     <div class="mtm-sekce">Informace</div>
+    <a class="mtm-odkaz" href="kontakt.html">Kontakt</a>
     <a class="mtm-odkaz" href="zasady.html">Ochrana osobních údajů</a>
     <div class="mtm-kontakt">
       <div class="mtm-kontakt-nadpis">Kontakt</div>
-      <div class="mtm-radek mtm-doba"><svg class="mtm-ik" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Bez objednání Po a Út 16–20 h<small>Ostatní dny na objednávku</small></span></div>
       <div class="mtm-radek"><svg class="mtm-ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg><a href="tel:+420731885825">731 885 825</a></div>
       <div class="mtm-radek"><svg class="mtm-ik" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a></div>
-      <div class="mtm-radek"><svg class="mtm-ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><a href="https://www.google.com/maps/search/?api=1&amp;query=%C5%A0umvaldsk%C3%A1%2059%2C%20Dlouh%C3%A1%20Lou%C4%8Dka" target="_blank" rel="noopener">Šumvaldská 59, Dlouhá Loučka</a></div>
+      <div class="mtm-radek"><svg class="mtm-ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg><a href="kontakt.html">Kde nás najdete</a></div>
       <div class="mtm-radek"><svg class="mtm-ik" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg><a href="https://www.facebook.com/people/MT-Servis/61566852234635/" target="_blank" rel="noopener">M&amp;T Servis na Facebooku</a></div>
     </div>
   </aside>
