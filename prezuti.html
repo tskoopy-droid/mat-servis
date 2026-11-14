@@ -198,7 +198,8 @@
   .cal-day.available:active { background: var(--blue-mid); }
   .cal-day.fully-booked { background: #fee2e2; border-color: #fecaca; color: #dc2626; cursor: not-allowed; font-weight: 600; }
   /* Plně obsazený den: šedý se štítkem PLNO, po ťuknutí hláška s nejbližším volným dnem */
-  .cal-grid .cal-day { min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+  /* Pevná výška a menší svislé odsazení: den se štítkem PLNO (dva řádky) pak nenatáhne celý řádek kalendáře */
+  .cal-grid .cal-day { height: 48px; padding: 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
   .cal-day.plno { background: #f1f5f9; border-color: #e2e8f0; color: #94a3b8; cursor: pointer; }
   .cal-day small { font-size: 8.5px; font-weight: 600; letter-spacing: .2px; text-transform: uppercase; margin-top: 2px; }
   .cal-dnes { box-shadow: inset 0 0 0 1px #94a3b8; }
