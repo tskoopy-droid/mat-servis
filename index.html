@@ -11,6 +11,17 @@
 <title>M&amp;T Servis – pneuservis a autoservis, Dlouhá Loučka</title>
 <link rel="canonical" href="https://mat-servis.cz/">
 <meta name="description" content="Pneuservis a autoservis M&T Servis v Dlouhé Loučce. Přezutí pneumatik a výměna oleje s online rezervací termínu bez volání, běžné opravy osobních aut na objednávku.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mat-servis.cz/">
+<meta property="og:site_name" content="M&amp;T Servis">
+<meta property="og:locale" content="cs_CZ">
+<meta property="og:title" content="M&amp;T Servis – pneuservis a autoservis, Dlouhá Loučka">
+<meta property="og:description" content="Přezutí pneumatik a výměna oleje s online rezervací bez volání, běžné opravy osobních aut.">
+<meta property="og:image" content="https://mat-servis.cz/sdileni.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="M&amp;T Servis – pneuservis a autoservis, Dlouhá Loučka">
+<meta name="twitter:card" content="summary_large_image">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -27,8 +38,10 @@
   .hero { text-align:center; margin-bottom:32px; padding-top:8px; }
   .hero h1 { font-size:24px; font-weight:700; color:var(--text); margin-bottom:8px; }
   .hero p { font-size:14px; color:var(--text-muted); line-height:1.6; }
-  .service-card { background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; box-shadow:0 2px 12px rgba(0,0,0,0.06); border:2px solid var(--border); text-decoration:none; display:flex; align-items:center; gap:20px; transition:all 0.2s; }
-  .service-card:active { transform:scale(0.98); border-color:var(--blue-mid); }
+  /* Odkaz na navigaci v patičce */
+  .footer .mapa { display:inline-flex; align-items:center; gap:5px; }
+  .mapa svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .service-card { background:#fff; border-radius:20px; padding:24px; margin-bottom:16px; box-shadow:0 2px 12px rgba(0,0,0,0.06); border:2px solid var(--border); text-decoration:none; display:flex; align-items:center; gap:20px; }
   .service-icon-wrap { width:56px; height:56px; border-radius:14px; background:var(--blue-light); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
   .service-icon-wrap svg { width:28px; height:28px; stroke:var(--blue); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
   .service-body { flex:1; }
@@ -47,6 +60,53 @@
   body .mtm-bar::before { content: ""; position: absolute; z-index: 0; inset: 0; opacity: 0.13; pointer-events: none;
     background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='42' viewBox='0 0 48 42'%3E%3Cg fill='none' stroke='%2317496e' stroke-width='2'%3E%3Cpath d='M19.8 15.0 L12.0 19.5 L4.2 15.0 L4.2 6.0 L12.0 1.5 L19.8 6.0 Z'/%3E%3Ccircle cx='12' cy='10.5' r='4'/%3E%3Cpath d='M43.8 36.0 L36.0 40.5 L28.2 36.0 L28.2 27.0 L36.0 22.5 L43.8 27.0 Z'/%3E%3Ccircle cx='36' cy='31.5' r='4'/%3E%3C/g%3E%3C/svg%3E") 0 0/32px 28px;
     -webkit-mask: linear-gradient(110deg, transparent 35%, #000 80%); mask: linear-gradient(110deg, transparent 35%, #000 80%); }
+  /* ===== Animace úvodu =====
+     1) nájezd nadpisu a karet (hned po načtení, karty jdou klikat okamžitě)
+     2) klíč v logu se pootočí (řídí skript pod menu.js)
+     3) ikony a zvednutí karty jen při najetí myší / dotyku */
+  /* Logo ve vrstvách: logo-klic.webp (klíč) + logo-pest.webp (pěst a nápis), logo-maska.png drží mezeru kolem pěsti */
+  .mtm-znacka .logo-vrstvy { position: absolute; inset: 0; display: none; }
+  .mtm-znacka.logo-hraje > img { visibility: hidden; }
+  .mtm-znacka.logo-hraje .logo-vrstvy { display: block; }
+  .mtm-znacka .logo-pest { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* okno je o 48 px (v měřítku původního obrázku 480×231) větší než logo, aby se pootočený klíč neořízl */
+  .mtm-znacka .logo-okno { position: absolute; left: -10%; right: -10%; top: -20.78%; bottom: -20.78%;
+    -webkit-mask: url(logo-maska.png) 0 0/100% 100% no-repeat; mask: url(logo-maska.png) 0 0/100% 100% no-repeat; }
+  .mtm-znacka .logo-klic { position: absolute; left: 8.333%; top: 14.68%; width: 83.333%; height: 70.64%; }
+  .mtm-znacka.logo-hraje .logo-klic { transform-origin: 49% 25%; animation: mKlicLogo 0.85s both; }
+  @keyframes mKlicLogo {
+    0%   { transform: rotate(0deg);   animation-timing-function: ease-out; }
+    35%  { transform: rotate(-11deg); animation-timing-function: cubic-bezier(0.5, 0, 0.3, 1); }
+    60%  { transform: rotate(7deg);   animation-timing-function: ease-out; }
+    80%  { transform: rotate(-2deg);  animation-timing-function: ease-in-out; }
+    100% { transform: rotate(0deg); }
+  }
+  .hero, .service-card { animation: mNajezd 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+  .service-card:nth-of-type(1) { animation-delay: 0.07s; }
+  .service-card:nth-of-type(2) { animation-delay: 0.14s; }
+  .service-card:nth-of-type(3) { animation-delay: 0.21s; }
+  @keyframes mNajezd { from { opacity: 0; transform: translateY(12px); } }
+  .service-card { transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s; }
+  .service-arrow { transition: transform 0.2s; }
+  .service-icon-wrap svg { transition: transform 0.5s cubic-bezier(0.3, 0, 0.2, 1); }
+  .ik-olej line { stroke-dasharray: 4; }
+  @keyframes mKlic { 35% { transform: rotate(-24deg); } 70% { transform: rotate(6deg); } }
+  @keyframes mOlej { from { stroke-dashoffset: 4; } to { stroke-dashoffset: 0; } }
+  @media (hover: hover) {
+    .service-card:hover { transform: translateY(-2px); border-color: var(--blue-mid); box-shadow: 0 8px 22px rgba(37,99,235,0.13); }
+    .service-card:hover .service-arrow { transform: translateX(4px); }
+    .service-card:hover .ik-kolo { transform: rotate(90deg); }
+    .service-card:hover .ik-klic { animation: mKlic 0.55s ease; }
+    .service-card:hover .ik-olej line { animation: mOlej 0.3s ease backwards; }
+    .service-card:hover .ik-olej line:nth-of-type(1) { animation-delay: 0.1s; }
+    .service-card:hover .ik-olej line:nth-of-type(3) { animation-delay: 0.2s; }
+  }
+  .service-card:active { transform: scale(0.98); border-color: var(--blue-mid); }
+  .service-card:active .ik-kolo { transform: rotate(90deg); }
+  @media (prefers-reduced-motion: reduce) {
+    .hero, .service-card, .service-card:hover .ik-klic, .service-card:hover .ik-olej line { animation: none; }
+    .service-card, .service-arrow, .service-icon-wrap svg { transition: none; }
+  }
 </style>
 <script type="application/ld+json">
 {
@@ -97,6 +157,31 @@
 </head>
 <body>
 <script src="menu.js"></script>
+<script>
+(function(){
+  // Klíč v logu se po načtení úvodu jednou pootočí („dotáhne“).
+  // Vrstvy loga se načtou na pozadí a původní logo se za ně vymění, až jsou všechny hotové;
+  // po animaci se vrátí původní obrázek. Když se nenačtou včas, nestane se nic.
+  try {
+    var zn = document.querySelector('.mtm-bar .mtm-znacka');
+    if (!zn || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var START = 550;   // ms – až po nájezdu karet
+    zn.insertAdjacentHTML('beforeend', '<span class="logo-vrstvy" aria-hidden="true"><span class="logo-okno"><img class="logo-klic" src="logo-klic.webp" alt=""></span><img class="logo-pest" src="logo-pest.webp" alt=""></span>');
+    var vr = zn.querySelector('.logo-vrstvy'), obr = vr.querySelectorAll('img'), ceka = obr.length + 1, t0 = Date.now();
+    function hotovo(){
+      if (--ceka) return;
+      var uz = Date.now() - t0;
+      if (uz > 2500) { vr.remove(); return; }
+      setTimeout(function(){
+        zn.classList.add('logo-hraje');
+        vr.querySelector('.logo-klic').addEventListener('animationend', function(){ zn.classList.remove('logo-hraje'); vr.remove(); });
+      }, Math.max(0, START - uz));
+    }
+    var m = new Image(); m.onload = hotovo; m.src = 'logo-maska.png';
+    for (var o = 0; o < obr.length; o++) { if (obr[o].complete && obr[o].naturalWidth) hotovo(); else obr[o].onload = hotovo; }
+  } catch(e){}
+})();
+</script>
 
 <div id="installBanner" style="display:none;align-items:center;gap:10px;background:#17496e;color:#fff;padding:10px 14px;font-size:14px;font-family:'Inter',sans-serif;position:sticky;top:0;z-index:1000;box-shadow:0 2px 6px rgba(0,0,0,.15)">
   <span style="flex:1;line-height:1.3">Nainstalujte si <b>M&T&nbsp;Servis</b> na plochu &mdash; rezervace na jeden klik.</span>
@@ -111,7 +196,7 @@
 
   <a href="prezuti.html" class="service-card">
     <div class="service-icon-wrap">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      <svg class="ik-kolo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
     </div>
     <div class="service-body">
       <div class="service-title">Přezutí pneumatik</div>
@@ -123,7 +208,7 @@
 
   <a href="oleje.html" class="service-card">
     <div class="service-icon-wrap">
-      <svg viewBox="0 0 24 24"><path d="M7 3h10l2 6H5L7 3z"/><path d="M5 9v9a2 2 0 002 2h10a2 2 0 002-2V9"/><line x1="12" y1="13" x2="12" y2="17"/><line x1="9" y1="13" x2="9" y2="17"/><line x1="15" y1="13" x2="15" y2="17"/></svg>
+      <svg class="ik-olej" viewBox="0 0 24 24"><path d="M7 3h10l2 6H5L7 3z"/><path d="M5 9v9a2 2 0 002 2h10a2 2 0 002-2V9"/><line x1="12" y1="13" x2="12" y2="17"/><line x1="9" y1="13" x2="9" y2="17"/><line x1="15" y1="13" x2="15" y2="17"/></svg>
     </div>
     <div class="service-body">
       <div class="service-title">Výměna oleje a filtrů</div>
@@ -135,7 +220,7 @@
 
   <a href="autoservis.html" class="service-card">
     <div class="service-icon-wrap">
-      <svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
+      <svg class="ik-klic" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
     </div>
     <div class="service-body">
       <div class="service-title">Autoservis</div>
@@ -148,17 +233,19 @@
 
 
 <div class="footer">
-  <div style="margin-bottom:6px;color:var(--text)">
-    <strong>Bez objednání:</strong> Po a Út 16–20 h &nbsp;·&nbsp; Ostatní dny na objednávku
+  <div style="margin-bottom:6px">
+    <a href="kontakt.html">Kontakt a otevírací doba</a>
   </div>
   <div style="margin-bottom:6px">
     <a href="tel:+420731885825">731&nbsp;885&nbsp;825</a>
     &nbsp;·&nbsp; <a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a>
     &nbsp;·&nbsp; <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" rel="noopener">Facebook</a>
   </div>
+  <div style="margin-bottom:6px">
+    <a class="mapa" href="https://www.google.com/maps/dir/?api=1&amp;destination=%C5%A0umvaldsk%C3%A1%2059%2C%20Dlouh%C3%A1%20Lou%C4%8Dka" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Šumvaldská 59, Dlouhá Loučka – navigovat</a>
+  </div>
   <div style="font-size:11px;color:#94a3b8;line-height:1.7">
-    Šumvaldská 59, Dlouhá Loučka
-    &nbsp;·&nbsp; IČO: 08134235
+    IČO: 08134235
     &nbsp;·&nbsp; Neplátce DPH
     <br>
     <a href="zasady.html" style="color:#94a3b8;text-decoration:none">Zásady ochrany osobních údajů</a>
