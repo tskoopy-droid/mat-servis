@@ -45,7 +45,7 @@
     <a class="mtm-odkaz" href="prezuti.html">Přezutí pneumatik</a>
     <a class="mtm-odkaz" href="oleje.html">Výměna oleje</a>
     <a class="mtm-odkaz" href="autoservis.html">Autoservis</a>
-    <a class="mtm-odkaz" href="pneu-podle-vin.html">Pneu a kola podle VIN</a>
+    <a class="mtm-odkaz" href="pneu-podle-vin.html">Vyhledávač rozměrů kol a pneu</a>
     <div class="mtm-sekce">Pro dílnu</div>
     <a class="mtm-odkaz" href="dilenska-prirucka.html">Strojírenské tabulky</a>
     <a class="mtm-odkaz" href="zavitove-tabulky.html">Závitové tabulky</a>
