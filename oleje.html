@@ -961,22 +961,21 @@ function nactiCenik() {
 function zobrazKategorieOleje(data) {
   document.getElementById('olejLoading').style.display = 'none';
 
-  // Krátký interval musí být na výběr VŽDY. Když Castrol vrátí jen Long
-  // Life oleje, vezme se tentýž olej a nabídne se i s intervalem 15 000 —
-  // je to stejný produkt, jen s kratší výměnou.
-  var standardOleje = data.oleje.filter(function(o) { return (o.km || 0) <= 20000; });
-  var llOleje       = data.oleje.filter(function(o) { return (o.km || 0) > 20000; });
-
-  if (!standardOleje.length && llOleje.length) {
-    standardOleje = llOleje.map(function(o) {
-      var kopie = {};
-      for (var k in o) if (o.hasOwnProperty(k)) kopie[k] = o[k];
-      kopie.km = 15000;
-      kopie.interval = '15000 km/ 12 měs.';
-      kopie.zkracenyInterval = true;   // pro hlášení, zákazník nic nepozná
-      return kopie;
-    });
-  }
+  // Interval se nevybírá. Výměna je vždy s pevným intervalem, nejvýš
+  // 15 000 km — olej s delším (Long Life) intervalem se nabídne jako tentýž
+  // produkt s kratší výměnou. Kategorie Long Life se proto nikdy neukáže
+  // a karta s výběrem se přeskočí (dole: maStandard !== maLL).
+  var MAX_INTERVAL_KM = 15000;
+  var standardOleje = data.oleje.map(function(o) {
+    if ((o.km || 0) <= MAX_INTERVAL_KM) return o;
+    var kopie = {};
+    for (var k in o) if (o.hasOwnProperty(k)) kopie[k] = o[k];
+    kopie.km = MAX_INTERVAL_KM;
+    kopie.interval = '15 000 km / 1 rok';
+    kopie.zkracenyInterval = true;   // pro hlášení, zákazník nic nepozná
+    return kopie;
+  });
+  var llOleje = [];
 
   stav.olejeStandard = standardOleje;
   stav.olejeLL       = llOleje;
