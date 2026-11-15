@@ -166,6 +166,14 @@ window.GAS_NACTENO.then(odesliMereniOleje);
      jako Bosch působí menší — proto je nastavené vyšší. */
   .olej-inline-logo{height:30px;width:auto;object-fit:contain;vertical-align:-9px;
     margin-right:5px;}
+  /* Total: jen nápis TotalEnergies bez symbolu — je široký, proto nižší */
+  .olej-inline-logo.logo-total{height:18px;vertical-align:-4px;}
+  .zaklad-volba-nadpis{font-size:13px;font-weight:700;color:var(--text-muted);margin:2px 0 8px;}
+  /* Řádek s názvem má u obou dlaždic stejnou výšku (logo Castrolu má 30 px),
+     ať jsou dlaždice s logem i bez loga stejně vysoké a text ve stejné rovině. */
+  .olej-volba-nazev{font-size:14px;font-weight:600;color:var(--text);min-width:0;
+    min-height:30px;display:flex;align-items:center;flex-wrap:wrap;column-gap:6px;line-height:1.25;}
+  .olej-volba-nazev .olej-inline-logo{margin-right:0;vertical-align:0;}
   .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
     padding:14px 0;border-bottom:1px solid var(--border);}
   .zaklad-radek:first-of-type{padding-top:4px;}
@@ -436,7 +444,9 @@ window.GAS_NACTENO.then(odesliMereniOleje);
       <button class="back-btn-cal" onclick="zpetZVymeny()"><span class="zpet-sipka">←</span> Zpět</button>
       <div class="section-title">Výměna oleje</div>
     </div>
-    <div class="zaklad-radek">
+    <!-- Volba Castrol × Total/Elf — jen u kategorie Standard a jen když jsou oba -->
+    <div id="zakladVolbaOleje" style="display:none;margin-bottom:6px;"></div>
+    <div class="zaklad-radek" id="zakladOlejRadek">
       <div class="zaklad-popis">
         <div class="zaklad-nazev sluzba-hlavni" id="zakladOlejNazev">—</div>
         <div class="zaklad-detail" id="zakladOlejDetail"></div>
@@ -726,6 +736,9 @@ var stav = {
   naceneniPromise: null,
   kabinaVarianta: null,         // index varianty, -1 = bez kabinoveho filtru, null = zatím nevybráno (nic se nepředvybírá)
   olejVybrany: null,
+  olejCastrol: null,            // nejlepší Castrol ve zvolené kategorii
+  olejTotal: null,              // olej Total/Elf pro kategorii Standard (z nacenění)
+  totalData: null,              // n.total z ?action=naceneni
   doliti: false,
   cenik: null,
   sluzby: { vzduch:null, kabina:false, palivo:null, reset:true },   // vzduch/palivo: null = zatím nevybráno, true/false = volba zákazníka
@@ -852,7 +865,7 @@ function resetVin() {
   // Všechny klíče, které nactiVin plní, musí být i tady — jinak by po
   // "Jiné vozidlo" a neúspěšném načtení zůstaly hodnoty z předchozího vozu
   // a odešly by v objednávce.
-  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:null,olejVybrany:null,doliti:false,cenik:null,sluzby:{vzduch:null,kabina:false,palivo:null,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:null,olejVybrany:null,olejCastrol:null,olejTotal:null,totalData:null,doliti:false,cenik:null,sluzby:{vzduch:null,kabina:false,palivo:null,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
   document.getElementById('vinInput').value = '';
   document.getElementById('vinError').classList.remove('visible');
   zobrazKartu('cardVin');
@@ -897,30 +910,41 @@ function nactiCenik() {
 
   olejePromise
     .then(function(data) {
-      if (!data || data.error)                        return selhalo('olej_chyba');
-      if (!data.oleje || data.oleje.length === 0)     return selhalo('olej_chybi');
-
-      stav.castrolData = data;
-      stav.objem       = data.objem || stav.objem;
-      stav.kodMotoru   = data.kodMotoru || stav.kodMotoru;
-      stav.cenik       = data;
-      // Varianty vozu, které Castrol po VINu nabídl. Zákazníkovi se
-      // neukazují — jdou jen do operátorského mailu, aby bylo vidět,
-      // mezi čím se vybíralo a co vyhrálo.
-      stav.castrolVarianty = data.varianty || [];
+      // Castrol vůz znát nemusí — pak může výměnu nabídnout olej Total/Elf,
+      // který přijde s naceněním (n.total). Proto se na nacenění čeká vždy.
+      var castrolOk = !!(data && !data.error && data.oleje && data.oleje.length);
+      var duvodBezCastrolu = (!data || data.error) ? 'olej_chyba' : 'olej_chybi';
 
       // Bez nacenění se objednat nedá — fixní ceny už stránka nemá.
-      // Proto se čeká i na ně, teprve pak se ukáže výběr oleje.
       var naceneniPromise = stav.naceneniPromise ||
         fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=naceneni', { redirect: 'follow' })
           .then(function(r) { return r.json(); })
           .catch(function() { return null; });
 
       return naceneniPromise.then(function(n) {
-        if (!n || n.error || !n.uspech) {
-          return selhalo(n && n.preteceno ? 'zahlceno' : 'naceneni_selhalo');
+        var nOk = !!(n && !n.error && n.uspech);
+        var t = (nOk && n.total && n.total.cena1l > 0) ? n.total : null;
+
+        if (!castrolOk && !t) return selhalo(duvodBezCastrolu);
+        if (!nOk) return selhalo(n && n.preteceno ? 'zahlceno' : 'naceneni_selhalo');
+
+        // Jen Total: objem je kapacita z LubAdvisoru + 10 % (spočítá GAS),
+        // cena práce a minimální předstih rezervace přijdou s olejem.
+        if (!castrolOk) {
+          data = { oleje: [], objem: t.objemRezerva, cenaPrace: t.cenaPrace,
+                   minDniRezervace: t.minDniRezervace, jenTotal: true };
         }
-        stav.naceneni = n;
+
+        stav.castrolData = data;
+        stav.objem       = data.objem || stav.objem;
+        stav.kodMotoru   = data.kodMotoru || stav.kodMotoru;
+        stav.cenik       = data;
+        // Varianty vozu, které Castrol po VINu nabídl. Zákazníkovi se
+        // neukazují — jdou jen do operátorského mailu, aby bylo vidět,
+        // mezi čím se vybíralo a co vyhrálo.
+        stav.castrolVarianty = data.varianty || [];
+        stav.totalData   = t;
+        stav.naceneni    = n;
         nastavCenyFiltru();
         zobrazKategorieOleje(data);
       });
@@ -957,13 +981,29 @@ function zobrazKategorieOleje(data) {
   stav.olejeStandard = standardOleje;
   stav.olejeLL       = llOleje;
 
-  var maStandard = standardOleje.length > 0;
+  // Olej Total/Elf se nabízí jen u pevného intervalu (Standard), jako druhá
+  // možnost vedle Castrolu. Interval přebírá od Castrolu ze stejné kategorie,
+  // bez Castrolu 10 000 km / 1 rok. Objem: stav.objem — od Castrolu, nebo
+  // (když Castrol vůz nezná) kapacita z LubAdvisoru + 10 %.
+  stav.olejTotal = null;
+  var t = stav.totalData;
+  if (t && t.cena1l > 0 && Number(stav.objem) > 0) {
+    var vzor = standardOleje.slice().sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0] || null;
+    stav.olejTotal = {
+      nazev: t.nazev, znacka: t.znacka, total: true, vCeniku: true, priorita: 999,
+      interval: (vzor && vzor.interval) || '10 000 km / 1 rok',
+      km: (vzor && vzor.km) || 10000,
+      cenaOleje: Math.round(t.cena1l * Number(stav.objem))
+    };
+  }
+
+  var maStandard = standardOleje.length > 0 || !!stav.olejTotal;
   var maLL       = llOleje.length > 0;
 
   if (!maStandard && !maLL) { zobrazNaceneni('olej_chybi'); return; }
 
   if (maStandard) {
-    var bestStd = standardOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0];
+    var bestStd = standardOleje.sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0] || stav.olejTotal;
     document.getElementById('intervalStandard').textContent = bestStd.interval || '15 000 km / 1 rok';
     document.getElementById('katStandard').style.display = '';
   }
@@ -1094,11 +1134,13 @@ function vyberKategorii(typ) {
   // Seznamy se sestavily v zobrazKategorieOleje — Standard může být
   // dopočítaný z Long Life oleje, takže se tady znovu nefiltruje podle km.
   var filtrovane = (typ === 'standard' ? stav.olejeStandard : stav.olejeLL) || [];
-  if (filtrovane.length === 0) return;
 
-  // Vyber olej s nejlepší prioritou
+  // Vyber olej s nejlepší prioritou. Castrol je výchozí; když ho vůz ve
+  // Standardu nemá, nastoupí Total/Elf. Mezi oběma se volí až na další kartě.
   filtrovane.sort(function(a, b) { return (a.priorita || 999) - (b.priorita || 999); });
-  stav.olejVybrany = filtrovane[0];
+  stav.olejCastrol = filtrovane[0] || null;
+  stav.olejVybrany = stav.olejCastrol || (typ === 'standard' ? stav.olejTotal : null);
+  if (!stav.olejVybrany) return;
 
   document.getElementById('olejContinueWrap').style.display = 'block';
   aktualizujSouhrn();
@@ -1109,7 +1151,7 @@ function vyberKategorii(typ) {
  * karta s výběrem intervalu se přeskakuje, takže se jde rovnou na vozidlo.
  */
 function zpetZVymeny() {
-  var jenJedna = !(stav.olejeStandard && stav.olejeStandard.length) !==
+  var jenJedna = !((stav.olejeStandard && stav.olejeStandard.length) || stav.olejTotal) !==
                  !(stav.olejeLL && stav.olejeLL.length);
   if (jenJedna) { zpetNa('cardAuto', 1); return; }
   zpetNa('cardOlej', 2);
@@ -1132,10 +1174,12 @@ function zobrazZaklad() {
   var p = (stav.naceneni && stav.naceneni.polozky) || {};
   var c = stav.cenik || {};
   if (!o) return;
+  vykresliVolbuOleje();
 
-  var viscMatch = o.nazev.match(/\b(\d+[wW]-\d+)\b/);
+  var celyNazev = olejNazevZobraz(o);
+  var viscMatch = celyNazev.match(/\b(\d+[wW]-\d+)\b/);
   var visc = viscMatch ? viscMatch[1] : '';
-  var nazev = visc ? o.nazev.replace(visc, '').replace(/\s+/g, ' ').trim() : o.nazev;
+  var nazev = visc ? celyNazev.replace(visc, '').replace(/\s+/g, ' ').trim() : celyNazev;
 
   // Řádek začíná logem Castrolu, množství patří k ostatním údajům dole.
   document.getElementById('zakladOlejNazev').innerHTML = olejNazevHtml(nazev);
@@ -1174,21 +1218,90 @@ function zobrazZaklad() {
 }
 
 /**
- * Název oleje s logem Castrolu na místě slova "Castrol".
- * Castrolí API to plní nekonzistentně — jednou "Castrol EDGE LL",
- * jindy jen "EDGE A3/B4". Když slovo v názvu není, logo se nevkládá.
+ * Volba mezi Castrolem a olejem Total/Elf nad rozpadem ceny. Ukáže se jen
+ * u kategorie Standard a jen když má vůz oba oleje. Castrol je první
+ * a předvybraný, Total/Elf druhý.
  */
-function olejNazevHtml(nazev) {
-  var t = String(nazev || '');
-  if (!/castrol/i.test(t)) return escHtml(t);
-  var zbytek = t.replace(/castrol\s*/i, '').trim();
-  return '<img src="logocastrol.png" alt="Castrol" class="olej-inline-logo" ' +
-         'onerror="olejLogoChybi(this)"> ' + escHtml(zbytek);
+function vykresliVolbuOleje() {
+  var box = document.getElementById('zakladVolbaOleje');
+  if (!box) return;
+  var c = stav.olejCastrol, t = stav.olejTotal, o = stav.olejVybrany;
+  var standard = !!o && (o.km || 0) <= 20000;
+  // Když se vybírá z dlaždic, olej už je vidět v nich — řádek s olejem
+  // v rozpadu ceny by ho jen opakoval, proto se schová.
+  var radek = document.getElementById('zakladOlejRadek');
+  var volba = !!(c && t && standard);
+  if (radek) radek.style.display = volba ? 'none' : '';
+  if (!volba) { box.style.display = 'none'; box.innerHTML = ''; return; }
+  // Interval je pro oba oleje stejný (Total ho přebírá), stačí ho napsat jednou.
+  box.innerHTML = '<div class="zaklad-volba-nadpis">Vyberte olej' +
+    (o.interval ? ' · interval ' + escHtml(o.interval) : '') + '</div>' +
+    dlazdiceOleje('castrol', c, o === c) + dlazdiceOleje('total', t, o === t);
+  box.style.display = '';
 }
 
-/** Logo v názvu oleje se nenačetlo — vrátí se slovo Castrol. */
+/**
+ * Název oleje pro zákazníka. Total/Elf se nabízí jen u pevného intervalu,
+ * takže slova "Long Life" v názvu by mátla — vypustí se. Plný název jde
+ * dál v rezervaci (olejVybrany) do tabulky a adminu.
+ */
+function olejNazevZobraz(o) {
+  var n = String((o && o.nazev) || '');
+  if (o && o.total) n = n.replace(/\bLong\s*Life\b/ig, '').replace(/\bLL\b/g, '').replace(/\s+/g, ' ').trim();
+  return n;
+}
+
+function dlazdiceOleje(kdo, olej, vybrano) {
+  var cely = olejNazevZobraz(olej);
+  var viscMatch = cely.match(/\b(\d+[wW]-\d+)\b/);
+  var visc = viscMatch ? viscMatch[1] : '';
+  var nazev = visc ? cely.replace(visc, '').replace(/\s+/g, ' ').trim() : cely;
+  return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
+         'style="margin-bottom:10px;" role="button" tabindex="0" onclick="vyberOlejZnacku(\'' + kdo + '\')">' +
+         '<div class="sluzba-left">' +
+         '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
+         '<div class="olej-volba-nazev">' + olejNazevHtml(nazev) + '</div>' +
+         '</div>' +
+         '<div class="sluzba-spodek">' +
+         '<span class="sluzba-detail">' + stav.objem + ' l' + (visc ? ' · ' + visc : '') + '</span>' +
+         '<span class="sluzba-cena">' + Math.round(Number(olej.cenaOleje) || 0) + ' Kč</span>' +
+         '</div>' +
+         '</div>';
+}
+
+function vyberOlejZnacku(kdo) {
+  var novy = kdo === 'total' ? stav.olejTotal : stav.olejCastrol;
+  if (!novy) return;
+  stav.olejVybrany = novy;
+  zobrazZaklad();
+  aktualizujSouhrn();
+}
+
+/**
+ * Název oleje s logem značky na místě slova "Castrol" / "Total" / "Elf".
+ * U Totalu je to jen nápis TotalEnergies bez symbolu (celé logo je moc dlouhé).
+ * Castrolí API to plní nekonzistentně — jednou "Castrol EDGE LL",
+ * jindy jen "EDGE A3/B4". Když značka v názvu není, logo se nevkládá.
+ */
+var LOGA_OLEJU = [
+  [/castrol\s*/i,               'logocastrol.png', 'Castrol', ''],
+  [/^total(energies)?\s+/i,     'logototal-text.png', 'Total', ' logo-total'],
+  [/^elf\s+/i,                  'logoelf.png',     'Elf',     '']
+];
+function olejNazevHtml(nazev) {
+  var t = String(nazev || '');
+  for (var i = 0; i < LOGA_OLEJU.length; i++) {
+    var l = LOGA_OLEJU[i];
+    if (!l[0].test(t)) continue;
+    return '<img src="' + l[1] + '" alt="' + l[2] + '" class="olej-inline-logo' + l[3] + '" ' +
+           'onerror="olejLogoChybi(this)"> ' + escHtml(t.replace(l[0], '').trim());
+  }
+  return escHtml(t);
+}
+
+/** Logo v názvu oleje se nenačetlo — vrátí se název značky. */
 function olejLogoChybi(img) {
-  var t = document.createTextNode('Castrol ');
+  var t = document.createTextNode((img.getAttribute('alt') || 'Castrol') + ' ');
   if (img.parentNode) img.parentNode.replaceChild(t, img);
 }
 
@@ -1373,7 +1486,7 @@ function sestavPolozky() {
   var polozky = [];
   var intervalLabel = o.interval || '10 000 km / 1 rok';
 
-  polozky.push({ popis: stav.objem + ' l ' + o.nazev + ' (' + intervalLabel + ')', cena: Math.round(Number(o.cenaOleje) || 0) });
+  polozky.push({ popis: stav.objem + ' l ' + olejNazevZobraz(o) + ' (' + intervalLabel + ')', cena: Math.round(Number(o.cenaOleje) || 0) });
   if (p.olejovy) polozky.push({ popis: sZnackou('Olejový filtr', p.olejovy.znacka), cena: Math.round(Number(p.olejovy.cena) || 0) });
   // Jedna položka, ne dvě — cena práce se nerozděluje, jen se pojmenuje
   // celá. Ekologická likvidace je v ní zahrnutá, ne přiúčtovaná navíc.
