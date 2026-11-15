@@ -166,14 +166,19 @@ window.GAS_NACTENO.then(odesliMereniOleje);
      jako Bosch působí menší — proto je nastavené vyšší. */
   .olej-inline-logo{height:30px;width:auto;object-fit:contain;vertical-align:-9px;
     margin-right:5px;}
-  /* Total: jen nápis TotalEnergies bez symbolu — je široký, proto nižší */
-  .olej-inline-logo.logo-total{height:18px;vertical-align:-4px;}
+  /* Total: malý symbol + nápis TotalEnergies — logo je široké, proto nižší */
+  .olej-inline-logo.logo-total{height:15px;vertical-align:-3px;}
   .zaklad-volba-nadpis{font-size:13px;font-weight:700;color:var(--text-muted);margin:2px 0 8px;}
-  /* Řádek s názvem má u obou dlaždic stejnou výšku (logo Castrolu má 30 px),
-     ať jsou dlaždice s logem i bez loga stejně vysoké a text ve stejné rovině. */
+  /* Dlaždice oleje: logo značky, pod ním název oleje, pod tím objem
+     s viskozitou a vpravo cena — stejně u Castrolu i Totalu/Elfu. */
   .olej-volba-nazev{font-size:14px;font-weight:600;color:var(--text);min-width:0;
-    min-height:30px;display:flex;align-items:center;flex-wrap:wrap;column-gap:6px;line-height:1.25;}
-  .olej-volba-nazev .olej-inline-logo{margin-right:0;vertical-align:0;}
+    display:flex;flex-direction:column;align-items:flex-start;row-gap:4px;line-height:1.25;}
+  /* Loga mají různý poměr stran — výšky jsou zvolené tak, aby byla
+     opticky podobně velká (Castrol/Elf vyšší, TotalEnergies delší). */
+  .olej-volba-nazev .olej-inline-logo{margin-right:0;vertical-align:0;height:34px;}
+  .olej-volba-nazev .olej-inline-logo.logo-total{height:16px;margin:9px 0;}
+  .sluzba-item.olej-volba .sluzba-left{align-items:flex-start;}
+  .sluzba-item.olej-volba .sluzba-check{margin-top:3px;}
   .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
     padding:14px 0;border-bottom:1px solid var(--border);}
   .zaklad-radek:first-of-type{padding-top:4px;}
@@ -839,7 +844,11 @@ function nactiVin() {
  * na to, co má zákazník v TP.
  */
 function zobrazAuto() {
-  document.getElementById('autoTitle').textContent = stav.znacka + ' ' + stav.model;
+  // Registr u některých značek vrací model i se značkou ("MG ZS") —
+  // v nadpisu by pak byla dvakrát ("MG MG ZS").
+  var zn = String(stav.znacka || '').trim(), md = String(stav.model || '').trim();
+  document.getElementById('autoTitle').textContent =
+    (zn && md.toUpperCase().indexOf(zn.toUpperCase() + ' ') === 0) ? md : (zn + ' ' + md).trim();
   nastavLogoVozu(stav.znacka);
   var rows = [
     ['Tovární značka', stav.znacka],
@@ -957,6 +966,25 @@ function nactiCenik() {
   }
 }
 
+/**
+ * Jednotný zápis intervalu. Castrol posílá "15000 km/ 12 měs.",
+ * stránka jinde píše "15 000 km / 1 rok". Co nepozná, nechá být.
+ */
+function intervalHezky(text) {
+  var t = String(text || '');
+  var m = t.match(/^\s*(\d[\d\s]*)\s*km\s*\/\s*(\d+)\s*m[ěe]s/i);
+  if (!m) return t;
+  var km = Number(m[1].replace(/\s/g, '')), mes = Number(m[2]);
+  if (!km || !mes) return t;
+  var kmText = String(km).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  var doba = mes + ' měs.';
+  if (mes % 12 === 0) {
+    var r = mes / 12;
+    doba = r + (r === 1 ? ' rok' : (r < 5 ? ' roky' : ' let'));
+  }
+  return kmText + ' km / ' + doba;
+}
+
 /** Vykreslí kategorie olejů — volá se až když je hotové i nacenění filtrů. */
 function zobrazKategorieOleje(data) {
   document.getElementById('olejLoading').style.display = 'none';
@@ -967,12 +995,15 @@ function zobrazKategorieOleje(data) {
   // a karta s výběrem se přeskočí (dole: maStandard !== maLL).
   var MAX_INTERVAL_KM = 15000;
   var standardOleje = data.oleje.map(function(o) {
-    if ((o.km || 0) <= MAX_INTERVAL_KM) return o;
     var kopie = {};
     for (var k in o) if (o.hasOwnProperty(k)) kopie[k] = o[k];
-    kopie.km = MAX_INTERVAL_KM;
-    kopie.interval = '15 000 km / 1 rok';
-    kopie.zkracenyInterval = true;   // pro hlášení, zákazník nic nepozná
+    if ((o.km || 0) > MAX_INTERVAL_KM) {
+      kopie.km = MAX_INTERVAL_KM;
+      kopie.interval = '15 000 km / 1 rok';
+      kopie.zkracenyInterval = true;   // pro hlášení, zákazník nic nepozná
+    } else {
+      kopie.interval = intervalHezky(o.interval);
+    }
     return kopie;
   });
   var llOleje = [];
@@ -1255,7 +1286,7 @@ function dlazdiceOleje(kdo, olej, vybrano) {
   var viscMatch = cely.match(/\b(\d+[wW]-\d+)\b/);
   var visc = viscMatch ? viscMatch[1] : '';
   var nazev = visc ? cely.replace(visc, '').replace(/\s+/g, ' ').trim() : cely;
-  return '<div class="sluzba-item' + (vybrano ? ' selected' : '') + '" ' +
+  return '<div class="sluzba-item olej-volba' + (vybrano ? ' selected' : '') + '" ' +
          'style="margin-bottom:10px;" role="button" tabindex="0" onclick="vyberOlejZnacku(\'' + kdo + '\')">' +
          '<div class="sluzba-left">' +
          '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' +
@@ -1278,13 +1309,13 @@ function vyberOlejZnacku(kdo) {
 
 /**
  * Název oleje s logem značky na místě slova "Castrol" / "Total" / "Elf".
- * U Totalu je to jen nápis TotalEnergies bez symbolu (celé logo je moc dlouhé).
+ * U Totalu je symbol zmenšený na výšku nápisu, ať logo není moc dlouhé.
  * Castrolí API to plní nekonzistentně — jednou "Castrol EDGE LL",
  * jindy jen "EDGE A3/B4". Když značka v názvu není, logo se nevkládá.
  */
 var LOGA_OLEJU = [
   [/castrol\s*/i,               'logocastrol.png', 'Castrol', ''],
-  [/^total(energies)?\s+/i,     'logototal-text.png', 'Total', ' logo-total'],
+  [/^total(energies)?\s+/i,     'logototal.png', 'Total', ' logo-total'],
   [/^elf\s+/i,                  'logoelf.png',     'Elf',     '']
 ];
 function olejNazevHtml(nazev) {
