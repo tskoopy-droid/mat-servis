@@ -162,7 +162,11 @@
 
   .page-title { max-width:500px; margin:0 auto; padding:24px 16px 0; text-align:center; }
 
-  .page-title h1 { font-size:24px; font-weight:700; color:var(--text); margin:0; }
+  .page-title h1 { font-size:24px; font-weight:800; letter-spacing:-.02em; text-wrap:balance; color:var(--text); margin:0; }
+  /* Krátká modrá linka pod nadpisem */
+  .page-title h1::after { content:''; display:block; width:44px; height:4px; border-radius:2px; margin:12px auto 0;
+    background:linear-gradient(90deg,var(--blue),var(--navy,#17496e)); }
+
   .header-text { display:table-cell; vertical-align:middle; padding-right:16px; width:100%; }
   .header-sub { font-size:19px; font-weight:700; color:var(--text); }
   .header-sub-small { font-size:11px; font-weight:500; color:var(--text-muted); line-height:1.5; }

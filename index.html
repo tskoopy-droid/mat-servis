@@ -36,8 +36,12 @@
   .header-sub-small { font-size:11px; font-weight:500; color:var(--text-muted); line-height:1.5; }
   .container { max-width:500px; margin:0 auto; padding:24px 16px; flex:1; }
   .hero { text-align:center; margin-bottom:32px; padding-top:8px; }
-  .hero h1 { font-size:24px; font-weight:700; color:var(--text); margin-bottom:8px; }
-  .hero p { font-size:14px; color:var(--text-muted); line-height:1.6; }
+  .hero h1 { font-size:24px; font-weight:800; letter-spacing:-.02em; text-wrap:balance; color:var(--text); margin-bottom:12px; }
+  /* Krátká modrá linka pod nadpisem */
+  .hero h1::after { content:''; display:block; width:44px; height:4px; border-radius:2px; margin:12px auto 0;
+    background:linear-gradient(90deg,var(--blue),var(--navy,#17496e)); }
+
+  .hero p { font-size:15px; color:#475569; line-height:1.6; max-width:420px; margin-left:auto; margin-right:auto; text-wrap:balance; }
   /* Odkaz na navigaci v patičce */
   .footer .mapa { display:inline-flex; align-items:center; gap:5px; }
   .mapa svg { width:14px; height:14px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
