@@ -160,6 +160,10 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
 
+  /* Fotky: dvě vedle sebe pod nadpisem. Pevná výška, aby stránka při načítání neposkočila. */
+  .foto-dve { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 4px; }
+  .foto-pas { height: 150px; border-radius: 16px; overflow: hidden; margin: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); background: #e2e8f0; }
+  .foto-pas img { display: block; width: 100%; height: 100%; object-fit: cover; }
   .page-title { max-width:500px; margin:0 auto; padding:24px 16px 0; text-align:center; }
 
   .page-title h1 { font-size:24px; font-weight:800; letter-spacing:-.02em; text-wrap:balance; color:var(--text); margin:0; }
@@ -354,6 +358,10 @@
 <div class="page-title" id="main-header"><h1>Přezutí pneumatik</h1></div>
 
 <div class="container">
+<div class="foto-dve">
+  <figure class="foto-pas"><img src="foto-prezuti.webp" alt="Přezouvání s utahovákem v dílně M&amp;T Servis" width="640" height="480" style="object-position:38% 50%"></figure>
+  <figure class="foto-pas"><img src="foto-klic.webp" alt="Dotažení kola momentovým klíčem" width="640" height="549" style="object-position:40% 35%"></figure>
+</div>
 
   
 <div id="cenik-box" style="background:#fff;border-radius:16px;padding:16px 20px;margin:16px 0 4px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:2px solid #e2e8f0">
