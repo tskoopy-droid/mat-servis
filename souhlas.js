@@ -13,6 +13,26 @@
 
   var vyvojar = cti('matdev') === '1';
 
+  // Odkud návštěvník přišel – zapamatuje se na první stránce návštěvy (sessionStorage,
+  // po zavření záložky zmizí), aby ho rezervace poslala do sloupce Zdroj, i když
+  // zákazník přišel třeba z Google profilu na úvod a k rezervaci se proklikal.
+  // Žádné osobní údaje: jen UTM z odkazu, nebo cizí doména. Vyhodnocuje se stejně
+  // jako ZDROJ_NAVSTEVY v prezuti.html.
+  try {
+    if (!sessionStorage.getItem('mt_zdroj')) {
+      var utm = ['utm_source', 'utm_medium', 'utm_campaign'].map(function (k) { return p.get(k) || ''; }).filter(Boolean);
+      var host = location.hostname.replace(/^www\./, '');
+      var zdroj = '';
+      if (utm.length) zdroj = utm.join(' / ');
+      else if (p.has('fbclid')) zdroj = 'facebook (bez UTM)';
+      else if (document.referrer) {
+        var odkud = new URL(document.referrer).hostname.replace(/^www\./, '');
+        if (odkud !== host) zdroj = 'odkaz z ' + odkud;
+      } else zdroj = 'přímo / neznámý';
+      if (zdroj) sessionStorage.setItem('mt_zdroj', zdroj);
+    }
+  } catch (e) {}
+
   function spustGA() {
     if (vyvojar || window.gtag) return;
     window['ga-disable-' + GA_ID] = false;
