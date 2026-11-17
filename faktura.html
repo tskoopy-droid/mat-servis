@@ -67,22 +67,38 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
   input:last-child, select:last-child, textarea:last-child { margin-bottom:0; }
   textarea { resize:vertical; min-height:62px; }
 
-  .polozky-head { display:grid; grid-template-columns:1fr 48px 46px 76px 84px 92px 30px; gap:6px; padding:0 4px 8px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--border); margin-bottom:10px; }
-  .polozky-head span:nth-child(2),.polozky-head span:nth-child(3),.polozky-head span:nth-child(4),.polozky-head span:nth-child(5),.polozky-head span:nth-child(6) { text-align:right; }
+  /* Řádek položky: Popis | Počet | Jedn. | Nákup/j | Marže % | Prodej/j | Celkem | × */
+  .polozky-head, .polozka-row { display:grid; grid-template-columns:1fr 52px 50px 78px 62px 84px 88px 28px; gap:6px; }
+  .polozky-head { padding:0 4px 8px; font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; border-bottom:2px solid var(--border); margin-bottom:10px; align-items:end; }
+  .polozky-head span { line-height:1.2; }
+  .polozky-head span:nth-child(n+2):nth-child(-n+7) { text-align:right; }
+  .polozky-head .sub { display:block; font-weight:500; text-transform:none; letter-spacing:0; color:#94a3b8; font-size:10px; }
+  .polozky-napoveda { font-size:12px; color:var(--text-muted); line-height:1.5; background:var(--bg); border-radius:10px; padding:8px 12px; margin-bottom:12px; }
   @media (max-width:640px) { .polozky-head { display:none; } }
 
-  .polozka-row { display:grid; grid-template-columns:1fr 48px 46px 76px 84px 92px 30px; gap:6px; align-items:center; margin-bottom:8px; }
-  .polozka-row input { margin-bottom:0; padding:9px 11px; font-size:14px; }
-  .polozka-row input[type=number] { padding:9px 4px; text-align:center; }
-  .polozka-row .p-celkem { font-size:14px; font-weight:700; text-align:right; color:var(--text); padding-right:4px; }
+  .polozka-row { align-items:center; margin-bottom:8px; }
+  .polozka-row .f { min-width:0; }
+  .polozka-row .f-lb { display:none; }
+  .polozka-row input { margin-bottom:0; padding:9px 8px; font-size:14px; }
+  .polozka-row input[type=number] { padding:9px 4px; text-align:right; }
+  .polozka-row .p-prodej input { border-color:var(--blue-mid); background:var(--blue-light); font-weight:700; }
+  .polozka-row .p-nakup input:placeholder-shown, .polozka-row .p-marze input:placeholder-shown { background:#fff; }
+  .polozka-row .p-celkem { font-size:14px; font-weight:700; text-align:right; color:var(--text); padding-right:4px; white-space:nowrap; }
   .polozka-row .btn-remove { background:none; border:none; color:#cbd5e1; cursor:pointer; font-size:20px; line-height:1; padding:4px; border-radius:6px; justify-self:center; }
   .polozka-row .btn-remove:hover { color:var(--red); background:var(--red-light); }
+  /* popis + rozbalovací výběr z ceníku přímo v řádku */
+  .p-popis-wrap { position:relative; }
+  .p-popis-wrap input { padding-right:38px; }
+  .p-vyber { position:absolute; top:3px; right:3px; bottom:3px; width:32px; border-radius:8px; background:var(--blue-light); color:var(--blue); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; pointer-events:none; }
+  .p-popis-wrap select { position:absolute; top:0; right:0; bottom:0; width:38px; opacity:0; cursor:pointer; margin:0; padding:0; border:none; }
   @media (max-width:640px) {
-    .polozka-row { grid-template-columns:1fr 30px; gap:6px; padding:12px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; }
-    .polozka-row .p-popis { grid-column:1; }
-    .polozka-row .btn-remove { grid-column:2; grid-row:1/4; align-self:start; }
-    .polozka-row .p-mnozstvi,.polozka-row .p-jednotka,.polozka-row .p-cena,.polozka-row .p-koef { grid-column:1; }
-    .polozka-row .p-celkem { grid-column:1; text-align:left; padding-top:4px; }
+    .polozka-row { grid-template-columns:repeat(3,1fr) 30px; gap:8px; padding:12px; border:2px solid var(--border); border-radius:12px; margin-bottom:10px; }
+    .polozka-row .f-lb { display:block; font-size:10.5px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.03em; margin-bottom:3px; }
+    .polozka-row .p-popis { grid-column:1 / 4; grid-row:1; }
+    .polozka-row .btn-remove { grid-column:4; grid-row:1; align-self:start; }
+    .polozka-row .p-mnozstvi { grid-column:1; } .polozka-row .p-jednotka { grid-column:2; }
+    .polozka-row .p-nakup { grid-column:1; } .polozka-row .p-marze { grid-column:2; } .polozka-row .p-prodej { grid-column:3; }
+    .polozka-row .p-celkem { grid-column:3; grid-row:2; align-self:end; padding-bottom:10px; }
   }
 
   .cenik-row { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
@@ -126,6 +142,10 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     #app, #gate { display:none !important; }
     #faktura-print { display:block !important; }
     .print-page { width:100%; break-after:avoid; page-break-after:avoid; }
+    body > *:not(#faktura-print) { display:none !important; }
+    /* Když se faktura vejde na 1 stranu, nic za ní nesmí založit 2. (prázdnou) stranu */
+    html.tisk-1strana, html.tisk-1strana body { height:100% !important; overflow:hidden !important; }
+    html.tisk-1strana #faktura-print { break-inside:avoid; page-break-inside:avoid; }
   }
   #faktura-print { display:none; }
   .print-page { width:210mm; min-height:0; padding:14mm; font-family:'Inter',Arial,sans-serif; font-size:9pt; color:#1e293b; }
@@ -236,7 +256,6 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         <select id="cenik-select" onchange="pridatZCeniku(this.value)">
           <option value="">+ Přidat z ceníku…</option>
         </select>
-        <button class="btn btn-light btn-sm" onclick="pridatPolozku()">+ Prázdná položka</button>
       </div>
       <div class="cenik-row">
         <select id="zakazka-cislo">
@@ -244,10 +263,14 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
         </select>
         <button class="btn btn-light btn-sm" id="zakazka-btn" onclick="nactiZeZakazky()">🔧 Načíst díly</button>
       </div>
+      <div class="polozky-napoveda">
+        <strong>Prodej/j</strong> = cena za 1 kus pro zákazníka (ta jde na fakturu). U dílu stačí vyplnit <strong>Nákup/j</strong> a <strong>Marži&nbsp;%</strong> – prodejní cena se dopočítá (zaokrouhlí nahoru na celé Kč). <strong>Celkem</strong> = počet × prodej/j. Ceník vybereš šipkou <strong>▾</strong> přímo v řádku.
+      </div>
       <div class="polozky-head">
-        <span>Popis</span><span>Množ.</span><span>Jedn.</span><span>Cena/j</span><span>Koef</span><span>Celkem</span><span></span>
+        <span>Popis</span><span>Počet</span><span>Jedn.</span><span>Nákup/j<span class="sub">bez marže</span></span><span>Marže<span class="sub">%</span></span><span>Prodej/j<span class="sub">na fakturu</span></span><span>Celkem</span><span></span>
       </div>
       <div id="polozky-body"></div>
+      <button class="btn btn-light btn-sm" style="margin-top:2px" onclick="pridatPolozku()">+ Přidat položku</button>
       <div class="celkem-box">
         <span class="celkem-label">Celkem k úhradě:</span>
         <span class="celkem-value" id="celkem-display">0 Kč</span>
@@ -308,7 +331,7 @@ function vyberFormu(f) {
   const sel = document.getElementById('forma');
   if (sel.disabled) return;
   sel.value = f;
-  document.getElementById('platba-tiles').classList.remove('chyba');
+  document.querySelectorAll('.platba-tiles').forEach(t => t.classList.remove('chyba'));
   syncEet();
 }
 
@@ -520,10 +543,21 @@ async function nactiZRezervace(id, col) {
       renderPolozky();
     }
 
+    // Předvyplnění ze stránky prezuti-faktura.html (dlaždice): položky + forma úhrady
+    let pred = null;
+    try { pred = JSON.parse(sessionStorage.getItem('faktura_predvyplneni') || 'null'); } catch(e) {}
+    if (pred && pred.id === id && Array.isArray(pred.polozky) && pred.polozky.length) {
+      polozky = pred.polozky.map(p => ({ popis:p.popis, mnozstvi:p.mnozstvi, jednotka:p.jednotka || 'ks', nakup:'', marze:'', cena:p.cena }));
+      renderPolozky();
+      if (pred.forma) vyberFormu(pred.forma);
+      sessionStorage.removeItem('faktura_predvyplneni');
+    }
+
     // Banner — info o vazbě na rezervaci
     rezervaceId  = id;
     rezervaceCol = col;
     zobrazRezBanner(r.jmeno, r.vozidlo, r.typ);
+
 
   } catch(e) {
     console.warn('nactiZRezervace chyba:', e);
@@ -531,7 +565,7 @@ async function nactiZRezervace(id, col) {
 }
 
 // ── Načtení dílů ze zakázky (Firemní výdaje, kategorie „díly na prodej") ──
-const KOEF_DEFAULT = 1.3;
+const MARZE_DEFAULT = 30;   // % přirážka na díly ze zakázky
 
 async function nactiSeznamZakazek() {
   const sel = document.getElementById('zakazka-cislo');
@@ -565,13 +599,15 @@ async function nactiZeZakazky() {
       setStatus('Zakázka ' + cz + ': žádné díly na prodej ve výdajích.', 'err');
       return;
     }
-    // odstranit úvodní prázdný řádek, pokud je jediný a nevyplněný
-    if (polozky.length === 1 && !polozky[0].popis && !cOf(polozky[0])) polozky = [];
+    // prázdné (nevyplněné) řádky pryč, díly se přidají za vyplněné položky
+    polozky = polozky.filter(p => !jePrazdna(p));
     r.polozky.forEach(d => {
-      polozky.push({ popis: d.popis || '', mnozstvi:1, jednotka:'ks', cena: d.cena, koef: KOEF_DEFAULT });
+      const p = { popis: d.popis || '', mnozstvi:1, jednotka:'ks', nakup: d.cena, marze: MARZE_DEFAULT, cena:'' };
+      prepocitejProdej(p);
+      polozky.push(p);
     });
     renderPolozky();
-    setStatus('✓ Načteno ' + r.polozky.length + ' položek ze zakázky ' + cz + ' (koef ' + KOEF_DEFAULT + ', uprav dle potřeby).', 'ok');
+    setStatus('✓ Načteno ' + r.polozky.length + ' položek ze zakázky ' + cz + ' (marže ' + MARZE_DEFAULT + ' %, uprav dle potřeby).', 'ok');
   } catch(e) {
     setStatus('Chyba připojení k serveru.', 'err');
   } finally {
@@ -589,19 +625,37 @@ function zobrazRezBanner(jmeno, vozidlo, typ) {
   document.querySelector('.wrap').insertBefore(banner, document.querySelector('.grid-2'));
 }
 
+function cenikOptions() {
+  return cenik.map((c, i) => `<option value="${i}">${esc(c.nazev)} — ${c.cena} Kč/${esc(c.jednotka||'ks')}</option>`).join('');
+}
 function renderCenikSelect() {
   const sel = document.getElementById('cenik-select');
-  sel.innerHTML = '<option value="">+ Přidat z ceníku…</option>' +
-    cenik.map((c, i) => `<option value="${i}">${esc(c.nazev)} — ${c.cena} Kč/${esc(c.jednotka||'ks')}</option>`).join('');
+  sel.innerHTML = '<option value="">+ Přidat z ceníku…</option>' + cenikOptions();
+  if (document.getElementById('polozky-body').children.length) renderPolozky();
 }
 
+function zCeniku(c) {
+  return { popis:c.nazev, mnozstvi:'', jednotka:c.jednotka || 'ks', nakup:'', marze:'', cena:(c.cena != null ? c.cena : '') };
+}
+// horní výběr: vyplní první prázdný řádek, jinak přidá nový
 function pridatZCeniku(idx) {
   if (idx === '') return;
   const c = cenik[parseInt(idx, 10)];
   if (!c) return;
-  polozky.push({ popis:c.nazev, mnozstvi:'', jednotka:c.jednotka || 'ks', cena:(c.cena != null ? c.cena : ''), koef:'' });
+  const prazdna = polozky.findIndex(jePrazdna);
+  if (prazdna >= 0) polozky[prazdna] = zCeniku(c); else polozky.push(zCeniku(c));
   renderPolozky();
   document.getElementById('cenik-select').value = '';
+}
+// výběr šipkou ▾ v řádku: přepíše právě tenhle řádek (počet zůstane)
+function vybratDoRadku(i, idx) {
+  if (idx === '') return;
+  const c = cenik[parseInt(idx, 10)];
+  if (!c) return;
+  const pocet = polozky[i].mnozstvi;
+  polozky[i] = zCeniku(c);
+  polozky[i].mnozstvi = pocet;
+  renderPolozky();
 }
 
 // ── Datumy + první řádek ──
@@ -618,25 +672,58 @@ function fmtIn(d) { return d.toISOString().split('T')[0]; }
 function fmtCZ(s) { if (!s) return ''; const [y,m,d]=s.split('-'); return `${d}. ${m}. ${y}`; }
 
 // ── Položky ──
-function pridatPolozku() { polozky.push({ popis:'', mnozstvi:'', jednotka:'ks', cena:'', koef:'' }); renderPolozky(); }
+// Položka: popis, mnozstvi (počet), jednotka, nakup (nákup/j bez marže), marze (%), cena (prodej/j = na fakturu)
+function novaPolozka() { return { popis:'', mnozstvi:'', jednotka:'ks', nakup:'', marze:'', cena:'' }; }
+function jePrazdna(p) { return !String(p.popis||'').trim() && !(parseFloat(p.cena) || 0) && !(parseFloat(p.nakup) || 0); }
+function pridatPolozku() { polozky.push(novaPolozka()); renderPolozky(); }
 function odebratiPolozku(i) { polozky.splice(i,1); if (!polozky.length) pridatPolozku(); else renderPolozky(); }
-function updatePolozka(i,f,v) { polozky[i][f] = v; renderCelkem(); }
+function updatePolozka(i,f,v) {
+  const p = polozky[i];
+  p[f] = v;
+  if (f === 'nakup' || f === 'marze') {
+    prepocitejProdej(p);
+    const inp = document.querySelector('#polozky-body .polozka-row:nth-child(' + (i+1) + ') .p-prodej input');
+    if (inp && document.activeElement !== inp) inp.value = p.cena;
+  } else if (f === 'cena') {
+    // prodej zadaný ručně → marže se dopočítá z nákupu (je-li vyplněný)
+    const n = parseFloat(p.nakup) || 0, c = parseFloat(v);
+    if (n > 0 && !isNaN(c)) {
+      p.marze = Math.round((c / n - 1) * 1000) / 10;
+      const inp = document.querySelector('#polozky-body .polozka-row:nth-child(' + (i+1) + ') .p-marze input');
+      if (inp) inp.value = p.marze;
+    }
+  }
+  renderCelkem();
+}
+// Prodej/j z nákupu a marže, zaokrouhleno nahoru na celé Kč
+function prepocitejProdej(p) {
+  const n = parseFloat(p.nakup);
+  if (isNaN(n) || p.nakup === '') return;
+  const m = parseFloat(p.marze) || 0;
+  p.cena = m ? Math.ceil(n * (1 + m / 100) - 1e-9) : n;
+}
 
-// prázdné množství = 1, prázdná cena = 0, prázdný koef = 1
+// prázdný počet = 1, prázdná cena = 0
 function qOf(p) { return (p.mnozstvi === '' || p.mnozstvi == null) ? 1 : (parseFloat(p.mnozstvi) || 0); }
 function cOf(p) { return parseFloat(p.cena) || 0; }
-function kOf(p) { return (p.koef === '' || p.koef == null) ? 1 : (parseFloat(p.koef) || 1); }
-// prodejní cena/j: s koeficientem zaokrouhlená nahoru na celé Kč, bez koeficientu beze změny
-function unitPrice(p) { const k = kOf(p); return k === 1 ? cOf(p) : Math.ceil(cOf(p) * k); }
+function unitPrice(p) { return cOf(p); }
 function lineTotal(p) { return qOf(p) * unitPrice(p); }
+function hodn(v) { return (v === '' || v == null) ? '' : v; }
 function renderPolozky() {
+  const opts = cenikOptions();
   document.getElementById('polozky-body').innerHTML = polozky.map((p,i) => `
     <div class="polozka-row">
-      <input class="p-popis" type="text" value="${esc(p.popis)}" placeholder="Popis služby nebo zboží" oninput="updatePolozka(${i},'popis',this.value)">
-      <input class="p-mnozstvi" type="number" value="${p.mnozstvi}" placeholder="1" min="0" step="1" style="text-align:right" onfocus="this.value=''" onblur="if(this.value==='')this.value=polozky[${i}].mnozstvi" oninput="updatePolozka(${i},'mnozstvi',this.value)">
-      <input class="p-jednotka" type="text" value="${esc(p.jednotka)}" placeholder="ks" oninput="updatePolozka(${i},'jednotka',this.value)">
-      <input class="p-cena" type="number" value="${p.cena}" placeholder="0" min="0" step="1" style="text-align:right" onfocus="this.value=''" onblur="if(this.value==='')this.value=polozky[${i}].cena" oninput="updatePolozka(${i},'cena',this.value)">
-      <input class="p-koef" type="number" value="${p.koef != null ? p.koef : ''}" placeholder="—" min="0" step="0.1" style="text-align:right" title="Koeficient (nákup × koef = prodej)" onfocus="this.select()" oninput="updatePolozka(${i},'koef',this.value)">
+      <div class="f p-popis"><span class="f-lb">Popis</span>
+        <div class="p-popis-wrap">
+          <input type="text" value="${esc(p.popis)}" placeholder="Popis služby nebo zboží" oninput="updatePolozka(${i},'popis',this.value)">
+          ${opts ? `<span class="p-vyber">▾</span><select title="Vybrat z ceníku (přepíše tento řádek)" onchange="vybratDoRadku(${i},this.value)"><option value="">— Vybrat z ceníku —</option>${opts}</select>` : ''}
+        </div>
+      </div>
+      <div class="f p-mnozstvi"><span class="f-lb">Počet</span><input type="number" inputmode="decimal" value="${hodn(p.mnozstvi)}" placeholder="1" min="0" step="1" onfocus="this.select()" oninput="updatePolozka(${i},'mnozstvi',this.value)"></div>
+      <div class="f p-jednotka"><span class="f-lb">Jedn.</span><input type="text" value="${esc(p.jednotka||'')}" placeholder="ks" oninput="updatePolozka(${i},'jednotka',this.value)"></div>
+      <div class="f p-nakup"><span class="f-lb">Nákup/j</span><input type="number" inputmode="decimal" value="${hodn(p.nakup)}" placeholder="—" step="1" title="Nákupní cena za 1 kus bez marže (nepovinné)" onfocus="this.select()" oninput="updatePolozka(${i},'nakup',this.value)"></div>
+      <div class="f p-marze"><span class="f-lb">Marže %</span><input type="number" inputmode="decimal" value="${hodn(p.marze)}" placeholder="—" step="1" title="Přirážka v % k nákupní ceně" onfocus="this.select()" oninput="updatePolozka(${i},'marze',this.value)"></div>
+      <div class="f p-prodej"><span class="f-lb">Prodej/j</span><input type="number" inputmode="decimal" value="${hodn(p.cena)}" placeholder="0" step="1" title="Prodejní cena za 1 kus — jde na fakturu" onfocus="this.select()" oninput="updatePolozka(${i},'cena',this.value)"></div>
       <div class="p-celkem">${fmtKc(lineTotal(p))}</div>
       <button class="btn-remove" onclick="odebratiPolozku(${i})" title="Odebrat">×</button>
     </div>
@@ -680,8 +767,20 @@ function zobrazNahled() {
   const cislo = document.getElementById('cislo').value.trim();
   if (!cislo) { alert('Zadej číslo faktury.'); document.getElementById('cislo').focus(); return; }
   if (celkem() <= 0) { alert('Faktura nemá žádné položky s cenou.'); return; }
+  tiskni();
+}
+
+// Jediné místo, odkud se tiskne (Náhled i Uložit). Když se faktura vejde na jednu
+// stranu A4, zapne se pojistka html.tisk-1strana → prohlížeč nepřidá prázdnou 2. stranu.
+function tiskni() {
   generujPrint();
-  window.print();
+  const box = document.getElementById('faktura-print');
+  box.style.cssText = 'display:block;position:absolute;left:-10000px;top:0;';
+  const vyska = document.getElementById('print-content').getBoundingClientRect().height; // px při šířce 210 mm
+  box.style.cssText = '';
+  // A4 = 1123 px; rezerva pro okraje, které si některé prohlížeče přidají samy
+  document.documentElement.classList.toggle('tisk-1strana', vyska > 0 && vyska < 980);
+  setTimeout(function(){ window.print(); }, 200);
 }
 
 // ── Uložení do evidence + tisk ──
@@ -726,7 +825,7 @@ async function ulozAVytiskni() {
                 posledniEet && posledniEet.stav === 'CHYBA' ? 'err' : 'ok');
       btn.innerHTML = '✓ Uloženo — tisknout znovu';
       btn.disabled = false;
-      btn.onclick = function() { generujPrint(); setTimeout(function(){ window.print(); }, 150); };
+      btn.onclick = function() { tiskni(); };
       syncEet();
       // automatická archivace rezervace pokud faktura vznikla z rezervace
       if (rezervaceId && rezervaceCol) {
@@ -735,8 +834,7 @@ async function ulozAVytiskni() {
         } catch(e) { console.warn('Archivace selhala:', e); }
       }
       // tisk pro zákazníka
-      generujPrint();
-      setTimeout(function(){ window.print(); }, 150);
+      tiskni();
     } else if (r.error === 'duplicate') {
       setStatus('Faktura ' + cislo + ' už v evidenci je. Změň číslo (nebo použij Náhled bez uložení pro přetisk).' + platbaPozn(), 'err');
       btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
