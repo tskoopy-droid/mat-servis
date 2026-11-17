@@ -1064,7 +1064,13 @@ function checkForm() {
 // Odkud zákazník přišel – posílá se s rezervací do sloupce Zdroj v logu rezervací.
 // Žádné osobní údaje: jen UTM z odkazu (kampaň reklamy), nebo doména, ze které přišel.
 // Zjišťuje se při načtení stránky, ať ho nepřepíše návrat z formuláře do kalendáře.
+// Přednost má zdroj z první stránky návštěvy (mt_zdroj, ukládá souhlas.js) –
+// jinak by příchod přes úvodní stránku skončil jako „web mat-servis.cz“.
 const ZDROJ_NAVSTEVY = (function () {
+  try {
+    const ulozeny = sessionStorage.getItem('mt_zdroj');
+    if (ulozeny) return ulozeny;
+  } catch (x) {}
   try {
     const q = new URLSearchParams(location.search);
     const utm = ['utm_source', 'utm_medium', 'utm_campaign'].map(k => q.get(k) || '').filter(Boolean);
