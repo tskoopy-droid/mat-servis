@@ -519,7 +519,24 @@ async function nactiInit() {
   const rezCol = params.get('col');
   if (rezId && rezCol) {
     await nactiZRezervace(rezId, rezCol);
+  } else if (pouzijPredvyplneni('')) {
+    // přezutí bez rezervace (zákazník bez objednání) → odběratel „Maloobchodní prodej“
+    const od = document.getElementById('odberatel_nazev');
+    if (!od.value.trim()) od.value = ODBERATEL_UNIVERZAL;
   }
+}
+
+// Předvyplnění ze stránky prezuti-faktura.html (dlaždice): položky + forma úhrady.
+// id = rezervace, '' = přezutí bez rezervace
+function pouzijPredvyplneni(id) {
+  let pred = null;
+  try { pred = JSON.parse(sessionStorage.getItem('faktura_predvyplneni') || 'null'); } catch(e) {}
+  if (!pred || (pred.id || '') !== (id || '') || !Array.isArray(pred.polozky) || !pred.polozky.length) return false;
+  polozky = pred.polozky.map(p => ({ popis:p.popis, mnozstvi:p.mnozstvi, jednotka:p.jednotka || 'ks', nakup:'', marze:'', cena:p.cena }));
+  renderPolozky();
+  if (pred.forma) vyberFormu(pred.forma);
+  sessionStorage.removeItem('faktura_predvyplneni');
+  return true;
 }
 
 async function nactiZRezervace(id, col) {
@@ -543,15 +560,7 @@ async function nactiZRezervace(id, col) {
       renderPolozky();
     }
 
-    // Předvyplnění ze stránky prezuti-faktura.html (dlaždice): položky + forma úhrady
-    let pred = null;
-    try { pred = JSON.parse(sessionStorage.getItem('faktura_predvyplneni') || 'null'); } catch(e) {}
-    if (pred && pred.id === id && Array.isArray(pred.polozky) && pred.polozky.length) {
-      polozky = pred.polozky.map(p => ({ popis:p.popis, mnozstvi:p.mnozstvi, jednotka:p.jednotka || 'ks', nakup:'', marze:'', cena:p.cena }));
-      renderPolozky();
-      if (pred.forma) vyberFormu(pred.forma);
-      sessionStorage.removeItem('faktura_predvyplneni');
-    }
+    pouzijPredvyplneni(id);
 
     // Banner — info o vazbě na rezervaci
     rezervaceId  = id;
