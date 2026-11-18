@@ -117,7 +117,7 @@ function getToken() { return sessionStorage.getItem('admin_token') || ''; }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function bezDiakritiky(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
 function fmtKc(n) { return n.toLocaleString('cs-CZ', { maximumFractionDigits:2 }) + ' Kč'; }
-function adresaFaktury() { return 'faktura.html?id=' + encodeURIComponent(rezId) + '&col=' + encodeURIComponent(rezCol); }
+function adresaFaktury() { return rezId ? 'faktura.html?id=' + encodeURIComponent(rezId) + '&col=' + encodeURIComponent(rezCol) : 'faktura.html'; }
 
 async function gasPost(payload) {
   const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
@@ -160,15 +160,17 @@ async function start() {
   if (!getToken()) { document.getElementById('gate').style.display = 'block'; return; }
   document.getElementById('app').style.display = 'block';
   document.getElementById('rucne').href = adresaFaktury();
-  if (!rezId || !rezCol) { document.getElementById('dl-grid').innerHTML = '<div class="hlaska err">Chybí rezervace — otevři to z adminu.</div>'; return; }
+  // s rezervací: ceník + jméno z rezervace; bez rezervace (záložka v adminu): jen ceník
   try {
-    const r = await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id:rezId, col:rezCol });
+    const r = (rezId && rezCol)
+      ? await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id:rezId, col:rezCol })
+      : await gasPost({ akce:'faktura_init', token:getToken() });
     if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
     if (!r.ok) throw new Error(r.message || r.error || 'neznámá chyba');
-    document.getElementById('zakaznik').textContent = [r.jmeno, r.vozidlo].filter(Boolean).join(' · ') || 'Rezervace';
+    document.getElementById('zakaznik').textContent = rezId ? ([r.jmeno, r.vozidlo].filter(Boolean).join(' · ') || 'Rezervace') : 'Bez rezervace';
     cenik = (r.cenik || []).filter(c => bezDiakritiky(c.kategorie) === 'prezuti');
     if (!cenik.length) {
-      document.getElementById('dl-grid').innerHTML = '<div class="hlaska err">V ceníku (Sheets, list fakturace_cenik) není žádná položka s kategorií „přezutí“.</div>';
+      document.getElementById('dl-grid').innerHTML = '<div class="hlaska err">V ceníku (Sheets, list fakturace_cenik) není žádná položka s kategorií „přezutí“' + (rezId ? '' : ' — nebo ještě není nasazená nová verze Apps Scriptu') + '.</div>';
       return;
     }
     // částka z adminu: shoda s 4 × cena položky → předvyplnit; jiná částka = jako by nebyla
