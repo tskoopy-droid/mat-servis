@@ -77,9 +77,12 @@
   .archiv-btn:disabled { opacity:0.5; cursor:not-allowed; }
   /* Zámek: podržením 5 s odemkne archivaci/fakturaci před termínem (jen do obnovení stránky) */
   .zamek-btn { background:#f1f5f9; color:var(--text-muted); border:1.5px solid var(--border); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; position:relative; overflow:hidden; }
-  .zamek-btn .prubeh { position:absolute; left:0; top:0; bottom:0; width:0; background:#fde68a; z-index:0; }
-  .zamek-btn.drzi .prubeh { width:100%; transition:width 3s linear; }
-  .zamek-btn span { position:relative; z-index:1; }
+  .zamek-btn.drzi { background:#fef3c7; border-color:#fde68a; }
+  /* při držení zámku se přes text „Archivace po termínu“ načítá žlutá lišta */
+  .archiv-text { position:relative; overflow:hidden; flex:1; min-width:0; padding:6px 10px; border-radius:8px; font-size:12px; color:var(--text-muted); font-style:italic; }
+  .archiv-text .prubeh { position:absolute; left:0; top:0; bottom:0; width:0; background:#fde68a; z-index:0; }
+  .archiv-text span { position:relative; z-index:1; }
+  .archiv-row.drzi .archiv-text .prubeh { width:100%; transition:width 3s linear; }
   /* Sloučit: ikona ve stejném stylu jako 🚫 a 🗑️, vybraná = modrá */
   .sloucit-btn { background:#f1f5f9; border-color:var(--border); }
   .sloucit-btn.vybrano { background:#dbeafe; border-color:#60a5fa; }
@@ -1007,9 +1010,9 @@
           </div>
         </div>`:`
         <div class="archiv-row" style="justify-content:space-between">
-          <div style="display:flex;gap:10px;align-items:center">
-            ${!jeServis?`<button class="zamek-btn" title="Podrž 3 s — odemkne archivaci a fakturaci před termínem" aria-label="Odemknout" onpointerdown="zamekStart(event,this,'${r.id}')" onpointerup="zamekStop(this)" onpointerleave="zamekStop(this)" onpointercancel="zamekStop(this)" oncontextmenu="return false"><i class="prubeh"></i><span>🔒</span></button>`:''}
-            <span style="font-size:12px;color:var(--text-muted);font-style:italic">Archivace po termínu</span>
+          <div style="display:flex;gap:10px;align-items:center;flex:1;min-width:0">
+            ${!jeServis?`<button class="zamek-btn" title="Podrž 3 s — odemkne archivaci a fakturaci před termínem" aria-label="Odemknout" onpointerdown="zamekStart(event,this,'${r.id}')" onpointerup="zamekStop(this)" onpointerleave="zamekStop(this)" onpointercancel="zamekStop(this)" oncontextmenu="return false">🔒</button>`:''}
+            <span class="archiv-text"><i class="prubeh"></i><span>Archivace po termínu</span></span>
           </div>
           <div style="display:flex;gap:8px">
             
@@ -1053,11 +1056,13 @@
     try{btn.setPointerCapture(e.pointerId);}catch(_){}
     zamekStop(btn);
     btn.classList.add('drzi');
+    const radek=btn.closest('.archiv-row');if(radek)radek.classList.add('drzi');
     zamekTimer=setTimeout(()=>{zamekTimer=null;odemceno.add(id);renderListZachovat();},3000);
   };
   window.zamekStop=function(btn){
     if(zamekTimer){clearTimeout(zamekTimer);zamekTimer=null;}
     btn.classList.remove('drzi');
+    const radek=btn.closest('.archiv-row');if(radek)radek.classList.remove('drzi');
   };
 
   // ── Sloučení přezutí: zaškrtnout 2+ rezervace → společná archivace/faktura ──
