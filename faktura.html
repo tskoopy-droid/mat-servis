@@ -327,6 +327,7 @@ let ulozeno = false;
 let rezervaceId  = '';
 let rezervaceCol = '';
 let posledniEet  = null;   // odpověď EET z posledního uložení (pro tisk)
+let davka        = null;   // přezutí z dlaždic: { rezervace:[{id,col,trzba}], auta:[{polozky,castka,jmeno,vozidlo}] }
 let sumupKod     = '';     // kód transakce SumUp po úspěšné platbě na terminálu
 let sumupCastka  = 0;      // částka, která se na terminálu zaplatila
 let sumupBezi    = false;
@@ -541,6 +542,7 @@ function pouzijPredvyplneni(id) {
   polozky = pred.polozky.map(p => ({ popis:p.popis, mnozstvi:p.mnozstvi, jednotka:p.jednotka || 'ks', nakup:'', marze:'', cena:p.cena }));
   renderPolozky();
   if (pred.forma) vyberFormu(pred.forma);
+  davka = (pred.davka && Array.isArray(pred.davka.auta) && pred.davka.auta.length) ? pred.davka : null;
   sessionStorage.removeItem('faktura_predvyplneni');
   return true;
 }
@@ -826,6 +828,7 @@ async function ulozAVytiskni() {
     poznamka: document.getElementById('poznamka').value.trim(),
     cislo_zakazky: document.getElementById('zakazka-cislo').value.trim(),
     z_rezervace: !!(rezervaceId && rezervaceCol),
+    prijmy_auta: davka ? davka.auta : [],   // přezutí: příjem za každé auto zapíše faktura
     eet_na_miste: document.getElementById('eet_na_miste').checked,
     sumup_kod: sumupKod
   };
@@ -842,8 +845,12 @@ async function ulozAVytiskni() {
       btn.disabled = false;
       btn.onclick = function() { tiskni(); };
       syncEet();
+      // přezutí z dlaždic: příjmy už zapsala faktura → rezervace jen přesunout do archivu
+      if (davka) {
+        await archivujDavku(r.cislo);
+      }
       // automatická archivace rezervace pokud faktura vznikla z rezervace
-      if (rezervaceId && rezervaceCol) {
+      else if (rezervaceId && rezervaceCol) {
         try {
           await gasPost({ akce:'admin_archive', token:getToken(), id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0, kod_prezuti:r.kod_prezuti || '' });
         } catch(e) { console.warn('Archivace selhala:', e); }
@@ -860,6 +867,31 @@ async function ulozAVytiskni() {
   } catch (e) {
     setStatus('Chyba připojení k serveru.' + platbaPozn(), 'err');
     btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
+  }
+}
+
+// Přesun rezervací z dávky do archivu (bez zápisu příjmu — ten zapsala faktura).
+// Když něco selže, tlačítko nabídne zkusit to znovu (nic se nezapíše dvakrát).
+async function archivujDavku(cislo) {
+  const zbyva = [];
+  for (const rz of (davka && davka.rezervace) || []) {
+    try {
+      const a = await gasPost({ akce:'admin_archive', token:getToken(), id:rz.id, col:rz.col, trzba: Math.round(rz.trzba || 0), bez_prijmu:true });
+      if (!a.ok && a.error !== 'not_found') zbyva.push(rz);
+    } catch(e) { zbyva.push(rz); }
+  }
+  davka.rezervace = zbyva;
+  try { sessionStorage.removeItem('admin_cache'); } catch(e) {}   // admin načte seznam znovu
+  if (zbyva.length) {
+    setStatus('✓ Faktura ' + cislo + ' uložena, ale ' + zbyva.length + ' rezervace se nepřesunula do archivu. Klepni na „Dokončit archivaci“.', 'err');
+    const btn = document.getElementById('save-btn');
+    btn.innerHTML = '↻ Dokončit archivaci'; btn.disabled = false;
+    btn.onclick = async function() { btn.disabled = true; await archivujDavku(cislo); };
+  } else if (document.getElementById('save-btn').innerHTML.indexOf('Dokončit') >= 0) {
+    setStatus('✓ Faktura ' + cislo + ' uložena, rezervace archivovány.', 'ok');
+    const btn = document.getElementById('save-btn');
+    btn.innerHTML = '✓ Uloženo — tisknout znovu'; btn.disabled = false;
+    btn.onclick = function() { tiskni(); };
   }
 }
 

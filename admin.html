@@ -73,6 +73,19 @@
   .archiv-btn { background:var(--green-light); color:var(--green); border:2px solid var(--green-mid); border-radius:10px; padding:10px 14px; font-size:13px; font-weight:700; font-family:'Inter',sans-serif; cursor:pointer; white-space:nowrap; }
   .archiv-btn:active { background:#bbf7d0; }
   .archiv-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  /* Zámek: podržením 5 s odemkne archivaci/fakturaci před termínem (jen do obnovení stránky) */
+  .zamek-btn { background:#f1f5f9; color:var(--text-muted); border:1.5px solid var(--border); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; position:relative; overflow:hidden; }
+  .zamek-btn .prubeh { position:absolute; left:0; top:0; bottom:0; width:0; background:#fde68a; z-index:0; }
+  .zamek-btn.drzi .prubeh { width:100%; transition:width 5s linear; }
+  .zamek-btn span { position:relative; z-index:1; }
+  .sloucit { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--text-muted); cursor:pointer; }
+  .sloucit input { width:18px; height:18px; accent-color:var(--blue); }
+  #sloucit-bar { display:none; position:fixed; left:0; right:0; bottom:0; z-index:40; background:#fff; border-top:1px solid var(--border); box-shadow:0 -4px 16px rgba(0,0,0,0.08); padding:10px 14px calc(10px + env(safe-area-inset-bottom)); }
+  #sloucit-bar.open { display:block; }
+  #sloucit-bar .in { max-width:700px; margin:0 auto; display:flex; align-items:center; gap:6px; }
+  #sloucit-bar .txt { font-size:14px; font-weight:700; flex:1; min-width:0; white-space:nowrap; }
+  body.bar-open { padding-bottom:84px; }
+  #sloucit-bar button { border:none; border-radius:10px; padding:11px 10px; white-space:nowrap; font-family:'Inter',sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
   .archived-msg { background:var(--green-light); border:2px solid var(--green-mid); color:var(--green); text-align:center; padding:12px; border-radius:10px; font-weight:700; font-size:14px; }
 
   /* Detail nacenění */
@@ -298,7 +311,7 @@
       <div class="tab" id="tab-sezona" onclick="switchTab('sezona')">📣 SMS sezóna</div>
       <div class="tab" onclick="otevritPrehled()">📋 Přehled</div>
       <div class="tab" onclick="location.href='faktura.html'">📄 Faktura</div>
-      <div class="tab" onclick="location.href='prezuti-faktura.html'">🚗 Přezutí bez rezervace</div>
+      <div class="tab" onclick="location.href='prezuti-faktura.html'">🚗 Přezutí ihned</div>
       <div class="tab" onclick="window.open('uctenka.html?t=AKstNCKhxcTsh1NrtciIfc0HtcSFYyw6','_blank')">🧾 Účtenka</div>
       <div class="tab" id="tab-servis" onclick="switchTab('servis')">🔧 Nový servis</div>
       <div class="tab" id="tab-trzba" onclick="switchTab('trzba')">💰 Přímá tržba</div>
@@ -481,6 +494,8 @@
   const SERVIS_TEL    = '731 885 825';
 
   let allData=[],currentTab='all',rozvrhData={},bookedData={};
+  const odemceno=new Set();   // rezervace odemčené zámkem (jen do obnovení stránky)
+  const slouceni=new Set();   // přezutí zaškrtnutá ke sloučení
   let dataNactena=false;
 
   // Načítání: běží nanejvýš jedno naráz (dřív odcházelo při otevření
@@ -966,6 +981,8 @@
       }else if(r.datum&&r.cas){
         muzeArchivovat=new Date(r.datum+'T'+r.cas+':00')<=new Date();
       }
+      if(!jeServis&&odemceno.has(r.id))muzeArchivovat=true;
+      const jePrezuti=r.typ==='prezuti';
       const badgeCls=jeServis?'badge-servis':(r.typ==='prezuti'?'badge-prezuti':'badge-oleje');
       const badgeTxt=jeServis?'🔧 Servis':(r.typ==='prezuti'?'🚗 Přezutí':'🛢️ Olej');
       // Servisní zakázku jde fakturovat hned (i před termínem), archivovat až po něm.
@@ -977,10 +994,11 @@
             <span class="trzba-suffix">Kč</span>
           </div>
           <div style="display:flex;gap:8px;width:100%">
-            <button class="archiv-btn" style="flex:1" onclick="archivovat('${r.id}','${r.col}','${r.typ}')">✓ Archivovat</button>
-            <button class="archiv-btn" style="flex:1;background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="fakturovat('${r.id}','${r.col}','${r.typ}')">🧾 Fakturovat</button>
+            <button class="archiv-btn" style="flex:1" onclick="${jePrezuti?`otevritDlazdice(['${r.id}'],'archiv')`:`archivovat('${r.id}','${r.col}','${r.typ}')`}">✓ Archivovat</button>
+            <button class="archiv-btn" style="flex:1;background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="${jePrezuti?`otevritDlazdice(['${r.id}'],'faktura')`:`fakturovat('${r.id}','${r.col}','${r.typ}')`}">🧾 Fakturovat</button>
           </div>
-          <div style="display:flex;justify-content:space-between;width:100%">
+          <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+            ${jePrezuti?`<label class="sloucit"><input type="checkbox" class="sloucit-cb" data-id="${r.id}" ${slouceni.has(r.id)?'checked':''} onchange="prepniSlouceni('${r.id}',this.checked)">Sloučit</label>`:''}
             <button class="zrusit-btn neprisel-btn" style="background:#fef3c7;border-color:#fde68a" title="Nepřišel" aria-label="Nepřišel" onclick="neprisel('${r.id}','${r.col}')">🚫</button>
             <button class="zrusit-btn" title="Zrušit (STORNO)" aria-label="Zrušit" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
           </div>
@@ -988,6 +1006,7 @@
         <div class="archiv-row" style="justify-content:space-between">
           <span style="font-size:12px;color:var(--text-muted);font-style:italic">Archivace po termínu</span>
           <div style="display:flex;gap:8px">
+            ${!jeServis?`<button class="zamek-btn" title="Podrž 5 s — odemkne archivaci a fakturaci před termínem" onpointerdown="zamekStart(event,this,'${r.id}')" onpointerup="zamekStop(this)" onpointerleave="zamekStop(this)" onpointercancel="zamekStop(this)" oncontextmenu="return false"><i class="prubeh"></i><span>🔒 Podrž 5 s</span></button>`:''}
             ${jeServis?`<button class="archiv-btn" style="background:#dbeafe;color:#1d4ed8;border-color:#bfdbfe" onclick="fakturovat('${r.id}','${r.col}','${r.typ}')">🧾 Fakturovat</button>`:''}
             <button class="zrusit-btn" onclick="cancelRez('${r.id}','${r.col}')">🗑️</button>
           </div>
@@ -1018,7 +1037,47 @@
         ${archivRowHtml}
       </div>`;
     }).join('');
+    obnovSlouceni();
   }
+
+  // ── Zámek: podržet 5 s → odemkne archivaci/fakturaci před termínem ──
+  let zamekTimer=null;
+  window.zamekStart=function(e,btn,id){
+    e.preventDefault();
+    try{btn.setPointerCapture(e.pointerId);}catch(_){}
+    zamekStop(btn);
+    btn.classList.add('drzi');
+    zamekTimer=setTimeout(()=>{zamekTimer=null;odemceno.add(id);renderListZachovat();},5000);
+  };
+  window.zamekStop=function(btn){
+    if(zamekTimer){clearTimeout(zamekTimer);zamekTimer=null;}
+    btn.classList.remove('drzi');
+  };
+
+  // ── Sloučení přezutí: zaškrtnout 2+ rezervace → společná archivace/faktura ──
+  window.prepniSlouceni=function(id,on){if(on)slouceni.add(id);else slouceni.delete(id);obnovSlouceni();};
+  function obnovSlouceni(){
+    // jen rezervace, které jsou v seznamu a mají zaškrtávátko (po termínu / odemčené)
+    const dostupne=new Set([...document.querySelectorAll('.sloucit-cb')].map(el=>el.dataset.id));
+    [...slouceni].forEach(id=>{if(!dostupne.has(id)&&!allData.some(x=>x.id===id))slouceni.delete(id);});
+    const bar=document.getElementById('sloucit-bar');
+    if(!bar)return;
+    bar.classList.toggle('open',slouceni.size>=2);
+    document.body.classList.toggle('bar-open',slouceni.size>=2);
+    document.getElementById('sloucit-pocet').textContent='Sloučit ('+slouceni.size+')';
+  }
+  window.slouceniZrusit=function(){slouceni.clear();document.querySelectorAll('.sloucit-cb').forEach(el=>el.checked=false);obnovSlouceni();};
+  // Otevře dlaždice přezutí pro jednu nebo víc rezervací; tržba z kolonky jde s sebou
+  window.otevritDlazdice=function(ids,rezim){
+    const rez=ids.map(id=>{
+      const r=allData.find(x=>x.id===id);if(!r)return null;
+      const inp=document.getElementById('trzba-'+id);
+      const castka=inp?parseInt(inp.value,10)||0:0;
+      return r.id+'~'+r.col+'~'+castka;
+    }).filter(Boolean);
+    if(!rez.length)return;
+    location.href='prezuti-faktura.html?rezim='+rezim+'&rez='+encodeURIComponent(rez.join('|'));
+  };
 
   // ── DETAIL NACENĚNÍ ────────────────────────────────────────
   function escHtml(s){
@@ -1712,5 +1771,13 @@ function sBuildMailText(){
   </div>
 </div>
 
+<div id="sloucit-bar">
+  <div class="in">
+    <span class="txt" id="sloucit-pocet">Sloučit vybrané</span>
+    <button style="background:var(--green-light);color:var(--green)" onclick="otevritDlazdice([...slouceni],'archiv')">✓ Archivovat</button>
+    <button style="background:#dbeafe;color:#1d4ed8" onclick="otevritDlazdice([...slouceni],'faktura')">🧾 Fakturovat</button>
+    <button style="background:#f1f5f9;color:var(--text-muted)" onclick="slouceniZrusit()">×</button>
+  </div>
+</div>
 </body>
 </html>

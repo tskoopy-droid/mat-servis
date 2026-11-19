@@ -55,6 +55,29 @@
   .rucne { display:block; text-align:center; font-size:13px; color:var(--text-muted); margin-top:4px; }
   .hlaska { font-size:13px; color:var(--text-muted); text-align:center; padding:30px 0; }
   .hlaska.err { color:var(--red); }
+
+  .h-titulek .rezim { color:var(--blue); }
+  .rezim-volba { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .rv { display:flex; flex-direction:column; align-items:center; gap:6px; padding:22px 8px; border:2px solid var(--border); border-radius:14px; background:#fff; font-family:inherit; font-size:16px; font-weight:700; color:var(--text); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .rv .ico { font-size:32px; line-height:1; }
+  .rv small { font-size:12px; font-weight:500; color:var(--text-muted); }
+  .auto-hlava { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .auto-hlava .titulek { margin:0; flex:1; min-width:0; }
+  .auto-hlava .kolonka { font-size:12px; color:var(--text-muted); white-space:nowrap; }
+  .auto-pryc { border:none; background:var(--bg); color:var(--text-muted); border-radius:8px; padding:6px 10px; font-family:inherit; font-size:12px; font-weight:600; cursor:pointer; }
+  .auto-suma { text-align:right; font-size:13px; color:var(--text-muted); margin-top:10px; }
+  .auto-suma strong { color:var(--text); }
+  .dl.tip .tip-pole { display:none; margin-top:10px; align-items:center; gap:8px; }
+  .dl.tip.ma .tip-pole { display:flex; }
+  .dl.tip.ma .dl-pocet { display:none; }
+  .tip-pole input { width:120px; border:2px solid var(--blue-mid); border-radius:10px; padding:9px 10px; font-family:inherit; font-size:16px; font-weight:700; text-align:right; background:#fff; color:var(--text); outline:none; }
+  .tip-pole input:focus { border-color:var(--blue); }
+  .tip-pole span { font-size:14px; font-weight:600; color:var(--text-muted); }
+  .btn-auto { width:100%; border:2px dashed var(--blue-mid); background:#fff; color:var(--blue); border-radius:14px; padding:14px; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer; margin-bottom:16px; }
+  .btn-dal.archiv { background:var(--blue); }
+  .vysledek { text-align:center; padding:34px 10px; font-size:17px; font-weight:700; color:var(--green); }
+  .vysledek.err { color:var(--red); font-size:14px; }
+  .suma-pozn { font-size:11px; color:var(--text-muted); }
 </style>
 </head>
 <body>
@@ -70,117 +93,272 @@
     <div class="header">
       <a href="admin.html" class="zpet" title="Zpět do adminu">←</a>
       <div>
-        <div class="h-titulek">🚗 Přezutí — fakturace</div>
+        <div class="h-titulek">🚗 Přezutí <span class="rezim" id="rezim-txt"></span></div>
         <div class="h-sub" id="zakaznik">Načítám…</div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="titulek">Co se dělalo — každým klepnutím +1 ks</div>
-      <div class="dl-grid" id="dl-grid"><div class="hlaska">Načítám ceník…</div></div>
-    </div>
-
-    <div class="card">
-      <div class="titulek">Platba</div>
-      <div class="platba" id="platba">
-        <button type="button" class="pl" data-forma="Hotově" onclick="vyberFormu(this.dataset.forma)"><span class="ico">💵</span>Hotově</button>
-        <button type="button" class="pl" data-forma="Kartou" onclick="vyberFormu(this.dataset.forma)"><span class="ico">💳</span>Kartou</button>
-        <button type="button" class="pl" data-forma="Převodem" onclick="vyberFormu(this.dataset.forma)"><span class="ico">🏦</span>Převodem</button>
+    <!-- Přezutí ihned: nejdřív volba Archivovat / Fakturovat -->
+    <div class="card" id="volba" style="display:none">
+      <div class="titulek">Co s tím?</div>
+      <div class="rezim-volba">
+        <button type="button" class="rv" onclick="nastavRezim('archiv')"><span class="ico">📦</span>Archivovat<small>hotově, bez faktury</small></button>
+        <button type="button" class="rv" onclick="nastavRezim('faktura')"><span class="ico">🧾</span>Fakturovat<small>vystavit fakturu</small></button>
       </div>
     </div>
 
-    <a class="rucne" id="rucne" href="#">Vyplnit fakturu ručně bez dlaždic →</a>
+    <div id="obsah" style="display:none">
+      <div id="auta"><div class="hlaska">Načítám ceník…</div></div>
+      <button type="button" class="btn-auto" id="btn-auto" style="display:none" onclick="pridatAuto()">+ Další auto</button>
+
+      <div class="card" id="platba-card" style="display:none">
+        <div class="titulek">Platba</div>
+        <div class="platba" id="platba">
+          <button type="button" class="pl" data-forma="Hotově" onclick="vyberFormu(this.dataset.forma)"><span class="ico">💵</span>Hotově</button>
+          <button type="button" class="pl" data-forma="Kartou" onclick="vyberFormu(this.dataset.forma)"><span class="ico">💳</span>Kartou</button>
+          <button type="button" class="pl" data-forma="Převodem" onclick="vyberFormu(this.dataset.forma)"><span class="ico">🏦</span>Převodem</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <div class="spodek">
+  <div class="spodek" id="spodek" style="display:none">
     <div class="spodek-in">
-      <div><div class="suma-lb">Celkem</div><div class="suma" id="suma">0 Kč</div></div>
-      <button class="btn-dal" id="btn-dal" onclick="pokracovat()">Pokračovat →</button>
+      <div><div class="suma-lb">Celkem</div><div class="suma" id="suma">0 Kč</div><div class="suma-pozn" id="suma-pozn"></div></div>
+      <button class="btn-dal" id="btn-dal" onclick="potvrdit()">Pokračovat →</button>
     </div>
   </div>
 </div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
-const KOL = 4;   // částka z adminu = 4 × cena položky ceníku → ta položka se předvyplní 4×
-
+const KOL = 4;   // částka v kolonce = 4 × cena pozice 1 nebo 2 → předvyplní se 4 ks
 const params = new URLSearchParams(location.search);
-const rezId  = params.get('id') || '';
-const rezCol = params.get('col') || '';
-const castka = parseFloat(params.get('castka')) || 0;
 
-let cenik = [];          // jen položky s kategorií „přezutí“ (sloupec D v listu fakturace_cenik)
-let pocty = {};          // index v cenik → počet
+// Rezervace: ?rez=id~col~castka|id~col~castka&rezim=archiv|faktura (starší odkaz: ?id=&col=&castka=)
+let rezervace = [];
+if (params.get('rez')) {
+  rezervace = params.get('rez').split('|').map(x => { const [id, col, c] = x.split('~'); return { id, col, castka: parseFloat(c) || 0 }; }).filter(r => r.id && r.col);
+} else if (params.get('id') && params.get('col')) {
+  rezervace = [{ id: params.get('id'), col: params.get('col'), castka: parseFloat(params.get('castka')) || 0 }];
+}
+const ihned = !rezervace.length;              // Přezutí ihned (bez objednání)
+let rezim = params.get('rezim') === 'archiv' ? 'archiv' : (params.get('rezim') === 'faktura' || !ihned ? 'faktura' : '');
+
+let cenik = [];        // položky s kategorií „přezutí“ kromě tipu
+let tipPolozka = null; // řádek „Tip“ z ceníku (pozice 6)
+let auta = [];         // { rezId, col, castka, jmeno, vozidlo, pocty:{idx:n} }
+let tip = { on:false, castka:'' };   // jen u prvního auta
 let forma = '';
+let bezi = false;
 
 function getToken() { return sessionStorage.getItem('admin_token') || ''; }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function bezDiakritiky(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
-function fmtKc(n) { return n.toLocaleString('cs-CZ', { maximumFractionDigits:2 }) + ' Kč'; }
-function adresaFaktury() { return rezId ? 'faktura.html?id=' + encodeURIComponent(rezId) + '&col=' + encodeURIComponent(rezCol) : 'faktura.html'; }
-
+function fmtKc(n) { return (Math.round(n * 100) / 100).toLocaleString('cs-CZ', { maximumFractionDigits:2 }) + ' Kč'; }
 async function gasPost(payload) {
   const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
   return res.json();
 }
 
-function celkem() { return cenik.reduce((s, c, i) => s + (pocty[i] || 0) * c.cena, 0); }
+function tipKc() { return tip.on ? (parseFloat(tip.castka) || 0) : 0; }
+// položky auta pro fakturu/příjmy (tip jen u 1. auta, jen když má částku)
+function polozkyAuta(a, i) {
+  const pl = cenik.map((c, k) => ({ popis:c.nazev, mnozstvi:a.pocty[k] || 0, jednotka:c.jednotka || 'ks', cena:c.cena })).filter(p => p.mnozstvi > 0);
+  if (i === 0 && tipPolozka && tipKc() > 0) pl.push({ popis:tipPolozka.nazev, mnozstvi:1, jednotka:'ks', cena:tipKc() });
+  return pl;
+}
+function soucetAuta(a, i) { return polozkyAuta(a, i).reduce((s, p) => s + p.mnozstvi * p.cena, 0); }
+// do příjmů jde částka z kolonky, bez ní součet položek a tipu
+function castkaAuta(a, i) { return a.castka > 0 ? a.castka : soucetAuta(a, i); }
+function maPolozky(a) { return cenik.some((c, k) => (a.pocty[k] || 0) > 0); }
+
+function novaAuto(r) {
+  const a = { rezId: r ? r.id : '', col: r ? r.col : '', castka: r ? r.castka : 0, jmeno:'', vozidlo:'', pocty:{} };
+  // předvyplnění: kolonka = 4 × cena pozice 1 nebo 2
+  if (a.castka > 0) {
+    const k = cenik.findIndex(c => (c.pozice === 1 || c.pozice === 2) && Math.abs(c.cena * KOL - a.castka) < 0.005);
+    if (k >= 0) a.pocty[k] = KOL;
+  }
+  return a;
+}
 
 function render() {
-  document.getElementById('dl-grid').innerHTML = cenik.map((c, i) => {
-    const n = pocty[i] || 0;
-    return '<div class="dl' + (n ? ' ma' : '') + '" onclick="plus(' + i + ')">' +
-      '<div class="dl-nazev">' + esc(c.nazev) + '</div>' +
-      '<div class="dl-cena">' + c.cena + ' Kč/' + esc(c.jednotka || 'ks') + '</div>' +
-      '<div class="dl-pocet">' + n + '</div>' +
-      '<button type="button" class="dl-minus" title="Ubrat 1" onclick="event.stopPropagation();minus(' + i + ')">−</button>' +
+  document.getElementById('rezim-txt').textContent = rezim === 'archiv' ? '— archivace' : rezim === 'faktura' ? '— fakturace' : '';
+  document.getElementById('auta').innerHTML = auta.map((a, i) => {
+    const nazev = 'Auto ' + (i + 1) + (a.jmeno || a.vozidlo ? ' · ' + [a.jmeno, a.vozidlo].filter(Boolean).join(' · ') : '');
+    const dlazdice = cenik.map((c, k) => {
+      const n = a.pocty[k] || 0;
+      return '<div class="dl' + (n ? ' ma' : '') + '" onclick="plus(' + i + ',' + k + ')">' +
+        '<div class="dl-nazev">' + esc(c.nazev) + '</div>' +
+        '<div class="dl-cena">' + c.cena + ' Kč/' + esc(c.jednotka || 'ks') + '</div>' +
+        '<div class="dl-pocet">' + n + '</div>' +
+        '<button type="button" class="dl-minus" title="Ubrat 1" onclick="event.stopPropagation();minus(' + i + ',' + k + ')">−</button>' +
+      '</div>';
+    }).join('');
+    const tipDl = (i === 0 && tipPolozka) ?
+      '<div class="dl tip' + (tip.on ? ' ma' : '') + '" onclick="tipZapnout()">' +
+        '<div class="dl-nazev">' + esc(tipPolozka.nazev) + '</div>' +
+        '<div class="dl-cena">' + (tip.on ? 'zadej částku' : 'klepni a zadej částku') + '</div>' +
+        '<div class="tip-pole" onclick="event.stopPropagation()"><input type="number" inputmode="numeric" min="0" step="1" id="tip-input" value="' + esc(tip.castka) + '" placeholder="0" oninput="tip.castka=this.value;sumy()"><span>Kč</span></div>' +
+        '<button type="button" class="dl-minus" title="Zrušit tip" onclick="event.stopPropagation();tipVypnout()">−</button>' +
+      '</div>' : '';
+    return '<div class="card">' +
+      '<div class="auto-hlava"><div class="titulek">' + esc(nazev) + '</div>' +
+        (a.castka > 0 ? '<span class="kolonka">kolonka ' + fmtKc(a.castka) + '</span>' : '') +
+        (ihned && i > 0 ? '<button type="button" class="auto-pryc" onclick="odebratAuto(' + i + ')">× odebrat</button>' : '') +
+      '</div>' +
+      '<div class="dl-grid">' + dlazdice + tipDl + '</div>' +
+      '<div class="auto-suma" id="auto-suma-' + i + '"></div>' +
     '</div>';
   }).join('');
   document.querySelectorAll('.pl').forEach(b => b.classList.toggle('active', b.dataset.forma === forma));
-  document.getElementById('suma').textContent = fmtKc(celkem());
+  document.getElementById('platba-card').style.display = rezim === 'faktura' ? '' : 'none';
+  document.getElementById('btn-auto').style.display = ihned ? '' : 'none';
+  const btn = document.getElementById('btn-dal');
+  btn.textContent = rezim === 'archiv' ? '📦 Archivovat' : 'Pokračovat →';
+  btn.classList.toggle('archiv', rezim === 'archiv');
+  sumy();
 }
-function plus(i)  { pocty[i] = (pocty[i] || 0) + 1; render(); }
-function minus(i) { pocty[i] = Math.max(0, (pocty[i] || 0) - 1); render(); }
+// jen čísla (bez překreslení — nezavře klávesnici u tipu)
+function sumy() {
+  let celkem = 0, fakt = 0;
+  auta.forEach((a, i) => {
+    const c = castkaAuta(a, i), s = soucetAuta(a, i);
+    celkem += c; fakt += s;
+    const el = document.getElementById('auto-suma-' + i);
+    if (el) el.innerHTML = auta.length > 1 || a.castka > 0 ? 'Do příjmů: <strong>' + fmtKc(c) + '</strong>' + (a.castka > 0 && Math.abs(a.castka - s) > 0.005 ? ' (položky ' + fmtKc(s) + ')' : '') : '';
+  });
+  document.getElementById('suma').textContent = fmtKc(rezim === 'faktura' ? fakt : celkem);
+  document.getElementById('suma-pozn').textContent = rezim === 'faktura' && Math.abs(fakt - celkem) > 0.005 ? 'do příjmů ' + fmtKc(celkem) : '';
+}
+function plus(i, k)  { auta[i].pocty[k] = (auta[i].pocty[k] || 0) + 1; render(); }
+function minus(i, k) { auta[i].pocty[k] = Math.max(0, (auta[i].pocty[k] || 0) - 1); render(); }
+function tipZapnout() { if (tip.on) return; tip.on = true; render(); const t = document.getElementById('tip-input'); if (t) t.focus(); }
+function tipVypnout() { tip = { on:false, castka:'' }; render(); }
+function pridatAuto() { auta.push(novaAuto(null)); render(); window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' }); }
+function odebratAuto(i) { auta.splice(i, 1); render(); }
 function vyberFormu(f) { forma = f; document.getElementById('platba').classList.remove('chyba'); render(); }
+function nastavRezim(r) {
+  rezim = r;
+  document.getElementById('volba').style.display = 'none';
+  document.getElementById('obsah').style.display = '';
+  document.getElementById('spodek').style.display = '';
+  render();
+}
 
-function pokracovat() {
-  const polozky = cenik.map((c, i) => ({ popis:c.nazev, mnozstvi:pocty[i] || 0, jednotka:c.jednotka || 'ks', cena:c.cena }))
-                       .filter(p => p.mnozstvi > 0);
-  if (!polozky.length) { alert('Klepni aspoň na jednu položku.'); return; }
+function chyba(text) {
+  alert(text);
+}
+
+async function potvrdit() {
+  if (bezi) return;
+  for (let i = 0; i < auta.length; i++) {
+    if (!maPolozky(auta[i])) { chyba('Auto ' + (i + 1) + ': klepni aspoň na jednu položku.'); return; }
+  }
+  if (tip.on && !(parseFloat(tip.castka) > 0)) { chyba('Zadej částku tipu, nebo ho zruš tlačítkem −.'); return; }
+  if (rezim === 'faktura') return doFaktury();
+  return archivovat();
+}
+
+// Fakturace: jedna faktura (stejné položky sečtené), příjmy po autech zapíše faktura
+function doFaktury() {
   if (!forma) {
     const p = document.getElementById('platba');
     p.classList.add('chyba'); p.scrollIntoView({ behavior:'smooth', block:'center' });
     return;
   }
-  sessionStorage.setItem('faktura_predvyplneni', JSON.stringify({ id:rezId, polozky, forma }));
-  location.href = adresaFaktury();
+  const souhrn = [];
+  auta.forEach((a, i) => polozkyAuta(a, i).forEach(p => {
+    const x = souhrn.find(s => s.popis === p.popis && s.cena === p.cena);
+    if (x) x.mnozstvi += p.mnozstvi; else souhrn.push(Object.assign({}, p));
+  }));
+  const davka = {
+    rezervace: auta.filter(a => a.rezId).map((a, i) => ({ id:a.rezId, col:a.col, trzba: castkaAuta(a, auta.indexOf(a)) })),
+    auta: auta.map((a, i) => ({ polozky: polozkyAuta(a, i), castka: castkaAuta(a, i), jmeno: a.jmeno || 'Maloobchodní prodej', vozidlo: a.vozidlo || '' }))
+  };
+  const prvni = auta[0];
+  sessionStorage.setItem('faktura_predvyplneni', JSON.stringify({ id: prvni.rezId || '', polozky: souhrn, forma, davka }));
+  location.href = prvni.rezId ? 'faktura.html?id=' + encodeURIComponent(prvni.rezId) + '&col=' + encodeURIComponent(prvni.col) : 'faktura.html';
+}
+
+// Archivace: bez faktury, hotově, bez EET; v příjmech řádek za každé auto
+async function archivovat() {
+  bezi = true;
+  const btn = document.getElementById('btn-dal');
+  btn.disabled = true; btn.textContent = 'Archivuji…';
+  const chyby = [];
+  try {
+    if (ihned) {
+      const r = await gasPost({ akce:'prezuti_archiv', token:getToken(), auta: auta.map((a, i) => ({ polozky: polozkyAuta(a, i), castka: castkaAuta(a, i) })) });
+      if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
+      if (!r.ok) chyby.push(r.message || r.error || 'neznámá chyba');
+    } else {
+      for (let i = 0; i < auta.length; i++) {
+        const a = auta[i];
+        if (a.hotovo) continue;
+        try {
+          const r = await gasPost({ akce:'admin_archive', token:getToken(), id:a.rezId, col:a.col, trzba: Math.round(castkaAuta(a, i)), polozky: polozkyAuta(a, i) });
+          if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
+          if (r.ok) a.hotovo = true; else chyby.push('Auto ' + (i + 1) + ': ' + (r.message || r.error || 'neznámá chyba'));
+        } catch (e) { chyby.push('Auto ' + (i + 1) + ': chyba připojení'); }
+      }
+    }
+  } catch (e) { chyby.push('Chyba připojení.'); }
+  bezi = false;
+  if (chyby.length) {
+    btn.disabled = false; btn.textContent = '📦 Archivovat znovu';
+    chyba('Archivace se nepovedla:\n' + chyby.join('\n') + '\n\nZkus to znovu (co už prošlo, se podruhé nezapíše).');
+    return;
+  }
+  document.getElementById('obsah').innerHTML = '<div class="card vysledek">✓ Archivováno · ' + fmtKc(auta.reduce((s, a, i) => s + castkaAuta(a, i), 0)) + '</div>';
+  document.getElementById('spodek').style.display = 'none';
+  try { sessionStorage.removeItem('admin_cache'); } catch (e) {}   // admin načte seznam znovu
+  setTimeout(() => { location.href = 'admin.html'; }, 1500);
 }
 
 async function start() {
   if (!getToken()) { document.getElementById('gate').style.display = 'block'; return; }
   document.getElementById('app').style.display = 'block';
-  document.getElementById('rucne').href = adresaFaktury();
-  // s rezervací: ceník + jméno z rezervace; bez rezervace (záložka v adminu): jen ceník
   try {
-    const r = (rezId && rezCol)
-      ? await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id:rezId, col:rezCol })
-      : await gasPost({ akce:'faktura_init', token:getToken() });
-    if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
-    if (!r.ok) throw new Error(r.message || r.error || 'neznámá chyba');
-    document.getElementById('zakaznik').textContent = rezId ? ([r.jmeno, r.vozidlo].filter(Boolean).join(' · ') || 'Rezervace') : 'Bez rezervace';
-    cenik = (r.cenik || []).filter(c => bezDiakritiky(c.kategorie) === 'prezuti');
+    let prvniCenik = null;
+    const info = [];
+    if (ihned) {
+      const r = await gasPost({ akce:'faktura_init', token:getToken() });
+      if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
+      if (!r.ok) throw new Error(r.message || r.error || 'neznámá chyba');
+      prvniCenik = r.cenik || [];
+    } else {
+      for (const rz of rezervace) {
+        const r = await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id:rz.id, col:rz.col });
+        if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
+        if (!r.ok) throw new Error(r.message || r.error || 'rezervace nenalezena');
+        if (!prvniCenik) prvniCenik = r.cenik || [];
+        info.push(r);
+      }
+    }
+    const prez = prvniCenik.filter(c => bezDiakritiky(c.kategorie) === 'prezuti')
+                           .map(c => Object.assign({}, c, { pozice: parseInt(c.pozice, 10) || 0 }));
+    tipPolozka = prez.find(c => bezDiakritiky(c.nazev) === 'tip') || null;
+    cenik = prez.filter(c => c !== tipPolozka);
     if (!cenik.length) {
-      document.getElementById('dl-grid').innerHTML = '<div class="hlaska err">V ceníku (Sheets, list fakturace_cenik) není žádná položka s kategorií „přezutí“' + (rezId ? '' : ' — nebo ještě není nasazená nová verze Apps Scriptu') + '.</div>';
+      document.getElementById('obsah').style.display = '';
+      document.getElementById('auta').innerHTML = '<div class="hlaska err">V ceníku (Sheets, list fakturace_cenik) není žádná položka s kategorií „přezutí“' + (ihned ? ' — nebo ještě není nasazená nová verze Apps Scriptu' : '') + '.</div>';
+      document.getElementById('zakaznik').textContent = '';
       return;
     }
-    // částka z adminu: shoda s 4 × cena položky → předvyplnit; jiná částka = jako by nebyla
-    if (castka > 0) {
-      const i = cenik.findIndex(c => Math.abs(c.cena * KOL - castka) < 0.005);
-      if (i >= 0) pocty[i] = KOL;
+    if (ihned) {
+      auta = [novaAuto(null)];
+      document.getElementById('zakaznik').textContent = 'Přezutí ihned · Maloobchodní prodej';
+    } else {
+      auta = rezervace.map((rz, i) => { const a = novaAuto(rz); a.jmeno = info[i].jmeno || ''; a.vozidlo = info[i].vozidlo || ''; return a; });
+      document.getElementById('zakaznik').textContent = auta.map(a => a.jmeno || 'Rezervace').join(' + ');
     }
-    render();
+    if (rezim) nastavRezim(rezim);
+    else { document.getElementById('volba').style.display = ''; render(); }
   } catch (e) {
-    document.getElementById('dl-grid').innerHTML = '<div class="hlaska err">Nepodařilo se načíst ceník: ' + esc(e.message) + '</div>';
+    document.getElementById('obsah').style.display = '';
+    document.getElementById('auta').innerHTML = '<div class="hlaska err">Nepodařilo se načíst: ' + esc(e.message) + '</div>';
   }
 }
 window.addEventListener('DOMContentLoaded', start);
