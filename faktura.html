@@ -327,6 +327,8 @@ let ulozeno = false;
 let rezervaceId  = '';
 let rezervaceCol = '';
 let posledniEet  = null;   // odpověď EET z posledního uložení (pro tisk)
+// Jednorázový klíč odeslání — Apps Script podle něj pozná opakovaný požadavek a nezapíše ho dvakrát
+const KLIC = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 let davka        = null;   // přezutí z dlaždic: { rezervace:[{id,col,trzba}], auta:[{polozky,castka,jmeno,vozidlo}] }
 let sumupKod     = '';     // kód transakce SumUp po úspěšné platbě na terminálu
 let sumupCastka  = 0;      // částka, která se na terminálu zaplatila
@@ -834,7 +836,7 @@ async function ulozAVytiskni() {
   };
 
   try {
-    const r = await gasPost({ akce:'faktura_save', token:getToken(), faktura });
+    const r = await gasPost({ akce:'faktura_save', token:getToken(), klic:KLIC + '_' + cislo, faktura });
     if (r.error === 'bad_token') { handleBadToken(); return; }
     if (r.ok) {
       ulozeno = true;
@@ -852,7 +854,7 @@ async function ulozAVytiskni() {
       // automatická archivace rezervace pokud faktura vznikla z rezervace
       else if (rezervaceId && rezervaceCol) {
         try {
-          await gasPost({ akce:'admin_archive', token:getToken(), id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0, kod_prezuti:r.kod_prezuti || '' });
+          await gasPost({ akce:'admin_archive', token:getToken(), klic:KLIC + '_' + rezervaceId, id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0, kod_prezuti:r.kod_prezuti || '' });
         } catch(e) { console.warn('Archivace selhala:', e); }
       }
       // tisk pro zákazníka
@@ -876,7 +878,7 @@ async function archivujDavku(cislo) {
   const zbyva = [];
   for (const rz of (davka && davka.rezervace) || []) {
     try {
-      const a = await gasPost({ akce:'admin_archive', token:getToken(), id:rz.id, col:rz.col, trzba: Math.round(rz.trzba || 0), bez_prijmu:true });
+      const a = await gasPost({ akce:'admin_archive', token:getToken(), klic:KLIC + '_' + rz.id, id:rz.id, col:rz.col, trzba: Math.round(rz.trzba || 0), bez_prijmu:true });
       if (!a.ok && a.error !== 'not_found') zbyva.push(rz);
     } catch(e) { zbyva.push(rz); }
   }
