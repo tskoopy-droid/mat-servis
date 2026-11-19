@@ -132,6 +132,8 @@
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbzytqpchcUuufLG6G56OhK6NtBMWwudBH4aZMDVFK8PRXt7x4dOeWFxqwP1Ab4E67c0rw/exec';
+// Jednorázový klíč odeslání — Apps Script podle něj pozná opakovaný požadavek a nezapíše ho dvakrát
+const KLIC = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
 const KOL = 4;   // částka v kolonce = 4 × cena pozice 1 nebo 2 → předvyplní se 4 ks
 const params = new URLSearchParams(location.search);
 
@@ -290,7 +292,7 @@ async function archivovat() {
   const chyby = [];
   try {
     if (ihned) {
-      const r = await gasPost({ akce:'prezuti_archiv', token:getToken(), auta: auta.map((a, i) => ({ polozky: polozkyAuta(a, i), castka: castkaAuta(a, i) })) });
+      const r = await gasPost({ akce:'prezuti_archiv', token:getToken(), klic:KLIC, auta: auta.map((a, i) => ({ polozky: polozkyAuta(a, i), castka: castkaAuta(a, i) })) });
       if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
       if (!r.ok) chyby.push(r.message || r.error || 'neznámá chyba');
     } else {
@@ -298,7 +300,7 @@ async function archivovat() {
         const a = auta[i];
         if (a.hotovo) continue;
         try {
-          const r = await gasPost({ akce:'admin_archive', token:getToken(), id:a.rezId, col:a.col, trzba: Math.round(castkaAuta(a, i)), polozky: polozkyAuta(a, i) });
+          const r = await gasPost({ akce:'admin_archive', token:getToken(), klic:KLIC + '_' + i, id:a.rezId, col:a.col, trzba: Math.round(castkaAuta(a, i)), polozky: polozkyAuta(a, i) });
           if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
           if (r.ok) a.hotovo = true; else chyby.push('Auto ' + (i + 1) + ': ' + (r.message || r.error || 'neznámá chyba'));
         } catch (e) { chyby.push('Auto ' + (i + 1) + ': chyba připojení'); }
