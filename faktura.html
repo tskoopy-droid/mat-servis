@@ -845,7 +845,7 @@ async function ulozAVytiskni() {
       // automatická archivace rezervace pokud faktura vznikla z rezervace
       if (rezervaceId && rezervaceCol) {
         try {
-          await gasPost({ akce:'admin_archive', token:getToken(), id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0 });
+          await gasPost({ akce:'admin_archive', token:getToken(), id:rezervaceId, col:rezervaceCol, trzba:r.celkem || 0, kod_prezuti:r.kod_prezuti || '' });
         } catch(e) { console.warn('Archivace selhala:', e); }
       }
       // tisk pro zákazníka
