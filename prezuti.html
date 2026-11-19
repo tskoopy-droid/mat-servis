@@ -358,7 +358,7 @@
 <div class="page-title" id="main-header"><h1>Přezutí pneumatik</h1></div>
 
 <div class="container">
-<div class="foto-dve">
+<div class="foto-dve" id="foto-dve">
   <figure class="foto-pas"><img src="foto-prezuti.webp" alt="Přezouvání s utahovákem v dílně M&amp;T Servis" width="640" height="640"></figure>
   <figure class="foto-pas"><img src="foto-klic.webp" alt="Dotažení kola momentovým klíčem" width="640" height="640"></figure>
 </div>
@@ -680,7 +680,8 @@ function showView(name) {
   });
   document.getElementById("steps").style.display = name==="confirm" ? "none" : "flex";
   document.getElementById("main-header").style.display = name==="confirm" ? "none" : "block";
-  // Na potvrzení rezervace nepatří ceník ani popisek kroku
+  // Na potvrzení rezervace nepatří fotky, ceník ani popisek kroku
+  document.getElementById("foto-dve").style.display = name==="confirm" ? "none" : "grid";
   document.getElementById("cenik-box").style.display = name==="confirm" ? "none" : "block";
   document.getElementById("step-popisek").style.display = name==="confirm" ? "none" : "block";
 }
