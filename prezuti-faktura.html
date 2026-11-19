@@ -21,6 +21,9 @@
   #app { display:none; }
 
   .header { background:#fff; border-radius:20px; padding:16px 18px; margin-bottom:16px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
+  /* celá stránka je jen klikací: podržení prstu neoznačí text (Chrome by nabízel vyhledávání) */
+  body { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  input { -webkit-user-select:text; user-select:text; }
   .zpet { display:inline-flex; align-items:center; justify-content:center; width:38px; height:38px; border-radius:10px; background:var(--bg); color:var(--text-muted); text-decoration:none; font-size:18px; flex-shrink:0; }
   .h-titulek { font-size:17px; font-weight:700; }
   .h-sub { font-size:13px; color:var(--text-muted); margin-top:2px; }
@@ -158,9 +161,16 @@ function getToken() { return sessionStorage.getItem('admin_token') || ''; }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function bezDiakritiky(t) { return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
 function fmtKc(n) { return (Math.round(n * 100) / 100).toLocaleString('cs-CZ', { maximumFractionDigits:2 }) + ' Kč'; }
+// Odpověď skriptu se čeká nejvýš 60 s, pak chyba (stránka nezůstane viset na „Načítám…“)
 async function gasPost(payload) {
-  const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) });
-  return res.json();
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 60000);
+  try {
+    const res = await fetch(GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload), signal: ctrl.signal });
+    return await res.json();
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'skript neodpověděl do 60 s' : 'chyba připojení');
+  } finally { clearTimeout(t); }
 }
 
 function tipKc() { return tip.on ? (parseFloat(tip.castka) || 0) : 0; }
@@ -234,11 +244,11 @@ function sumy() {
   document.getElementById('suma').textContent = fmtKc(rezim === 'faktura' ? fakt : celkem);
   document.getElementById('suma-pozn').textContent = rezim === 'faktura' && Math.abs(fakt - celkem) > 0.005 ? 'do příjmů ' + fmtKc(celkem) : '';
 }
-function plus(i, k)  { auta[i].pocty[k] = (auta[i].pocty[k] || 0) + 1; render(); }
-function minus(i, k) { auta[i].pocty[k] = Math.max(0, (auta[i].pocty[k] || 0) - 1); render(); }
-function tipZapnout() { if (tip.on) return; tip.on = true; render(); const t = document.getElementById('tip-input'); if (t) t.focus(); }
+function plus(i, k)  { dotknuto = true; auta[i].pocty[k] = (auta[i].pocty[k] || 0) + 1; render(); }
+function minus(i, k) { dotknuto = true; auta[i].pocty[k] = Math.max(0, (auta[i].pocty[k] || 0) - 1); render(); }
+function tipZapnout() { if (tip.on) return; dotknuto = true; tip.on = true; render(); const t = document.getElementById('tip-input'); if (t) t.focus(); }
 function tipVypnout() { tip = { on:false, castka:'' }; render(); }
-function pridatAuto() { auta.push(novaAuto(null)); render(); window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' }); }
+function pridatAuto() { dotknuto = true; auta.push(novaAuto(null)); render(); window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' }); }
 function odebratAuto(i) { auta.splice(i, 1); render(); }
 function vyberFormu(f) { forma = f; document.getElementById('platba').classList.remove('chyba'); render(); }
 function nastavRezim(r) {
@@ -319,48 +329,85 @@ async function archivovat() {
   setTimeout(() => { location.href = 'admin.html'; }, 1500);
 }
 
+// ── Načtení: ceník z paměti telefonu → dlaždice hned; aktuální ceník se stáhne na pozadí ──
+const CENIK_KLIC = 'prezuti_cenik_v1';
+let dotknuto = false;   // klepl už na něco? (pak se při změně ceníku zachovají počty podle názvů)
+
+function prezZCeniku(vse) {
+  return (vse || []).filter(c => bezDiakritiky(c.kategorie) === 'prezuti')
+                    .map(c => ({ nazev:c.nazev, jednotka:c.jednotka, cena:Number(c.cena) || 0, kategorie:c.kategorie, pozice: parseInt(c.pozice, 10) || 0 }));
+}
+function nastavCenik(prez) {
+  tipPolozka = prez.find(c => bezDiakritiky(c.nazev) === 'tip') || null;
+  cenik = prez.filter(c => c !== tipPolozka);
+}
+function infoRezervaci() {
+  try { return JSON.parse(sessionStorage.getItem('prezuti_rez_info') || '{}') || {}; } catch (e) { return {}; }
+}
+function postavAuta() {
+  const info = infoRezervaci();
+  if (ihned) {
+    auta = [novaAuto(null)];
+    document.getElementById('zakaznik').textContent = 'Přezutí ihned · Maloobchodní prodej';
+  } else {
+    auta = rezervace.map(rz => { const a = novaAuto(rz); const x = info[rz.id] || {}; a.jmeno = x.jmeno || ''; a.vozidlo = x.vozidlo || ''; return a; });
+    document.getElementById('zakaznik').textContent = auta.map(a => a.jmeno || 'Rezervace').join(' + ');
+  }
+}
+function zobrazStranku() {
+  if (!cenik.length) {
+    document.getElementById('obsah').style.display = '';
+    document.getElementById('auta').innerHTML = '<div class="hlaska err">V ceníku (Sheets, list fakturace_cenik) není žádná položka s kategorií „přezutí“.</div>';
+    document.getElementById('zakaznik').textContent = '';
+    return;
+  }
+  postavAuta();
+  if (rezim) nastavRezim(rezim);
+  else { document.getElementById('volba').style.display = ''; render(); }
+}
+// po stažení aktuálního ceníku: když se liší od uloženého, překreslit (naklikané počty zůstanou podle názvů)
+function aktualizujCenik(prez) {
+  const stary = cenik.map(c => c.nazev);
+  const pocty = auta.map(a => { const m = {}; Object.keys(a.pocty).forEach(k => { if (stary[k]) m[stary[k]] = a.pocty[k]; }); return m; });
+  nastavCenik(prez);
+  if (!dotknuto) { zobrazStranku(); return; }
+  auta.forEach((a, i) => { a.pocty = {}; cenik.forEach((c, k) => { if (pocty[i][c.nazev]) a.pocty[k] = pocty[i][c.nazev]; }); });
+  if (!tipPolozka) tip = { on:false, castka:'' };
+  render();
+}
+// jména u rezervací, když je admin nepředal (např. otevřeno ze záložky)
+async function doplnJmena() {
+  const chybi = auta.filter(a => a.rezId && !a.jmeno);
+  for (const a of chybi) {
+    try {
+      const r = await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id:a.rezId, col:a.col });
+      if (r.ok) { a.jmeno = r.jmeno || ''; a.vozidlo = r.vozidlo || ''; }
+    } catch (e) {}
+  }
+  if (chybi.length) { document.getElementById('zakaznik').textContent = auta.map(a => a.jmeno || 'Rezervace').join(' + '); render(); }
+}
+
 async function start() {
   if (!getToken()) { document.getElementById('gate').style.display = 'block'; return; }
   document.getElementById('app').style.display = 'block';
+  let ulozeny = null;
+  try { ulozeny = JSON.parse(localStorage.getItem(CENIK_KLIC) || 'null'); } catch (e) {}
+  const zPameti = Array.isArray(ulozeny) && ulozeny.length;
+  if (zPameti) { nastavCenik(ulozeny); zobrazStranku(); }   // dlaždice hned, bez čekání na skript
   try {
-    let prvniCenik = null;
-    const info = [];
-    if (ihned) {
-      const r = await gasPost({ akce:'faktura_init', token:getToken() });
-      if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
-      if (!r.ok) throw new Error(r.message || r.error || 'neznámá chyba');
-      prvniCenik = r.cenik || [];
-    } else {
-      for (const rz of rezervace) {
-        const r = await gasPost({ akce:'faktura_z_rezervace', token:getToken(), id:rz.id, col:rz.col });
-        if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
-        if (!r.ok) throw new Error(r.message || r.error || 'rezervace nenalezena');
-        if (!prvniCenik) prvniCenik = r.cenik || [];
-        info.push(r);
-      }
-    }
-    const prez = prvniCenik.filter(c => bezDiakritiky(c.kategorie) === 'prezuti')
-                           .map(c => Object.assign({}, c, { pozice: parseInt(c.pozice, 10) || 0 }));
-    tipPolozka = prez.find(c => bezDiakritiky(c.nazev) === 'tip') || null;
-    cenik = prez.filter(c => c !== tipPolozka);
-    if (!cenik.length) {
-      document.getElementById('obsah').style.display = '';
-      document.getElementById('auta').innerHTML = '<div class="hlaska err">V ceníku (Sheets, list fakturace_cenik) není žádná položka s kategorií „přezutí“' + (ihned ? ' — nebo ještě není nasazená nová verze Apps Scriptu' : '') + '.</div>';
-      document.getElementById('zakaznik').textContent = '';
-      return;
-    }
-    if (ihned) {
-      auta = [novaAuto(null)];
-      document.getElementById('zakaznik').textContent = 'Přezutí ihned · Maloobchodní prodej';
-    } else {
-      auta = rezervace.map((rz, i) => { const a = novaAuto(rz); a.jmeno = info[i].jmeno || ''; a.vozidlo = info[i].vozidlo || ''; return a; });
-      document.getElementById('zakaznik').textContent = auta.map(a => a.jmeno || 'Rezervace').join(' + ');
-    }
-    if (rezim) nastavRezim(rezim);
-    else { document.getElementById('volba').style.display = ''; render(); }
+    const r = await gasPost({ akce:'faktura_init', token:getToken() });
+    if (r.error === 'bad_token') { sessionStorage.removeItem('admin_token'); location.reload(); return; }
+    if (!r.ok) throw new Error(r.message || r.error || 'neznámá chyba');
+    const prez = prezZCeniku(r.cenik);
+    try { localStorage.setItem(CENIK_KLIC, JSON.stringify(prez)); } catch (e) {}
+    if (!zPameti) { nastavCenik(prez); zobrazStranku(); }
+    else if (JSON.stringify(prez) !== JSON.stringify(ulozeny)) aktualizujCenik(prez);
+    doplnJmena();
   } catch (e) {
+    if (zPameti) { doplnJmena(); return; }   // jedeme z uloženého ceníku, chyba nevadí
     document.getElementById('obsah').style.display = '';
-    document.getElementById('auta').innerHTML = '<div class="hlaska err">Nepodařilo se načíst: ' + esc(e.message) + '</div>';
+    document.getElementById('auta').innerHTML = '<div class="hlaska err">Nepodařilo se načíst: ' + esc(e.message) + '<br><br><button type="button" class="btn-auto" onclick="location.reload()">↻ Zkusit znovu</button></div>';
+    document.getElementById('zakaznik').textContent = 'Chyba';
   }
 }
 window.addEventListener('DOMContentLoaded', start);

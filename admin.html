@@ -35,6 +35,8 @@
   .refresh-btn:disabled { opacity:0.5; cursor:not-allowed; }
 
   .tabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  /* tlačítka a karty: podržení prstu neoznačí text (Chrome by nabízel „Klepnutím vyhledat“) */
+  .tab, .archiv-btn, .zrusit-btn, .sloucit, #sloucit-bar, .stat, .rez-badge { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   .tab { padding:12px 14px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; border:2px solid transparent; background:var(--white); color:var(--text-muted); text-align:center; }
   .tab.active { background:var(--blue); color:#fff; }
   .tab-wide { grid-column:1/-1; }
@@ -1076,6 +1078,8 @@
       return r.id+'~'+r.col+'~'+castka;
     }).filter(Boolean);
     if(!rez.length)return;
+    // jména a auta pro dlaždice (stránka pak nemusí čekat na skript)
+    try{const info={};ids.forEach(id=>{const r=allData.find(x=>x.id===id);if(r)info[id]={jmeno:r.jmeno||'',vozidlo:r.auto||''};});sessionStorage.setItem('prezuti_rez_info',JSON.stringify(info));}catch(e){}
     location.href='prezuti-faktura.html?rezim='+rezim+'&rez='+encodeURIComponent(rez.join('|'));
   };
 
