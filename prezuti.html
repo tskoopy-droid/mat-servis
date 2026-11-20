@@ -303,6 +303,9 @@
   .submit-btn.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
   .submit-btn.active:active { background: var(--blue-dark); }
   .submit-btn.inactive { background: var(--border); color: #94a3b8; cursor: not-allowed; }
+  /* Tlačítko během odesílání rezervace – text a kolečko přímo v tlačítku */
+  .submit-btn.odesila { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--blue-light); color: var(--blue-dark); border: 2px solid var(--blue-mid); cursor: wait; }
+  .submit-btn .mini-spinner { flex-shrink: 0; width: 20px; height: 20px; border: 3px solid var(--blue-mid); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
   .slot-error { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; border-radius:12px; padding:14px 16px; font-size:14px; font-weight:600; text-align:center; margin-bottom:14px; display:none; }
 
   /* CONFIRM */
@@ -379,7 +382,7 @@
     <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
-    <span style="font-size:14px;color:#1e293b">RunFlat a nízkoprofilové pneu<br><span style="font-size:12px;color:#64748b">Za nízkoprofilové považujeme pneu s profilem <strong>45 a nižším</strong> – druhé číslo v rozměru, např. 225/<strong>45</strong> R17 nebo 235/<strong>40</strong> R19.</span></span>
+    <span style="font-size:14px;color:#1e293b">RunFlat a nízkoprofilové pneu<br><span style="font-size:12px;color:#64748b">Profil <strong>45 a nižší</strong>, např. 225/<strong>45</strong> R17</span></span>
     <span style="font-size:15px;font-weight:700;color:#2563eb;white-space:nowrap;flex-shrink:0">+50 Kč/ks</span>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:8px 0;border-bottom:1px solid #f1f5f9">
@@ -1145,8 +1148,10 @@ function submitForm() {
   odesilani = true;
   zobrazChybu('');
   const btn = document.getElementById("submit-btn");
-  btn.textContent = "Odesílám...";
-  btn.className = "submit-btn inactive";
+  btn.innerHTML = '<span class="mini-spinner" aria-hidden="true"></span>Čekejte na potvrzení…';
+  btn.className = "submit-btn odesila";
+  btn.setAttribute("aria-busy", "true");
+  const skryjOdesilaniInfo = () => { btn.removeAttribute("aria-busy"); if (btn.className === "submit-btn odesila") btn.className = "submit-btn inactive"; };
   const odeslaniStart = performance.now();
 
   // Jediny POST na GAS - ten se postara o Firestore zapis, mail zakaznikovi,
@@ -1178,6 +1183,7 @@ function submitForm() {
     let data = null;
     try { data = JSON.parse(text); } catch (x) {}
     odesilani = false;
+    skryjOdesilaniInfo();
     const odeslaniMs = performance.now() - odeslaniStart;
     const serverMs = data && typeof data.server_ms === 'number' ? data.server_ms : undefined;
 
@@ -1229,6 +1235,7 @@ function submitForm() {
   })
   .catch(err => {
     odesilani = false;
+    skryjOdesilaniInfo();
     merOdeslani(performance.now() - odeslaniStart, undefined, 'sit');
     nejistyVysledek('sit', String((err && err.message) || err));
   });
@@ -1307,8 +1314,8 @@ showView("date");
 </script>
 
 <div style="text-align:center;padding:16px;border-top:1px solid var(--border);margin-top:8px;font-size:12px;color:#94a3b8">
-  Sledujte nás: <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" style="color:#1877f2;font-weight:600;text-decoration:none">M&T Servis na Facebooku</a>
-  &nbsp;·&nbsp; <a href="mailto:info@mat-servis.cz" style="color:var(--blue);font-weight:600;text-decoration:none">info@mat-servis.cz</a>
+  Sledujte nás: <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" style="color:#1877f2;font-weight:600;text-decoration:none;white-space:nowrap">M&T Servis na Facebooku</a>
+  &nbsp;·&nbsp; <a href="mailto:info@mat-servis.cz" style="color:var(--blue);font-weight:600;text-decoration:none;white-space:nowrap">info@mat-servis.cz</a>
 </div>
 
 </body>
