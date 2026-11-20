@@ -303,6 +303,11 @@
   .submit-btn.active { background: var(--blue); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
   .submit-btn.active:active { background: var(--blue-dark); }
   .submit-btn.inactive { background: var(--border); color: #94a3b8; cursor: not-allowed; }
+  /* Patička – stejná jako na úvodu (styl.css .footer; tahle stránka styl.css nenačítá) */
+  .footer { text-align:center; padding:16px 16px 24px; margin-top:8px; border-top:1px solid var(--border); font-size:14px; line-height:1.6; color:#5b6b82; }
+  .footer a { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 6px; color:var(--blue-dark); font-weight:600; text-decoration:none; }
+  .footer .tise, .footer .tise a { font-size:12px; font-weight:500; color:#5b6b82; }
+  .footer .mapa svg { width:16px; height:16px; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
   /* Tlačítko během odesílání rezervace – text a kolečko přímo v tlačítku */
   .submit-btn.odesila { display: flex; align-items: center; justify-content: center; gap: 10px; background: var(--blue-light); color: var(--blue-dark); border: 2px solid var(--blue-mid); cursor: wait; }
   .submit-btn .mini-spinner { flex-shrink: 0; width: 20px; height: 20px; border: 3px solid var(--blue-mid); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; }
@@ -1313,9 +1318,24 @@ renderCalendar();
 showView("date");
 </script>
 
-<div style="text-align:center;padding:16px;border-top:1px solid var(--border);margin-top:8px;font-size:12px;color:#94a3b8">
-  Sledujte nás: <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" style="color:#1877f2;font-weight:600;text-decoration:none;white-space:nowrap">M&T Servis na Facebooku</a>
-  &nbsp;·&nbsp; <a href="mailto:info@mat-servis.cz" style="color:var(--blue);font-weight:600;text-decoration:none;white-space:nowrap">info@mat-servis.cz</a>
+<div class="footer">
+  <div>
+    <a href="kontakt.html">Kontakt a otevírací doba</a>
+  </div>
+  <div>
+    <a href="tel:+420731885825">731&nbsp;885&nbsp;825</a>
+    · <a href="mailto:info@mat-servis.cz">info@mat-servis.cz</a>
+    · <a href="https://www.facebook.com/share/1AiFS9dDim/" target="_blank" rel="noopener">Facebook</a>
+  </div>
+  <div>
+    <a class="mapa" href="https://www.google.com/maps/dir/?api=1&amp;destination=M%26T+Servis&amp;destination_place_id=ChIJ9fi9wWg9EkcRX5ovBc0hpOg" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg>Šumvaldská 59, Dlouhá Loučka – navigovat</a>
+  </div>
+  <div class="tise">
+    IČO: 08134235
+    &nbsp;·&nbsp; Neplátce DPH
+    <br>
+    <a href="zasady.html">Zásady ochrany osobních údajů</a>
+  </div>
 </div>
 
 </body>
