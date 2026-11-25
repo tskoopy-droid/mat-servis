@@ -333,6 +333,23 @@
   .confirm-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 14px; line-height: 1.5; }
   .confirm-card { background: var(--white); border: 2px solid var(--blue-mid); border-radius: 14px; padding: 14px 16px; display: inline-block; text-align: left; margin-bottom: 14px; min-width: 260px; font-size: 14px; line-height: 1.9; box-shadow: 0 2px 12px rgba(37,99,235,0.1); }
   .confirm-card .row-item { display: flex; align-items: center; gap: 10px; }
+  /* Animace potvrzení: kolečko naskočí, fajfka se dokreslí, zelená vlna, pak postupně text a karta */
+  .confirm-icon { position: relative; animation: potvrzeni-pop 0.45s cubic-bezier(.34,1.56,.64,1) both; }
+  .confirm-icon::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid #16a34a; opacity: 0; animation: potvrzeni-vlna 0.7s ease-out 0.35s; }
+  .confirm-icon .fajfka-tah { stroke-dasharray: 1; stroke-dashoffset: 1; animation: potvrzeni-tah 0.4s ease-out 0.3s forwards; }
+  .confirm > *:not(.confirm-icon) { animation: potvrzeni-nahoru 0.4s ease-out both; }
+  .confirm > :nth-child(2) { animation-delay: 0.5s; }
+  .confirm > :nth-child(3) { animation-delay: 0.6s; }
+  .confirm > :nth-child(4) { animation-delay: 0.7s; }
+  .confirm > :nth-child(n+5) { animation-delay: 0.8s; }
+  @keyframes potvrzeni-pop { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes potvrzeni-tah { to { stroke-dashoffset: 0; } }
+  @keyframes potvrzeni-vlna { from { transform: scale(1); opacity: 0.6; } to { transform: scale(1.7); opacity: 0; } }
+  @keyframes potvrzeni-nahoru { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .confirm-icon, .confirm-icon::after, .confirm > * { animation: none !important; }
+    .confirm-icon .fajfka-tah { animation: none; stroke-dashoffset: 0; }
+  }
   .new-btn { background: var(--blue-light); border: none; color: var(--blue); border-radius: 12px; padding: 12px 20px; white-space: nowrap; cursor: pointer; font-size: 14px; font-family: 'Inter', sans-serif; font-weight: 600; transition: background 0.15s; }
   .new-btn:active { background: var(--blue-mid); }
 
@@ -936,7 +953,7 @@ function renderConfirm(name, phone, email, car, mamUlozene, chciUlozit, smsStav)
   else info = `<div class="confirm-sub">Na adresu <strong style="color:#1e293b;font-size:16px">${escHtml(email)}</strong> vám zašleme potvrzovací e-mail.<br><span style="font-size:13px;color:#94a3b8">Pro zrušení klikněte na odkaz v emailu.</span></div>`;
   document.getElementById("view-confirm").innerHTML = `
     <div class="confirm">
-      <div class="confirm-icon"><svg viewBox="0 0 24 24" aria-hidden="true">${IKONY.check}</svg></div>
+      <div class="confirm-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="fajfka-tah" pathLength="1" d="M4 12l5 5L20 6"/></svg></div>
       <div class="confirm-title">Rezervace přijata!</div>
       ${info}
       <div class="confirm-card">
