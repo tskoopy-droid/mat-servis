@@ -333,6 +333,7 @@ let davka        = null;   // přezutí z dlaždic: { rezervace:[{id,col,trzba}]
 let sumupKod     = '';     // kód transakce SumUp po úspěšné platbě na terminálu
 let sumupCastka  = 0;      // částka, která se na terminálu zaplatila
 let sumupBezi    = false;
+let kartaSelhala = false;   // terminál neprošel / nedal výsledek → nabídne se Uložit bez terminálu
 
 // Hotově a kartou = vždy na místě (EET). Převodem jen když zaplatil QR u pultu.
 // Dlaždice formy úhrady — žádná není vybraná předem
@@ -369,7 +370,13 @@ function syncEet() {
     cb.checked = true;
     cb.disabled = true;
   }
-  document.getElementById('karta-btn').style.display = (forma === 'Kartou' && !sumupKod && !ulozeno) ? '' : 'none';
+  // Kartou a ještě nezaplaceno: hlavní je terminál. Uložit jde až po neúspěšném pokusu
+  // (např. zaplaceno v aplikaci SumUp), jinak by se faktura uložila bez platby.
+  const cekaKarta = forma === 'Kartou' && !sumupKod && !ulozeno;
+  document.getElementById('karta-btn').style.display = cekaKarta ? '' : 'none';
+  const sbtn = document.getElementById('save-btn');
+  sbtn.style.display = (cekaKarta && !kartaSelhala) ? 'none' : '';
+  if (!ulozeno && !sbtn.disabled) sbtn.innerHTML = cekaKarta ? '💾 Uložit bez terminálu' : '💾 Uložit a vytisknout';
 }
 
 // ── Platba kartou na terminálu SumUp Solo ──
@@ -405,15 +412,17 @@ async function zaplatitKartou() {
       return;
     }
     pipnuti(false);
-    if (v.stav === 'timeout') throw new Error('Výsledek platby nepřišel. Podívej se na terminál / do aplikace SumUp — pokud platba prošla, ulož fakturu tlačítkem Uložit.');
+    if (v.stav === 'timeout') throw new Error('Výsledek platby nepřišel. Podívej se na terminál / do aplikace SumUp — pokud platba prošla, ulož fakturu tlačítkem Uložit bez terminálu.');
     throw new Error(v.stav === 'zruseno' ? 'Platba byla zrušena.' : 'Platba neproběhla' + (v.duvod ? ' (' + v.duvod + ')' : '') + '. Můžeš to zkusit znovu.');
   } catch (e) {
     setStatus(e.message || 'Chyba platby.', 'err');
+    kartaSelhala = true;
   } finally {
     if (sumupBezi) {
       sumupBezi = false;
       sumupBox('', false, true);
       kbtn.disabled = false; sbtn.disabled = false;
+      syncEet();
     }
   }
 }
@@ -769,13 +778,15 @@ function resetForm() {
   if (!confirm('Vymazat celý formulář?')) return;
   ['odberatel_nazev','odberatel_ico','odberatel_adresa','poznamka','zakazka-cislo'].forEach(id => document.getElementById(id).value = '');
   polozky = []; ulozeno = false; posledniEet = null;
-  sumupKod = ''; sumupCastka = 0;
+  sumupKod = ''; sumupCastka = 0; kartaSelhala = false;
   sumupBox('', false, true);
   document.getElementById('forma').disabled = false;
   document.getElementById('forma').value = '';
   document.getElementById('platba-tiles').classList.remove('chyba');
   setStatus('');
-  document.getElementById('save-btn').disabled = false;
+  const sb = document.getElementById('save-btn');
+  sb.disabled = false; sb.onclick = ulozAVytiskni; sb.innerHTML = '💾 Uložit a vytisknout';
+  syncEet();
   document.getElementById('cislo').value = dalsiCislo || '';
   init();
 }
@@ -858,7 +869,16 @@ async function ulozAVytiskni() {
         } catch(e) { console.warn('Archivace selhala:', e); }
       }
       // tisk pro zákazníka
-      tiskni();
+      // Prohlížeč otevře tisk jen pár sekund po klepnutí. Po platbě na terminálu
+      // nebo pomalém uložení (EET) by se tisk tiše neotevřel → nabídnout tlačítko.
+      if (!navigator.userActivation || navigator.userActivation.isActive) {
+        tiskni();
+      } else if (btn.innerHTML.indexOf('Dokončit') < 0) {
+        btn.innerHTML = '🖨️ Vytisknout fakturu';
+        const st = document.getElementById('save-status');
+        setStatus(st.textContent.replace(' Pro návrat použij tlačítko Admin nahoře.', '') + ' Klepni na Vytisknout fakturu.', st.className.indexOf('err') >= 0 ? 'err' : 'ok');
+        btn.scrollIntoView({ behavior:'smooth', block:'center' });
+      }
     } else if (r.error === 'duplicate') {
       setStatus('Faktura ' + cislo + ' už v evidenci je. Změň číslo (nebo použij Náhled bez uložení pro přetisk).' + platbaPozn(), 'err');
       btn.disabled = false; btn.innerHTML = '💾 Uložit a vytisknout';
