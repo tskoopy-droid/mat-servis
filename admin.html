@@ -41,6 +41,45 @@
   .tab.active { background:var(--blue); color:#fff; }
   .tab-wide { grid-column:1/-1; }
 
+  /* ── Výdaje a zisk ── */
+  .vz-top { display:flex; gap:8px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom:14px; }
+  .vz-top select { padding:8px 12px; border:2px solid var(--border); border-radius:10px; font-size:14px; font-family:'Inter',sans-serif; color:var(--text); background:var(--white); }
+  .vz-kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px; }
+  .vz-kpi { border:2px solid var(--border); border-radius:14px; padding:12px; }
+  .vz-kpi .l { font-size:12px; color:var(--text-muted); }
+  .vz-kpi .v { font-size:19px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; margin-top:2px; }
+  .vz-kpi .s { font-size:11px; color:var(--text-muted); }
+  .vz-kpi.zisk .v { color:var(--green); }
+  .vz-alert { display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; background:#fff7ed; border:2px solid #fed7aa; color:#9a3412; border-radius:14px; padding:12px 14px; margin-bottom:14px; font-size:14px; }
+  .vz-alert.ok { background:var(--green-light); border-color:var(--green-mid); color:var(--green); }
+  .vz-alert button { background:#ea580c; color:#fff; border:none; border-radius:10px; padding:10px 16px; font-weight:700; font-size:14px; font-family:'Inter',sans-serif; cursor:pointer; }
+  .vz-h { font-size:15px; font-weight:700; color:var(--text); margin:6px 0 10px; }
+  .vz-bar { display:grid; grid-template-columns:minmax(100px,140px) 1fr auto; gap:10px; align-items:center; font-size:13px; margin-bottom:8px; }
+  .vz-track { height:10px; background:var(--blue-light); border-radius:5px; overflow:hidden; }
+  .vz-fill { height:100%; background:var(--blue); border-radius:5px; }
+  .vz-bar.warn .vz-fill { background:#ea580c; }
+  .vz-bar.muted .vz-fill { background:var(--text-muted); }
+  .vz-num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .vz-tbl { overflow-x:auto; }
+  .vz-tbl table { width:100%; border-collapse:collapse; font-size:13px; }
+  .vz-tbl th, .vz-tbl td { text-align:left; padding:6px; border-bottom:1px solid var(--border); vertical-align:top; }
+  .vz-tbl th { color:var(--text-muted); font-size:11px; text-transform:uppercase; }
+  .vz-tbl .r { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .vz-note { font-size:12px; color:var(--text-muted); margin-top:8px; }
+  .vz-wiz-pos { display:flex; justify-content:space-between; align-items:center; font-size:13px; color:var(--text-muted); margin-bottom:8px; }
+  .vz-prog { height:6px; background:var(--border); border-radius:3px; overflow:hidden; margin-bottom:14px; }
+  .vz-prog div { height:100%; background:var(--blue); }
+  .vz-item { font-size:16px; font-weight:700; color:var(--text); }
+  .vz-meta { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:13px; color:var(--text-muted); margin:4px 0 14px; }
+  .vz-lbl { font-size:12px; color:var(--text-muted); margin-bottom:6px; }
+  .vz-opts { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+  .vz-opts button { flex:1 1 120px; padding:12px; border:2px solid var(--border); background:var(--white); color:var(--text); border-radius:12px; font-size:14px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
+  .vz-opts button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .vz-akce { display:flex; gap:8px; }
+  .vz-akce .save-btn { flex:2; margin-top:0; }
+  .vz-akce .vz-skip { flex:1; background:#f1f5f9; color:var(--text-muted); border:none; border-radius:12px; font-size:15px; font-weight:600; font-family:'Inter',sans-serif; cursor:pointer; }
+  .vz-msg { font-size:13px; color:var(--text-muted); margin-top:10px; min-height:18px; }
+
   .stats { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px; }
   .stat { background:var(--white); border-radius:16px; padding:16px; text-align:center; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
   .stat-num { font-size:28px; font-weight:700; color:var(--blue); }
@@ -321,6 +360,7 @@
       <div class="tab" onclick="window.open('uctenka.html?t=AKstNCKhxcTsh1NrtciIfc0HtcSFYyw6','_blank')">🧾 Účtenka</div>
       <div class="tab" id="tab-servis" onclick="switchTab('servis')">🔧 Nový servis</div>
       <div class="tab" id="tab-trzba" onclick="switchTab('trzba')">💰 Přímá tržba</div>
+      <div class="tab tab-wide" id="tab-vydaje" onclick="switchTab('vydaje')">📊 Výdaje a zisk</div>
     </div>
 
     <!-- Rezervace -->
@@ -336,6 +376,34 @@
       <div id="rozvrh-rows"><div class="loading">Načítám...</div></div>
       <button class="save-btn" id="save-rozvrh-btn" onclick="saveRozvrh()">Uložit dostupnost</button>
       <div class="save-msg" id="save-msg">Uloženo!</div>
+    </div>
+
+    <!-- Výdaje a zisk -->
+    <div class="card" id="section-vydaje" style="display:none">
+      <div id="vz-prehled">
+        <div class="vz-top">
+          <div style="font-size:16px;font-weight:700;color:var(--text)">Výdaje a zisk</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="vz-mesic" aria-label="Měsíc" onchange="vzZmenaMesice(this.value)"></select>
+            <button class="refresh-btn" id="vz-reload" onclick="vzNacti()">Načíst znovu</button>
+          </div>
+        </div>
+        <div id="vz-obsah"><div class="loading">Načítám výdaje a příjmy...</div></div>
+      </div>
+      <div id="vz-pruvodce" style="display:none">
+        <div class="vz-wiz-pos"><span id="vz-pos"></span><button class="refresh-btn" onclick="vzZavritPruvodce()">Zpět na přehled</button></div>
+        <div class="vz-prog"><div id="vz-prog-fill" style="width:0"></div></div>
+        <div class="vz-item" id="vz-popis"></div>
+        <div class="vz-meta" id="vz-meta"></div>
+        <div class="vz-lbl">Typ</div>
+        <div class="vz-opts" id="vz-typ"></div>
+        <div id="vz-kat-box"><div class="vz-lbl">Kategorie</div><div class="vz-opts" id="vz-kat"></div></div>
+        <div class="vz-akce">
+          <button class="save-btn" id="vz-ulozit" onclick="vzUlozit()">Uložit a další</button>
+          <button class="vz-skip" onclick="vzPreskocit()">Přeskočit</button>
+        </div>
+        <div class="vz-msg" id="vz-msg"></div>
+      </div>
     </div>
 
     <!-- Tržba -->
@@ -681,9 +749,10 @@
     currentTab=tab;
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     document.getElementById('tab-'+tab).classList.add('active');
-    ['section-rez','section-rozvrh','section-trzba','section-servis','section-sms','section-sezona'].forEach(id=>
+    ['section-rez','section-rozvrh','section-trzba','section-servis','section-sms','section-sezona','section-vydaje'].forEach(id=>
       document.getElementById(id).style.display='none');
-    if(tab==='rozvrh'){document.getElementById('section-rozvrh').style.display='block';renderWeekTabs();renderRozvrh();}
+    if(tab==='vydaje'){document.getElementById('section-vydaje').style.display='block';vzInit();}
+    else if(tab==='rozvrh'){document.getElementById('section-rozvrh').style.display='block';renderWeekTabs();renderRozvrh();}
     else if(tab==='trzba'){document.getElementById('section-trzba').style.display='block';initTrzbaForm();}
     else if(tab==='servis'){document.getElementById('section-servis').style.display='block';sInit();}
     else if(tab==='sms'){document.getElementById('section-sms').style.display='block';smsInit();}
@@ -694,6 +763,113 @@
       else document.getElementById('rez-list').innerHTML='<div class="loading">Načítám rezervace...</div>';
     }
   }
+
+  // ── VÝDAJE A ZISK ──────────────────────────────────────────
+  // Data: GAS admin_vydaje_prehled (výdaje z tabulky „faktury", příjmy z listu prijmy).
+  // Průvodce zapisuje Typ + Kategorii přes admin_vydaj_ucel (GAS ověří řádek podle č. obj. + popisu).
+  const VZ_MES=["","leden","únor","březen","duben","květen","červen","červenec","srpen","září","říjen","listopad","prosinec"];
+  const VZ_MES_GEN={"ledna":1,"února":2,"března":3,"dubna":4,"května":5,"června":6,"července":7,"srpna":8,"září":9,"října":10,"listopadu":11,"prosince":12};
+  let vzVydaje=[],vzPrijmy=[],vzTypy=['firemní','osobní','storno'],vzKat=['náklady','díly na prodej','vybavení dílny'];
+  let vzMesic=null,vzNacteno=false,vzFronta=[],vzI=0,vzVyber={typ:null,kat:null};
+  const vzKc=n=>(Math.round(n*100)/100).toLocaleString('cs-CZ',{maximumFractionDigits:2})+' Kč';
+  const vzEsc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function vzMk(s){
+    s=String(s||'').trim();let m=s.match(/^(\d{4})-(\d{2})/);if(m)return m[1]+'-'+m[2];
+    m=s.match(/^\d{1,2}\.\s*(\S+)\s+(\d{4})/);if(m){const mm=VZ_MES_GEN[m[1].toLowerCase()]||parseInt(m[1]);if(mm)return m[2]+'-'+String(mm).padStart(2,'0');}
+    return null;
+  }
+  const vzChybi=x=>!x.typ||(x.typ==='firemní'&&!x.kat&&x.cena>0);
+  window.vzInit=function(){ if(!vzNacteno) vzNacti(); };
+  window.vzNacti=async function(){
+    const token=getToken();if(!token){handleBadToken();return;}
+    const btn=document.getElementById('vz-reload');btn.disabled=true;
+    document.getElementById('vz-obsah').innerHTML='<div class="loading">Načítám výdaje a příjmy...</div>';
+    try{
+      const r=await gasPost({akce:'admin_vydaje_prehled',token});
+      if(r.error==='bad_token'){handleBadToken();return;}
+      if(!r.ok){document.getElementById('vz-obsah').innerHTML='<div class="loading">'+vzEsc(r.message||'Načtení se nepovedlo. Je v Apps Scriptu nasazená akce admin_vydaje_prehled?')+'</div>';return;}
+      vzVydaje=(r.vydaje||[]).map(x=>Object.assign(x,{mk:vzMk(x.datum)}));
+      vzPrijmy=(r.prijmy||[]).map(x=>Object.assign(x,{mk:vzMk(x.datum)}));
+      if(r.typy)vzTypy=r.typy; if(r.kategorie)vzKat=r.kategorie;
+      vzNacteno=true;vzMesice();vzRender();
+    }catch(e){document.getElementById('vz-obsah').innerHTML='<div class="loading">Spojení se nepovedlo. Zkus Načíst znovu.</div>';}
+    finally{btn.disabled=false;}
+  };
+  function vzMesice(){
+    const keys=[...new Set(vzVydaje.map(x=>x.mk).concat(vzPrijmy.map(x=>x.mk)).filter(Boolean))].sort().reverse();
+    const d=new Date(),cur=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    if(!vzMesic||!keys.includes(vzMesic))vzMesic=keys.includes(cur)?cur:keys[0];
+    document.getElementById('vz-mesic').innerHTML=keys.map(k=>{const[y,m]=k.split('-');return `<option value="${k}"${k===vzMesic?' selected':''}>${VZ_MES[+m]} ${y}</option>`;}).join('');
+  }
+  window.vzZmenaMesice=function(v){vzMesic=v;vzRender();};
+  function vzRender(){
+    const V=vzVydaje.filter(x=>x.mk===vzMesic),P=vzPrijmy.filter(x=>x.mk===vzMesic);
+    const firm=V.filter(x=>x.typ!=='osobní'&&x.typ!=='storno');
+    const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+    const prijem=sum(P,x=>x.castka),zisk=sum(P.filter(x=>x.zisk!==null),x=>x.zisk);
+    const firmS=sum(firm,x=>x.cena),bezZak=sum(firm.filter(x=>!x.zak),x=>x.cena),osob=sum(V.filter(x=>x.typ==='osobní'),x=>x.cena);
+    const chybi=V.filter(vzChybi);
+    let h='<div class="vz-kpis">'+[
+      ['Příjmy',vzKc(prijem),P.length+' záznamů',''],
+      ['Hrubý zisk',vzKc(zisk),'ze sloupce hruby_zisk','zisk'],
+      ['Firemní výdaje',vzKc(firmS),'bez osobních a storna',''],
+      ['Bez zakázky',vzKc(bezZak),'vybavení, sklad, režie',''],
+      ['Osobní',vzKc(osob),'nepočítá se do firmy','']
+    ].map(k=>`<div class="vz-kpi ${k[3]}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('')+'</div>';
+    h+=chybi.length
+      ?`<div class="vz-alert"><span><b>${chybi.length} výdajů bez vyplněného účelu</b> (${vzKc(sum(chybi,x=>x.cena))}). Chybí Typ, nebo u firemních Kategorie.</span><button onclick="vzStart()">Vyplňovat</button></div>`
+      :'<div class="vz-alert ok"><span><b>Vše vyplněno.</b> Všechny výdaje v měsíci mají Typ i Kategorii.</span></div>';
+    const sk={};firm.forEach(x=>{const k=x.kat||'nevyplněno';sk[k]=(sk[k]||0)+x.cena;});if(osob)sk['osobní']=osob;
+    const max=Math.max(1,...Object.values(sk));
+    h+='<div class="vz-h">Výdaje podle účelu</div>'+(Object.keys(sk).length?Object.entries(sk).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+      `<div class="vz-bar ${k==='nevyplněno'?'warn':k==='osobní'?'muted':''}"><span>${vzEsc(k)}</span><div class="vz-track"><div class="vz-fill" style="width:${Math.max(2,v/max*100)}%"></div></div><span class="vz-num">${vzKc(v)}</span></div>`).join(''):'<div class="vz-note">V tomto měsíci nejsou žádné výdaje.</div>');
+    const J=P.filter(x=>x.zak);
+    h+='<div class="vz-h" style="margin-top:16px">Zakázky v měsíci</div><div class="vz-tbl"><table><thead><tr><th>Zakázka</th><th>Popis</th><th class="r">Příjem</th><th class="r">Hrubý zisk</th></tr></thead><tbody>'+
+      (J.length?J.map(x=>`<tr><td>${vzEsc(x.zak)}</td><td>${vzEsc(x.popis)}${x.jmeno?' · '+vzEsc(x.jmeno):''}</td><td class="r">${vzKc(x.castka)}</td><td class="r">${x.zisk===null?'–':vzKc(x.zisk)}</td></tr>`).join(''):'<tr><td colspan="4" class="vz-note">Žádné příjmy s číslem zakázky.</td></tr>')+'</tbody></table></div>';
+    const prez=P.filter(x=>!x.zak&&x.zisk!==null);
+    h+=`<div class="vz-note">Přezutí a vyvážení: ${prez.length} záznamů, ${vzKc(sum(prez,x=>x.zisk))} (celá částka = hrubý zisk).</div>`;
+    document.getElementById('vz-obsah').innerHTML=h;
+  }
+  window.vzStart=function(){
+    vzFronta=vzVydaje.filter(x=>x.mk===vzMesic&&vzChybi(x));vzI=0;
+    document.getElementById('vz-prehled').style.display='none';document.getElementById('vz-pruvodce').style.display='block';vzUkaz();
+  };
+  window.vzZavritPruvodce=function(){document.getElementById('vz-pruvodce').style.display='none';document.getElementById('vz-prehled').style.display='block';vzRender();};
+  function vzTlacitka(id,hodnoty,klic){
+    const box=document.getElementById(id);box.innerHTML='';
+    hodnoty.forEach(v=>{const b=document.createElement('button');b.type='button';b.textContent=v;if(vzVyber[klic]===v)b.className='on';
+      b.onclick=()=>{vzVyber[klic]=v;if(klic==='typ'&&v!=='firemní')vzVyber.kat=null;vzSync();};box.appendChild(b);});
+  }
+  function vzSync(){
+    vzTlacitka('vz-typ',vzTypy,'typ');
+    const kat=vzVyber.typ==='firemní';document.getElementById('vz-kat-box').style.display=kat?'block':'none';
+    vzTlacitka('vz-kat',vzKat,'kat');
+    document.getElementById('vz-ulozit').disabled=!vzVyber.typ||(kat&&!vzVyber.kat&&vzFronta[vzI].cena>0);
+  }
+  function vzUkaz(){
+    if(vzI>=vzFronta.length){document.getElementById('vz-msg').textContent='';vzZavritPruvodce();return;}
+    const x=vzFronta[vzI];
+    vzVyber={typ:x.typ||(x.zak?'firemní':null),kat:x.kat||(x.zak?'díly na prodej':null)};
+    document.getElementById('vz-pos').textContent='Položka '+(vzI+1)+' z '+vzFronta.length;
+    document.getElementById('vz-prog-fill').style.width=(vzI/vzFronta.length*100)+'%';
+    document.getElementById('vz-popis').textContent=x.popis;
+    const meta=[x.datum,x.dodavatel+' '+x.obj,(x.ks&&x.ks!=='1'?x.ks+' ks · ':'')+vzKc(x.cena),x.zak?'zakázka '+x.zak:'bez zakázky'];
+    document.getElementById('vz-meta').innerHTML=meta.map(t=>'<span>'+vzEsc(t)+'</span>').join('');
+    document.getElementById('vz-msg').textContent=x.zak?'Má číslo zakázky, proto je předvybráno firemní / díly na prodej.':'';
+    vzSync();
+  }
+  window.vzPreskocit=function(){vzI++;vzUkaz();};
+  window.vzUlozit=async function(){
+    const token=getToken();if(!token){handleBadToken();return;}
+    const x=vzFronta[vzI],btn=document.getElementById('vz-ulozit'),msg=document.getElementById('vz-msg');
+    btn.disabled=true;msg.textContent='Ukládám...';
+    try{
+      const r=await gasPost({akce:'admin_vydaj_ucel',token,row:x.row,obj:x.obj,popis:x.popis,typ:vzVyber.typ,kat:vzVyber.typ==='firemní'?(vzVyber.kat||''):''});
+      if(r.error==='bad_token'){handleBadToken();return;}
+      if(!r.ok){btn.disabled=false;msg.textContent=r.message||'Uložení se nepovedlo.';return;}
+      x.typ=r.typ;x.kat=r.kat;x.row=r.row;vzI++;vzUkaz();
+    }catch(e){btn.disabled=false;msg.textContent='Spojení se nepovedlo a není jisté, jestli se uložilo. Zavři průvodce, dej Načíst znovu a zkontroluj položku.';}
+  };
 
   // ── TRŽBA ──────────────────────────────────────────────────
   function initTrzbaForm(){
