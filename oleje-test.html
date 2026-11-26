@@ -833,6 +833,9 @@ function nactiVin() {
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
 
+      // ── TEST: fotky olejů z nabídky se načtou, hned jak přijde nacenění ──
+      stav.naceneniPromise.then(prednactiFotkyOleju_);
+
       zobrazAuto();
     })
     .catch(function() {
@@ -941,16 +944,8 @@ function nactiCenik() {
           .catch(function() { return null; });
 
       return naceneniPromise.then(function(n) {
-        // TEST: nabídka olejů všech značek se načte až po nacenění — server
-        // má pak vůz v cache a odpověď je rychlá.
-        var nOk = !!(n && !n.error && n.uspech);
-        if (!nOk) return { n: n, nab: null };
-        return fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=oleje_nabidka', { redirect: 'follow' })
-          .then(function(r) { return r.json(); })
-          .catch(function() { return null; })
-          .then(function(nab) { return { n: n, nab: nab }; });
-      }).then(function(x) {
-        var n = x.n;
+        // TEST: nabídka olejů všech značek přichází přibalená k nacenění (olejeNabidka).
+        var x = { n: n, nab: n && n.olejeNabidka };
         var nab = (x.nab && x.nab.ok && x.nab.oleje && x.nab.oleje.length) ? x.nab : null;
         var nOk = !!(n && !n.error && n.uspech);
         var t = (nOk && n.total && n.total.cena1l > 0) ? n.total : null;
@@ -1008,6 +1003,14 @@ function intervalHezky(text) {
     doba = r + (r === 1 ? ' rok' : (r < 5 ? ' roky' : ' let'));
   }
   return kmText + ' km / ' + doba;
+}
+
+/** TEST: fotky olejů z nabídky (n.olejeNabidka) se uloží do cache prohlížeče dřív, než odpoví Castrol. */
+function prednactiFotkyOleju_(n) {
+  var nab = n && n.olejeNabidka;
+  ((nab && nab.ok && nab.oleje) || []).forEach(function(o) {
+    if (o.obrazek) { var img = new Image(); img.src = o.obrazek; }
+  });
 }
 
 /** Vykreslí kategorie olejů — volá se až když je hotové i nacenění filtrů. */
