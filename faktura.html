@@ -225,6 +225,15 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
       </div>
     </div>
 
+    <div class="card" id="koncept-card" style="display:none">
+      <div class="card-title">📝 Rozpracované faktury</div>
+      <div class="cenik-row" style="margin-bottom:0">
+        <select id="koncept-vyber"></select>
+        <button class="btn btn-light btn-sm" id="koncept-nacti-btn" onclick="nactiKoncept()">📂 Načíst koncept</button>
+      </div>
+      <a href="#" id="koncept-smaz" onclick="smazKoncept();return false" style="display:inline-flex;align-items:center;min-height:44px;margin-top:4px;font-size:12px;color:var(--text-muted)">Smazat vybraný koncept</a>
+    </div>
+
     <div class="grid-2">
       <div class="card">
         <div class="card-title">🧾 Faktura</div>
@@ -297,6 +306,7 @@ var qrcode=function(){var t=function(t,r){var e=t,n=g[r],o=null,i=0,a=null,u=[],
     <div class="bottom-actions">
       <span class="save-status" id="save-status"></span>
       <button class="btn btn-light" onclick="resetForm()">Vymazat formulář</button>
+      <button class="btn btn-light" id="koncept-btn" onclick="ulozKoncept()">📝 Uložit koncept</button>
       <button class="btn btn-light" onclick="zobrazNahled()">Náhled (bez uložení)</button>
       <button class="btn btn-karta" id="karta-btn" onclick="zaplatitKartou()" style="display:none">💳 Zaplatit na terminálu</button>
       <button class="btn btn-save" id="save-btn" onclick="ulozAVytiskni()">💾 Uložit a vytisknout</button>
@@ -334,6 +344,8 @@ let sumupKod     = '';     // kód transakce SumUp po úspěšné platbě na ter
 let sumupCastka  = 0;      // částka, která se na terminálu zaplatila
 let sumupBezi    = false;
 let kartaSelhala = false;   // terminál neprošel / nedal výsledek → nabídne se Uložit bez terminálu
+let konceptId    = '';     // načtený koncept (list „Koncepty") — po uložení faktury se smaže
+let koncepty     = [];
 
 // Hotově a kartou = vždy na místě (EET). Převodem jen když zaplatil QR u pultu.
 // Dlaždice formy úhrady — žádná není vybraná předem
@@ -530,6 +542,7 @@ async function nactiInit() {
 
   // ── Seznam čísel zakázek pro našeptávač (sestupně) ──
   nactiSeznamZakazek();
+  nactiKoncepty();
 
   // ── Předvyplnění z rezervace (pokud přišli přes ?id=&col=) ──
   const params = new URLSearchParams(window.location.search);
@@ -773,9 +786,92 @@ function setStatus(msg, type) {
   el.className = 'save-status' + (type ? ' '+type : '');
 }
 
+// ── Koncepty (rozpracované faktury v listu „Koncepty") ──
+// Ukládá se konečná cena za kus; při načtení se nákup ani marže nepřepočítávají.
+async function nactiKoncepty() {
+  try {
+    const r = await gasPost({ akce:'faktura_koncepty', token:getToken() });
+    if (!r.ok) return;
+    koncepty = r.koncepty || [];
+  } catch (e) { return; }
+  const card = document.getElementById('koncept-card');
+  const sel = document.getElementById('koncept-vyber');
+  card.style.display = koncepty.length ? '' : 'none';
+  sel.innerHTML = koncepty.map(k => `<option value="${esc(k.id)}">${esc(k.popis)} · ${fmtKc(k.celkem)} · ${esc(k.ulozeno)}</option>`).join('');
+  if (konceptId && koncepty.some(k => k.id === konceptId)) sel.value = konceptId;
+}
+
+async function ulozKoncept() {
+  const pol = polozky.filter(p => !jePrazdna(p)).map(p => ({ popis:p.popis, mnozstvi:qOf(p), jednotka:p.jednotka || 'ks', cena:unitPrice(p) }));
+  if (!pol.length) { alert('Koncept nemá žádné položky.'); return; }
+  const btn = document.getElementById('koncept-btn');
+  btn.disabled = true; btn.innerHTML = 'Ukládám…';
+  const koncept = {
+    id: konceptId,
+    odberatel: document.getElementById('odberatel_nazev').value.trim(),
+    ico: document.getElementById('odberatel_ico').value.trim(),
+    adresa: document.getElementById('odberatel_adresa').value.trim(),
+    poznamka: document.getElementById('poznamka').value.trim(),
+    cislo_zakazky: document.getElementById('zakazka-cislo').value.trim(),
+    rez_id: rezervaceId, rez_col: rezervaceCol,
+    polozky: pol
+  };
+  try {
+    const r = await gasPost({ akce:'faktura_koncept_ulozit', token:getToken(), koncept });
+    if (r.error === 'bad_token') { handleBadToken(); return; }
+    if (!r.ok) { setStatus('Koncept se neuložil: ' + (r.message || r.error || 'neznámá chyba'), 'err'); return; }
+    konceptId = r.id;
+    setStatus('✓ Koncept uložen (' + fmtKc(r.celkem) + '). Najdeš ho nahoře v Rozpracovaných fakturách.', 'ok');
+    nactiKoncepty();
+  } catch (e) {
+    setStatus('Koncept se neuložil — chyba připojení.', 'err');
+  } finally {
+    btn.disabled = false; btn.innerHTML = '📝 Uložit koncept';
+  }
+}
+
+function nactiKoncept() {
+  const id = document.getElementById('koncept-vyber').value;
+  const k = koncepty.find(x => x.id === id);
+  if (!k) return;
+  if (polozky.some(p => !jePrazdna(p)) && konceptId !== id && !confirm('Načíst koncept? To, co je teď ve formuláři, se přepíše.')) return;
+  resetForm(true);
+  const d = k.data || {};
+  document.getElementById('odberatel_nazev').value = d.odberatel || '';
+  document.getElementById('odberatel_ico').value = d.ico || '';
+  document.getElementById('odberatel_adresa').value = d.adresa || '';
+  document.getElementById('poznamka').value = d.poznamka || '';
+  if (d.cislo_zakazky) {
+    const sel = document.getElementById('zakazka-cislo');
+    if (![...sel.options].some(o => o.value === d.cislo_zakazky)) sel.add(new Option(d.cislo_zakazky, d.cislo_zakazky));
+    sel.value = d.cislo_zakazky;
+  }
+  if (d.rez_id && d.rez_col) { rezervaceId = d.rez_id; rezervaceCol = d.rez_col; }
+  polozky = (d.polozky || []).map(p => ({ popis:p.popis || '', mnozstvi:p.mnozstvi, jednotka:p.jednotka || 'ks', nakup:'', marze:'', cena:p.cena }));
+  if (!polozky.length) polozky = [novaPolozka()];
+  konceptId = k.id;
+  renderPolozky();
+  setStatus('✓ Načten koncept ' + (k.popis || '') + ' (' + fmtKc(celkem()) + '). Po uložení faktury se koncept smaže.', 'ok');
+}
+
+async function smazKoncept() {
+  const id = document.getElementById('koncept-vyber').value;
+  const k = koncepty.find(x => x.id === id);
+  if (!k || !confirm('Smazat koncept „' + (k.popis || '') + '“?')) return;
+  try {
+    const r = await gasPost({ akce:'faktura_koncept_smazat', token:getToken(), id });
+    if (r.error === 'bad_token') { handleBadToken(); return; }
+    if (!r.ok) { setStatus('Koncept se nesmazal: ' + (r.message || r.error || 'neznámá chyba'), 'err'); return; }
+    if (konceptId === id) konceptId = '';
+    setStatus('Koncept smazán.', 'ok');
+    nactiKoncepty();
+  } catch (e) { setStatus('Koncept se nesmazal — chyba připojení.', 'err'); }
+}
+
 // ── Reset ──
-function resetForm() {
-  if (!confirm('Vymazat celý formulář?')) return;
+function resetForm(bezDotazu) {
+  if (!bezDotazu && !confirm('Vymazat celý formulář?')) return;
+  konceptId = '';
   ['odberatel_nazev','odberatel_ico','odberatel_adresa','poznamka','zakazka-cislo'].forEach(id => document.getElementById(id).value = '');
   polozky = []; ulozeno = false; posledniEet = null;
   sumupKod = ''; sumupCastka = 0; kartaSelhala = false;
@@ -858,6 +954,12 @@ async function ulozAVytiskni() {
       btn.disabled = false;
       btn.onclick = function() { tiskni(); };
       syncEet();
+      // faktura je v příjmech → rozpracovaný koncept už není potřeba
+      if (konceptId) {
+        const kid = konceptId; konceptId = '';
+        try { await gasPost({ akce:'faktura_koncept_smazat', token:getToken(), id:kid }); } catch(e) {}
+        nactiKoncepty();
+      }
       // přezutí z dlaždic: příjmy už zapsala faktura → rezervace jen přesunout do archivu
       if (davka) {
         await archivujDavku(r.cislo);
