@@ -1330,7 +1330,8 @@ function vykresliVolbuOleje() {
   stav.seznamOleju = seznam;
   var doporuceny = seznam[0];
   var html = '<div class="zaklad-volba-nadpis">' + (o === doporuceny ? 'Doporučený olej' : 'Vybraný olej') +
-    (o.interval ? ' · interval ' + escHtml(o.interval) : '') + '</div>' +
+    (o.interval ? ' · interval ' + escHtml(o.interval) : '') +
+    (Number(stav.objem) > 0 ? ' · náplň ' + String(stav.objem).replace('.', ',') + ' l' : '') + '</div>' +
     dlazdiceOleje(seznam.indexOf(o), o, true, o === doporuceny);
   html += '<button type="button" class="olej-dalsi-btn" onclick="prepniDalsiOleje()">' +
     (stav.dalsiOtevreno ? 'Skrýt další oleje' : 'Jiné oleje (' + (seznam.length - 1) + ')') + '</button>';
@@ -1399,7 +1400,7 @@ function dlazdiceOleje(index, olej, vybrano, doporuceny) {
          '</div>' +
          '</div>' +
          '<div class="sluzba-spodek">' +
-         '<span class="sluzba-detail">Náplň: ' + String(stav.objem).replace('.', ',') + ' l</span>' +
+         '<span class="sluzba-detail"></span>' +
          '<span class="sluzba-cena">' + Math.round(Number(olej.cenaOleje) || 0) + ' Kč</span>' +
          '</div>' +
          '</div>';
