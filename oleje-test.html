@@ -187,6 +187,21 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .olej-volba-nazev .olej-inline-logo.logo-total{height:16px;margin:9px 0;}
   .sluzba-item.olej-volba .sluzba-left{align-items:flex-start;}
   .sluzba-item.olej-volba .sluzba-check{margin-top:3px;}
+  /* Dlaždice oleje (nová): nahoře logo + štítek Doporučujeme, pod tím název
+     a hned za ním viskozita jako štítek; dole objem a cena. */
+  .olej-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+  .olej-hlava{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;min-height:28px;}
+  .olej-volba .sluzba-left{min-width:0;}
+  @media (max-width:420px){ .olej-hlava .olej-inline-logo{height:24px;} .olej-hlava .olej-inline-logo.logo-total{height:13px;}
+    .olej-volba .olej-dop{font-size:10.5px;padding:2px 7px;} }
+  .olej-hlava .olej-inline-logo{height:28px;margin:0;vertical-align:0;}
+  .olej-hlava .olej-inline-logo.logo-total{height:15px;}
+  .olej-znacka-txt{font-size:15px;font-weight:800;color:var(--text);}
+  .olej-volba .olej-dop{color:#fff;background:var(--blue);padding:3px 9px;border-radius:999px;margin:0;white-space:nowrap;}
+  .olej-jmeno{font-size:15px;font-weight:600;color:var(--text);line-height:1.3;}
+  .olej-visk{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:12.5px;font-weight:700;
+    color:var(--navy);background:#e8eef7;white-space:nowrap;vertical-align:1px;}
+  .olej-volba .olej-foto{width:64px;height:64px;margin-right:4px;}
   .zaklad-radek{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
     padding:14px 0;border-bottom:1px solid var(--border);}
   .zaklad-radek:first-of-type{padding-top:4px;}
@@ -1373,15 +1388,18 @@ function dlazdiceOleje(index, olej, vybrano, doporuceny) {
   var foto = olej.obrazek
     ? '<img class="olej-foto" src="' + escHtml(olej.obrazek) + '" alt="" loading="lazy" onerror="this.remove()">'
     : '';
+  var ln = olejLogoANazev_(nazev);
   return '<div class="sluzba-item olej-volba' + (vybrano ? ' selected' : '') + '" ' +
          'style="margin-bottom:10px;" role="button" tabindex="0" onclick="vyberOlejIndex(' + index + ')">' +
          '<div class="sluzba-left">' +
          '<div class="sluzba-check">' + (vybrano ? '✓' : '') + '</div>' + foto +
-         '<div class="olej-volba-nazev">' + (doporuceny ? '<span class="olej-dop">Doporučujeme</span><br>' : '') +
-         olejNazevHtml(nazev) + '</div>' +
+         '<div class="olej-info">' +
+           '<div class="olej-hlava">' + ln.logo + (doporuceny ? '<span class="olej-dop">Doporučujeme</span>' : '') + '</div>' +
+           '<div class="olej-jmeno">' + escHtml(ln.nazev) + (visc ? '<span class="olej-visk">' + escHtml(visc) + '</span>' : '') + '</div>' +
+         '</div>' +
          '</div>' +
          '<div class="sluzba-spodek">' +
-         '<span class="sluzba-detail">' + stav.objem + ' l' + (visc ? ' · ' + visc : '') + '</span>' +
+         '<span class="sluzba-detail">Náplň: ' + String(stav.objem).replace('.', ',') + ' l</span>' +
          '<span class="sluzba-cena">' + Math.round(Number(olej.cenaOleje) || 0) + ' Kč</span>' +
          '</div>' +
          '</div>';
@@ -1416,6 +1434,22 @@ function olejNazevHtml(nazev) {
            'onerror="olejLogoChybi(this)"> ' + escHtml(t.replace(l[0], '').trim());
   }
   return escHtml(t);
+}
+
+/** Logo značky zvlášť a název oleje bez značky (pro dlaždici oleje).
+ *  Značka bez loga (Shell, Q8) se ukáže jako tučný text. */
+function olejLogoANazev_(nazev) {
+  var t = String(nazev || '').trim();
+  for (var i = 0; i < LOGA_OLEJU.length; i++) {
+    var l = LOGA_OLEJU[i];
+    if (!l[0].test(t)) continue;
+    return { logo: '<img src="' + l[1] + '" alt="' + l[2] + '" class="olej-inline-logo' + l[3] + '" ' +
+                   'onerror="olejLogoChybi(this)">',
+             nazev: t.replace(l[0], '').trim() };
+  }
+  var m = t.match(/^(Shell|Q8)\s+/i);
+  if (m) return { logo: '<span class="olej-znacka-txt">' + escHtml(m[1]) + '</span>', nazev: t.slice(m[0].length) };
+  return { logo: '', nazev: t };
 }
 
 /** Logo v názvu oleje se nenačetlo — vrátí se název značky. */
