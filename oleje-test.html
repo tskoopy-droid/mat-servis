@@ -192,10 +192,11 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .olej-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
   .olej-hlava{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 8px;min-height:28px;}
   .olej-volba .sluzba-left{min-width:0;}
-  @media (max-width:420px){ .olej-hlava .olej-inline-logo{height:24px;} .olej-hlava .olej-inline-logo.logo-total{height:13px;}
+  @media (max-width:420px){ .olej-hlava .olej-inline-logo{height:24px;} .olej-hlava .olej-inline-logo.logo-total{height:13px;} .olej-hlava .olej-inline-logo.logo-elf{height:18px;}
     .olej-volba .olej-dop{font-size:10.5px;padding:2px 7px;} }
   .olej-hlava .olej-inline-logo{height:28px;margin:0;vertical-align:0;}
   .olej-hlava .olej-inline-logo.logo-total{height:15px;}
+  .olej-hlava .olej-inline-logo.logo-elf{height:21px;}   /* Elf je opticky větší než ostatní */
   .olej-znacka-txt{font-size:15px;font-weight:800;color:var(--text);}
   .olej-volba .olej-dop{color:#fff;background:var(--blue);padding:3px 9px;border-radius:999px;margin:0;white-space:nowrap;}
   .olej-jmeno{font-size:15px;font-weight:600;color:var(--text);line-height:1.3;}
@@ -1464,7 +1465,7 @@ function vyberOlejIndex(i) {
 var LOGA_OLEJU = [
   [/castrol\s*/i,               'logocastrol.png', 'Castrol', ''],
   [/^total(energies)?\s+/i,     'logototal.png', 'Total', ' logo-total'],
-  [/^elf\s+/i,                  'logoelf.png',     'Elf',     ''],
+  [/^elf\s+/i,                  'logoelf.png',     'Elf',     ' logo-elf'],
   [/^shell\s+/i,                'logoshell.png',   'Shell',   ''],
   [/^q8\s+/i,                   'logoq8.svg',      'Q8',      '']
 ];
