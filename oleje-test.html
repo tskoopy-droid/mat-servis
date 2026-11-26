@@ -796,7 +796,7 @@ function nactiVin() {
   btn.innerHTML = 'Načítám… ' + svgSpinW;
   btn.disabled = true;
 
-  fetch(VIN_PROXY + '?vin=' + vin)
+  fetch(VIN_PROXY + '?vin=' + vin + '&trvale=1')
     .then(function(r) { return r.json(); })
     .then(function(data) {
       btn.innerHTML = 'Načíst ' + svgArrow;
@@ -820,7 +820,7 @@ function nactiVin() {
       stav.vykon        = data.vykon ? data.vykon.split('/')[0].trim() : '';
 
       // ── Preload Castrol na pozadí — výsledek je již JSON (ne Response) ──
-      stav.castrolPreloadPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=olej'
+      stav.castrolPreloadPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=olej&trvale=1'
             + (data.rok ? '&rok=' + encodeURIComponent(data.rok) : '')
             + (data.znacka ? '&znacka=' + encodeURIComponent(data.znacka) : ''),
             { redirect: 'follow' })
@@ -828,7 +828,7 @@ function nactiVin() {
         .catch(function() { return null; });
 
       // ── Preload nacenění filtrů na pozadí ──
-      stav.naceneniPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=naceneni',
+      stav.naceneniPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=naceneni&trvale=1',
             { redirect: 'follow' })
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
@@ -922,7 +922,7 @@ function nactiCenik() {
     olejePromise = stav.castrolPreloadPromise;
   } else {
     // Fallback: fetchni teď a parsuj JSON
-    olejePromise = fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=olej'
+    olejePromise = fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=olej&trvale=1'
           + (stav.rokRegistrace ? '&rok=' + encodeURIComponent(stav.rokRegistrace) : '')
           + (stav.znacka ? '&znacka=' + encodeURIComponent(stav.znacka) : ''),
           { redirect: 'follow' })
@@ -939,7 +939,7 @@ function nactiCenik() {
 
       // Bez nacenění se objednat nedá — fixní ceny už stránka nemá.
       var naceneniPromise = stav.naceneniPromise ||
-        fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=naceneni', { redirect: 'follow' })
+        fetch(VIN_PROXY + '?vin=' + stav.vin + '&action=naceneni&trvale=1', { redirect: 'follow' })
           .then(function(r) { return r.json(); })
           .catch(function() { return null; });
 
