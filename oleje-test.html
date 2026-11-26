@@ -1334,7 +1334,7 @@ function vykresliVolbuOleje() {
     (Number(stav.objem) > 0 ? ' · náplň ' + String(stav.objem).replace('.', ',') + ' l' : '') + '</div>' +
     dlazdiceOleje(seznam.indexOf(o), o, true, o === doporuceny);
   html += '<button type="button" class="olej-dalsi-btn" onclick="prepniDalsiOleje()">' +
-    (stav.dalsiOtevreno ? 'Skrýt další oleje' : 'Jiné oleje (' + (seznam.length - 1) + ')') + '</button>';
+    (stav.dalsiOtevreno ? 'Skrýt nabídku' : 'Vybrat jiný olej (' + (seznam.length - 1) + ')') + '</button>';
   if (stav.dalsiOtevreno) {
     seznam.forEach(function(x, i) { if (x !== o) html += dlazdiceOleje(i, x, false, x === doporuceny); });
   }
