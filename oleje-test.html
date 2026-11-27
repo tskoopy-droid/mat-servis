@@ -1039,6 +1039,9 @@ function nactiCenik() {
         stav.nabidka = nab;
         // Oleje, které Pegas nemá skladem (ceník v Sheets, sloupec skladem = NE) – neukážou se ani z Castrol API
         stav.vyprodano = ((x.nab && x.nab.vyprodano) || []).map(klicOleje_);
+        // Vlastní sklad (list oleje_sklad): klíč oleje -> { nazev (řádek skladu), volne (litry) }
+        stav.nasSklad = {};
+        ((x.nab && x.nab.sklad) || []).forEach(function(r) { stav.nasSklad[klicOleje_(r[0])] = { nazev: r[0], volne: Number(r[1]) || 0 }; });
 
         if (!castrolOk && !t && !nab) return selhalo(duvodBezCastrolu);
         if (!nOk) return selhalo(n && n.preteceno ? 'zahlceno' : 'naceneni_selhalo');
@@ -1123,8 +1126,8 @@ function zobrazKategorieOleje(data) {
     }
     return kopie;
   }).filter(function(o) {
-    // vyprodaný na Pegasu -> nezobrazit; doporučený pak bude první dostupný z nabídky
-    return (stav.vyprodano || []).indexOf(klicOleje_(o.nazev)) < 0;
+    // nedostupný (Pegas nemá skladem a u nás není dost na náplň) -> nezobrazit
+    return olejDostupny_(o.nazev);
   });
   var llOleje = [];
 
@@ -1157,14 +1160,15 @@ function zobrazKategorieOleje(data) {
       return {
         id: x.id, nazev: x.nazev, znacka: x.znacka, obrazek: x.obrazek, viskozita: x.viskozita,
         popis: x.popis, total: x.znacka === 'total' || x.znacka === 'elf',
-        vCeniku: true, priorita: 999, zJson: true,
+        vCeniku: true, priorita: x.priorita || 999, zJson: true,
+        cenik: x.cenik || '', pegasSkladem: x.pegasSkladem,
         interval: (vzorA && vzorA.interval) || '10 000 km / 1 rok',
         km: (vzorA && vzorA.km) || 10000,
         cenaOleje: Math.round(x.cena1l * Number(stav.objem))
       };
-    }).filter(function(o) { return (stav.vyprodano || []).indexOf(klicOleje_(o.nazev)) < 0; });
-    // když Castrol API nic nevrátí, je doporučený první olej z nabídky
-    stav.olejTotal = stav.olejeAlt[0] || stav.olejTotal;
+    }).filter(function(o) { return olejDostupny_(o.cenik || o.nazev, o.pegasSkladem); });
+    // když Castrol API nic nevrátí: doporučený = Castrol z nabídky podle priority, jinak Total/Elf podle priority
+    stav.olejTotal = doporucenyZNabidky_(stav.olejeAlt) || stav.olejTotal;
   }
 
   var maStandard = standardOleje.length > 0 || !!stav.olejTotal;
@@ -1432,9 +1436,35 @@ function klicOleje_(n) {
 }
 
 /** Doporučený olej první (Castrol z API, jinak první z nabídky), pak ostatní z nabídky bez duplicit. */
+/**
+ * Dostupnost oleje: skladem u nás (volné litry >= náplň) NEBO skladem na Pegasu.
+ * Pegas: pegasSkladem z nabídky (false = není), jinak podle seznamu vyprodaných;
+ * stav starší než 2 dny posílá GAS jako neznámý -> olej je dostupný.
+ */
+function skladZaznam_(nazev) {
+  var z = (stav.nasSklad || {})[klicOleje_(nazev)];
+  return (z && z.volne >= Number(stav.objem || 0) && Number(stav.objem) > 0) ? z : null;
+}
+function olejDostupny_(nazev, pegasSkladem) {
+  if (skladZaznam_(nazev)) return true;
+  if (pegasSkladem === false) return false;
+  return (stav.vyprodano || []).indexOf(klicOleje_(nazev)) < 0;
+}
+
+/** Doporučený z nabídky (bez Castrol API): Castrol s nejlepší prioritou, jinak Total/Elf, jinak nejlevnější. */
+function doporucenyZNabidky_(oleje) {
+  function nejlepsi(f) {
+    return (oleje || []).filter(f).sort(function(a, b) { return (a.priorita || 999) - (b.priorita || 999); })[0] || null;
+  }
+  return nejlepsi(function(o) { return o.znacka === 'castrol'; })
+      || nejlepsi(function(o) { return o.znacka === 'total' || o.znacka === 'elf'; })
+      || (oleje || []).slice().sort(function(a, b) { return (a.cenaOleje || 0) - (b.cenaOleje || 0); })[0] || null;
+}
+
 function seznamOleju_() {
   var c = stav.olejCastrol, seznam = [];
   if (c) seznam.push(c);
+  else if (stav.olejTotal) seznam.push(stav.olejTotal);   // doporučený z nabídky (Castrol/Total podle priority)
   var alt = stav.olejeAlt || [];
   alt.forEach(function(a) {
     if (c && klicOleje_(a.nazev) === klicOleje_(c.nazev)) {
@@ -2318,6 +2348,9 @@ function odeslat() {
     olejId:stav.olejVybrany&&stav.olejVybrany.id||'',   // id z oleje_katalog.json -> objednávka balení v Pegasu
     datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem,
     slevovy_kod:stav.slevovyKod||'',
+    // Olej z vlastního skladu -> GAS zapíše rezervaci litrů do oleje_vydej (oleje_sklad.gs)
+    skladOlej: (function(){ var o=stav.olejVybrany, z=o && skladZaznam_(o.cenik || o.nazev); return z ? z.nazev : ''; })(),
+    skladLitry: stav.objem,
     // Předběžná prohlídka před STK (krok Technická kontrola) – GAS ji dá do předmětu a nahoru do mailu
     stkProhlidka: !!(stav.sluzby.stk && stkNabidnout()),
     stkDo: stav.stkDo || ''
