@@ -332,6 +332,11 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .volitelne-stitek{display:inline-block;vertical-align:middle;margin-left:6px;padding:2px 8px;border-radius:999px;background:var(--blue-light);color:var(--blue);font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;}
   .zaklad-volitelne{margin-top:12px;padding:10px 12px;background:var(--blue-light);border-radius:10px;font-size:13px;color:var(--text);line-height:1.5;}
   .sekce-popis{font-size:13px;color:var(--text);opacity:.85;line-height:1.6;margin-bottom:12px;}
+  /* Upozornění na blížící se / propadlou STK (krok Technická kontrola) */
+  .stk-upozorneni{margin:0 0 14px;padding:14px 16px;border-radius:14px;border:2px solid #fcd34d;background:#fffbeb;}
+  .stk-up-nadpis{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#b45309;}
+  .stk-up-text{font-size:15px;font-weight:600;color:var(--text);margin-top:4px;line-height:1.45;}
+  .stk-up-pozn{font-size:13px;font-weight:400;color:var(--text-muted);margin-top:6px;line-height:1.5;}
   .kategorie-item{border:2px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;background:var(--white);}
   .kategorie-item:active,.kategorie-item.selected{border-color:var(--blue);background:var(--blue-light);}
   .kategorie-header{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
@@ -599,6 +604,33 @@ window.GAS_NACTENO.then(odesliMereniOleje);
     <button onclick="dalPo('cardPalivo')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
   </div>
 
+  <!-- Krok 6b: Technická kontrola – jen když STK z registru končí do STK_PRED_DNY dní (nebo propadla) -->
+  <div class="card hidden" id="cardStk">
+    <div class="krok-header">
+      <button class="back-btn-cal" onclick="zpetZeStk()"><span class="zpet-sipka">←</span> Zpět</button>
+      <div class="section-title">Technická kontrola</div>
+    </div>
+    <div class="stk-upozorneni" id="stkUpozorneni">
+      <div class="stk-up-nadpis" id="stkUpNadpis">Blíží se STK</div>
+      <div class="stk-up-text" id="stkUpText"></div>
+      <div class="stk-up-pozn" id="stkUpPozn" hidden></div>
+    </div>
+    <div class="sluzba-item" id="slStk" role="button" tabindex="0" onclick="vyberSluzbu('stk', true)">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkStk"></div>
+        <div class="sluzba-hlavni"><span class="sluzba-name">Předběžná prohlídka před STK zdarma</span></div>
+      </div>
+    </div>
+    <div class="sluzba-item" id="slStkNe" role="button" tabindex="0" style="margin-top:10px;" onclick="vyberSluzbu('stk', false)">
+      <div class="sluzba-left">
+        <div class="sluzba-check" id="chkStkNe"></div>
+        <div class="sluzba-hlavni"><span class="sluzba-name">Bez prohlídky</span></div>
+      </div>
+    </div>
+    <div class="error-box" id="errStk">Vyberte prosím jednu z možností.</div>
+    <button onclick="dalPo('cardStk')" style="width:100%;margin-top:16px;padding:14px;background:var(--blue);border:none;border-radius:14px;font-family:Inter,sans-serif;font-weight:700;font-size:15px;color:#fff;cursor:pointer;">Pokračovat →</button>
+  </div>
+
   <!-- Krok 7: Souhrn -->
   <div class="card hidden" id="cardSouhrn">
     <div class="krok-header">
@@ -686,7 +718,7 @@ function merOlej(nazev, parametry) {
 }
 var KROKY_OLEJ = {
   cardOlej: 'olej_krok_olej', cardZaklad: 'olej_krok_cena', cardVzduch: 'olej_krok_vzduch',
-  cardKabina: 'olej_krok_kabina', cardPalivo: 'olej_krok_palivo', cardSouhrn: 'olej_krok_souhrn',
+  cardKabina: 'olej_krok_kabina', cardPalivo: 'olej_krok_palivo', cardStk: 'olej_krok_stk', cardSouhrn: 'olej_krok_souhrn',
   cardTermin: 'olej_krok_kalendar'
 };
 
@@ -802,7 +834,7 @@ var stav = {
   totalData: null,              // n.total z ?action=naceneni
   doliti: false,
   cenik: null,
-  sluzby: { vzduch:null, kabina:false, palivo:null, reset:true },   // vzduch/palivo: null = zatím nevybráno, true/false = volba zákazníka
+  sluzby: { vzduch:null, kabina:false, palivo:null, stk:null, reset:true },   // vzduch/palivo: null = zatím nevybráno, true/false = volba zákazníka
   selDate: null, selTime: null,
   cenaCelkem: 0,
 };
@@ -873,6 +905,15 @@ function nactiVin() {
         .then(function(r) { return r.json(); })
         .catch(function() { return null; });
 
+      // ── Preload platnosti STK z registru na pozadí (stejné volání jako pneu-podle-vin) ──
+      stav.stkDoIso = ''; stav.stkDo = ''; stav.sluzby.stk = null;
+      stav.stkPromise = fetch(VIN_PROXY + '?action=vozidlo&vin=' + vin, { redirect: 'follow' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          if (d && !d.error && d.stkDoIso) { stav.stkDoIso = d.stkDoIso; stav.stkDo = d.stkDo || ''; }
+        })
+        .catch(function() {});
+
       // ── Preload nacenění filtrů na pozadí ──
       stav.naceneniPromise = fetch(VIN_PROXY + '?vin=' + vin + '&action=naceneni&trvale=1',
             { redirect: 'follow' })
@@ -933,7 +974,7 @@ function resetVin() {
   // Všechny klíče, které nactiVin plní, musí být i tady — jinak by po
   // "Jiné vozidlo" a neúspěšném načtení zůstaly hodnoty z předchozího vozu
   // a odešly by v objednávce.
-  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:null,olejVybrany:null,olejCastrol:null,olejTotal:null,totalData:null,doliti:false,cenik:null,sluzby:{vzduch:null,kabina:false,palivo:null,reset:true},selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
+  stav = { vin:'',znacka:'',model:'',typ:'',varianta:'',karoserie:'',emisniUroven:'',kodMotoru:'',palivo:'',objem:0,rok:'',vykon:'',rokRegistrace:'',kodMotoruRegistr:'',castrolVarianty:[],castrolData:null,castrolPreloadPromise:null,naceneni:null,naceneniPromise:null,olejeStandard:null,olejeLL:null,kabinaVarianta:null,olejVybrany:null,olejCastrol:null,olejTotal:null,totalData:null,doliti:false,cenik:null,sluzby:{vzduch:null,kabina:false,palivo:null,stk:null,reset:true},stkDo:'',stkDoIso:'',stkPromise:null,selDate:null,selTime:null,cenaCelkem:0,slevovyKod:'',slevaProcent:0,slevaKc:0,cenaPredSlevou:0 };
   document.getElementById('vinInput').value = '';
   document.getElementById('vinError').classList.remove('visible');
   zobrazKartu('cardVin');
@@ -1401,7 +1442,10 @@ function seznamOleju_() {
   });
   // Pro značku bez nabídky (zatím má data jen MG) zůstává starý Total/Elf
   if (!alt.length && stav.olejTotal && seznam.indexOf(stav.olejTotal) < 0) seznam.push(stav.olejTotal);
-  return seznam;
+  // Doporučený vždy nahoře, ostatní od nejlevnějšího (stabilně – při shodě ceny zůstane pořadí nabídky)
+  var ostatni = seznam.slice(1).map(function(x, i) { return { x: x, i: i }; });
+  ostatni.sort(function(a, b) { return ((Number(a.x.cenaOleje) || 0) - (Number(b.x.cenaOleje) || 0)) || (a.i - b.i); });
+  return seznam.slice(0, 1).concat(ostatni.map(function(a) { return a.x; }));
 }
 
 function prepniDalsiOleje() {
@@ -1746,6 +1790,7 @@ function sestavPolozky() {
   }
 
   if (stav.sluzby.palivo && p.palivovy) polozky.push({ popis: sZnackou('Palivový filtr', p.palivovy.znacka), cena: Math.round(Number(p.palivovy.cena) || 0) });
+  if (stav.sluzby.stk && stkNabidnout()) polozky.push({ popis: 'Předběžná prohlídka před STK', cena: 0, zdarma: true });
   return polozky;
 }
 
@@ -1759,7 +1804,7 @@ function aktualizujSouhrn() {
     itemsHtml.push(
       '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">' +
       '<div style="font-size:13px;color:var(--text-muted);">' + p.popis + '</div>' +
-      '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;margin-left:12px;">' + p.cena + ' Kč</div>' +
+      '<div style="font-size:14px;font-weight:700;color:var(--text);white-space:nowrap;margin-left:12px;">' + (p.zdarma ? 'zdarma' : p.cena + ' Kč') + '</div>' +
       '</div>'
     );
     total += p.cena;
@@ -1839,7 +1884,7 @@ function odeslaPoptavku() {
 }
 
 // ── Navigace ──────────────────────────────────────────────────
-var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardZaklad','cardVzduch','cardKabina','cardPalivo','cardSouhrn','cardTermin','cardKontakt','cardHotovo'];
+var VSECHNY_KARTY = ['cardVin','cardAuto','cardOlej','cardZaklad','cardVzduch','cardKabina','cardPalivo','cardStk','cardSouhrn','cardTermin','cardKontakt','cardHotovo'];
 
 function zobrazKartu(id) {
   VSECHNY_KARTY.forEach(function(k) { document.getElementById(k).classList.add('hidden'); });
@@ -1898,7 +1943,71 @@ function zobrazFiltr(id) {
   zobrazKartu(id);
 }
 
+// ── Technická kontrola: krok za filtry, jen když STK z registru končí do STK_PRED_DNY dní ──
+// Propadlou STK nabízíme jemně: zápis v registru se může zpozdit, zákazník ji už mít může.
+var STK_PRED_DNY = 100;
+
+function stkDny() {
+  if (!stav.stkDoIso) return null;
+  return Math.ceil((new Date(stav.stkDoIso + 'T23:59:59') - new Date()) / 86400000);
+}
+
+function stkNabidnout() {
+  var d = stkDny();
+  return d !== null && d <= STK_PRED_DNY;
+}
+
+function zobrazStk() {
+  var d = stkDny();
+  var text, pozn = '';
+  if (d < 0) {
+    document.getElementById('stkUpNadpis').textContent = 'Platnost STK';
+    text = 'Podle registru vozidel platnost STK skončila ' + stav.stkDo + '.';
+    pozn = 'Pokud už máte novou technickou kontrolu, zápis v registru se jen mohl zpozdit – pak zvolte „Bez prohlídky“.';
+  } else {
+    document.getElementById('stkUpNadpis').textContent = 'Blíží se STK';
+    text = d === 0 ? 'Platnost technické kontroly končí dnes (' + stav.stkDo + ').'
+         : 'Platnost technické kontroly končí ' + stav.stkDo + ' – za ' + d + ' ' + (d === 1 ? 'den' : (d < 5 ? 'dny' : 'dní')) + '.';
+  }
+  document.getElementById('stkUpText').textContent = text;
+  var p = document.getElementById('stkUpPozn');
+  p.textContent = pozn; p.hidden = !pozn;
+  vykresliSluzbu('stk');
+  zobrazKartu('cardStk');
+  updateSteps(3);
+}
+
+/** Po posledním filtru: krok STK (když se blíží), jinak rovnou souhrn. Na registr se čeká max. 4 s. */
+function poFiltrech_() {
+  var hotovo = false;
+  function dal() {
+    if (hotovo) return; hotovo = true;
+    if (stkNabidnout()) { zobrazStk(); return; }
+    aktualizujSouhrn();
+    zobrazKartu('cardSouhrn');
+    updateSteps(4);
+  }
+  if (stav.stkPromise) { stav.stkPromise.then(dal, dal); setTimeout(dal, 4000); }
+  else dal();
+}
+
+function zpetZeStk() {
+  for (var i = FILTR_KARTY.length - 1; i >= 0; i--) {
+    if (kartaMaObsah(FILTR_KARTY[i])) { zobrazFiltr(FILTR_KARTY[i]); updateSteps(3); return; }
+  }
+  zobrazKartu('cardZaklad');
+  updateSteps(2);
+}
+
 function dalPo(id) {
+  if (id === 'cardStk') {
+    if (stav.sluzby.stk === null) { document.getElementById('errStk').classList.add('visible'); return; }
+    if (stav.sluzby.stk) merOlej('olej_stk_pridana');
+    aktualizujSouhrn();
+    zobrazKartu('cardSouhrn');
+    updateSteps(4);
+    return;
+  }
   if (FILTR_VOLBA[id] && !FILTR_VOLBA[id]()) {
     document.getElementById(FILTR_CHYBA[id]).classList.add('visible');
     return;
@@ -1907,9 +2016,7 @@ function dalPo(id) {
   for (var i = od; i < FILTR_KARTY.length; i++) {
     if (kartaMaObsah(FILTR_KARTY[i])) { zobrazFiltr(FILTR_KARTY[i]); updateSteps(3); return; }
   }
-  aktualizujSouhrn();
-  zobrazKartu('cardSouhrn');
-  updateSteps(4);
+  poFiltrech_();
 }
 
 function zpetPred(id) {
@@ -1922,6 +2029,7 @@ function zpetPred(id) {
 }
 
 function zpetZeSouhrnu() {
+  if (stkNabidnout()) { zobrazStk(); return; }
   for (var i = FILTR_KARTY.length - 1; i >= 0; i--) {
     if (kartaMaObsah(FILTR_KARTY[i])) { zobrazFiltr(FILTR_KARTY[i]); updateSteps(3); return; }
   }
@@ -2204,7 +2312,10 @@ function odeslat() {
     olejVybrany:stav.olejVybrany?stav.olejVybrany.nazev:'',
     olejId:stav.olejVybrany&&stav.olejVybrany.id||'',   // id z oleje_katalog.json -> objednávka balení v Pegasu
     datum:stav.selDate, cas:stav.selTime, polozky:polozky, cenaCelkem:stav.cenaCelkem,
-    slevovy_kod:stav.slevovyKod||''
+    slevovy_kod:stav.slevovyKod||'',
+    // Předběžná prohlídka před STK (krok Technická kontrola) – GAS ji dá do předmětu a nahoru do mailu
+    stkProhlidka: !!(stav.sluzby.stk && stkNabidnout()),
+    stkDo: stav.stkDo || ''
   };
 
   fetch(window.GAS_URL, { method:'POST', redirect:'follow', body: JSON.stringify(payload) })
