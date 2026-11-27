@@ -113,6 +113,22 @@ window.GAS_NACTENO.then(odesliMereniOleje);
 </script>
 <style>
   @keyframes vinSpin{to{transform:rotate(360deg)}}
+  /* Načítání nabídky olejů: střídající se loga značek, text a plnící se ukazatel */
+  .nac{text-align:center;padding:26px 8px 30px;}
+  .nac-loga{position:relative;height:44px;margin:0 auto 16px;max-width:200px;}
+  .nac-loga img{position:absolute;inset:0;margin:auto;max-height:34px;max-width:150px;opacity:0;
+    animation:nacLogo 7.5s infinite;}
+  .nac-loga img:nth-child(1){animation-delay:0s}
+  .nac-loga img:nth-child(2){animation-delay:1.5s;max-height:18px}
+  .nac-loga img:nth-child(3){animation-delay:3s;max-height:26px}
+  .nac-loga img:nth-child(4){animation-delay:4.5s;max-height:18px}
+  .nac-loga img:nth-child(5){animation-delay:6s;max-height:30px}
+  @keyframes nacLogo{0%{opacity:0;transform:translateY(6px) scale(.96)}5%,17%{opacity:1;transform:none}22%,100%{opacity:0;transform:translateY(-6px) scale(.96)}}
+  .nac-text{font-size:14px;font-weight:600;color:var(--text);min-height:20px;transition:opacity .25s;}
+  .nac-text.mizi{opacity:0;}
+  .nac-pruh{height:6px;max-width:260px;margin:14px auto 0;border-radius:99px;background:#e8eef7;overflow:hidden;}
+  .nac-pruh-plneni{height:100%;width:0;border-radius:99px;background:var(--blue);transition:width .6s ease;}
+  @media (prefers-reduced-motion:reduce){.nac-loga img{animation:none}.nac-loga img:nth-child(1){opacity:1}}
 /* Značka dílu na dlaždici: logo na vlastním řádku, pod ním název.
    Samotné logo nestačí — u Blue Print z obrázku není poznat, o koho jde.
    Číslo dílu se zákazníkovi NEUKAZUJE, na rozdíl od testovací stránky. */
@@ -466,13 +482,17 @@ window.GAS_NACTENO.then(odesliMereniOleje);
       <button class="back-btn-cal" onclick="zpetNa('cardAuto', 1)"><span class="zpet-sipka">←</span> Zpět</button>
       <div class="section-title">Výběr oleje</div>
     </div>
-    <div id="olejLoading" style="text-align:center;padding:28px 0;display:none;">
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px;">Načítá se databáze</div>
-      <img src="logocastrol.png" alt="Castrol" id="loadingLogo"
-        style="height:40px;width:auto;object-fit:contain;display:block;margin:0 auto 12px;"
-        onerror="loadingLogoChybi(this)">
-      <div id="loadingText" style="font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:10px;display:none;">Castrol</div>
-      <svg viewBox="0 0 24 24" style="width:28px;height:28px;stroke:var(--blue);fill:none;stroke-width:2.5;stroke-linecap:round;animation:vinSpin 0.8s linear infinite"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
+    <div id="olejLoading" class="nac" style="display:none;">
+      <div class="nac-loga" aria-hidden="true">
+        <img src="logocastrol.png" alt="" id="loadingLogo" onerror="loadingLogoChybi(this)">
+        <img src="logototal.png" alt="" onerror="this.remove()">
+        <img src="logoelf.png" alt="" onerror="this.remove()">
+        <img src="logoshell.png" alt="" onerror="this.remove()">
+        <img src="logoq8.svg" alt="" onerror="this.remove()">
+      </div>
+      <div id="loadingText" style="display:none;"></div>
+      <div class="nac-text" id="nacText" aria-live="polite">Hledáme oleje doporučené pro váš motor…</div>
+      <div class="nac-pruh"><div class="nac-pruh-plneni" id="nacPruh"></div></div>
     </div>
     <div class="kategorie-item" id="katStandard" role="button" tabindex="0" onclick="vyberKategorii('standard')" style="display:none;">
       <div class="kategorie-header">
@@ -995,6 +1015,7 @@ function pokracujNaSluzby() {
   document.getElementById('infoNaceneni').classList.remove('visible');
   document.getElementById('naceneniSection').classList.remove('visible');
   document.getElementById('olejLoading').style.display = 'block';
+  spustNacitani_();
   nactiCenik();
 }
 
@@ -1073,7 +1094,7 @@ function nactiCenik() {
     .catch(function() { selhalo('olej_chyba'); });
 
   function selhalo(duvod) {
-    document.getElementById('olejLoading').style.display = 'none';
+    document.getElementById('olejLoading').style.display = 'none'; zastavNacitani_();
     zobrazNaceneni(duvod);
   }
 }
@@ -1082,6 +1103,19 @@ function nactiCenik() {
  * Jednotný zápis intervalu. Castrol posílá "15000 km/ 12 měs.",
  * stránka jinde píše "15 000 km / 1 rok". Co nepozná, nechá být.
  */
+/**
+ * Interval, když Castrol API neodpoví: z uložených dat nabídky (Castrol/Total pro tento vůz),
+ * zkrácený na max. 15 000 km / 1 rok jako u Castrolu; bez dat 10 000 km / 1 rok.
+ */
+function intervalZaloha_() {
+  var nab = stav.nabidka || {};
+  var km = Number(nab.intervalKm) || 0;
+  if (!km) return { interval: '10 000 km / 1 rok', km: 10000 };
+  var mes = Math.min(Number(nab.intervalMes) || 12, 12);
+  km = Math.min(km, 15000);
+  return { interval: intervalHezky(km + ' km/ ' + mes + ' měs.'), km: km };
+}
+
 function intervalHezky(text) {
   var t = String(text || '');
   var m = t.match(/^\s*(\d[\d\s]*)\s*km\s*\/\s*(\d+)\s*m[ěe]s/i);
@@ -1107,7 +1141,7 @@ function prednactiFotkyOleju_(n) {
 
 /** Vykreslí kategorie olejů — volá se až když je hotové i nacenění filtrů. */
 function zobrazKategorieOleje(data) {
-  document.getElementById('olejLoading').style.display = 'none';
+  document.getElementById('olejLoading').style.display = 'none'; zastavNacitani_();
 
   // Interval se nevybírá. Výměna je vždy s pevným intervalem, nejvýš
   // 15 000 km — olej s delším (Long Life) intervalem se nabídne jako tentýž
@@ -1144,7 +1178,7 @@ function zobrazKategorieOleje(data) {
     var vzor = standardOleje.slice().sort(function(a,b){ return (a.priorita||999)-(b.priorita||999); })[0] || null;
     stav.olejTotal = {
       nazev: t.nazev, znacka: t.znacka, total: true, vCeniku: true, priorita: 999,
-      interval: (vzor && vzor.interval) || '10 000 km / 1 rok',
+      interval: (vzor && vzor.interval) || intervalZaloha_().interval,
       km: (vzor && vzor.km) || 10000,
       cenaOleje: Math.round(t.cena1l * Number(stav.objem))
     };
@@ -1162,8 +1196,8 @@ function zobrazKategorieOleje(data) {
         popis: x.popis, total: x.znacka === 'total' || x.znacka === 'elf',
         vCeniku: true, priorita: x.priorita || 999, zJson: true,
         cenik: x.cenik || '', pegasSkladem: x.pegasSkladem,
-        interval: (vzorA && vzorA.interval) || '10 000 km / 1 rok',
-        km: (vzorA && vzorA.km) || 10000,
+        interval: (vzorA && vzorA.interval) || intervalZaloha_().interval,
+        km: (vzorA && vzorA.km) || intervalZaloha_().km,
         cenaOleje: Math.round(x.cena1l * Number(stav.objem))
       };
     });
@@ -1520,7 +1554,9 @@ function sbalNabidkuOleju_() {
  */
 function olejNazevZobraz(o) {
   var n = String((o && o.nazev) || '');
-  if (o && o.total) n = n.replace(/\bLong\s*Life\b/ig, '').replace(/\bLL\b/g, '').replace(/\s+/g, ' ').trim();
+  // Long Life oleje se prodávají se zkráceným (pevným) intervalem -> „Long Life“ / „LL“ se
+  // zákazníkovi neukazuje u žádné značky (plný název jde dál v rezervaci do tabulky a adminu).
+  if (o) n = n.replace(/\bLong\s*Life\b/ig, '').replace(/\bLL\b/g, '').replace(/\s+/g, ' ').trim();
   return n;
 }
 
@@ -1676,9 +1712,35 @@ function nastavLogoVozu(znacka) {
 
 /** Logo Castrolu v hlášce o načítání se nenačetlo — nastoupí text. */
 function loadingLogoChybi(img) {
-  img.style.display = 'none';
-  var t = document.getElementById('loadingText');
-  if (t) t.style.display = '';
+  img.remove();
+}
+
+/**
+ * Načítání nabídky olejů (Castrol API + nacenění trvá ~8–10 s): střídající se text
+ * a ukazatel, který se plní k 92 % – dojede až zmizením načítání.
+ */
+var NAC_TEXTY = ['Hledáme oleje doporučené pro váš motor…', 'Ověřujeme dostupnost u dodavatele…',
+                 'Počítáme cenu výměny a filtrů…', 'Porovnáváme oleje podle ceny…', 'Ještě chvilku…'];
+var _nacCasovac = null;
+function spustNacitani_() {
+  zastavNacitani_();
+  var text = document.getElementById('nacText'), pruh = document.getElementById('nacPruh');
+  if (!text || !pruh) return;
+  var i = 0, start = Date.now();
+  text.textContent = NAC_TEXTY[0]; text.classList.remove('mizi');
+  pruh.style.transition = 'none'; pruh.style.width = '0'; void pruh.offsetWidth; pruh.style.transition = '';
+  _nacCasovac = setInterval(function() {
+    var s = (Date.now() - start) / 1000;
+    pruh.style.width = Math.round(92 * (1 - Math.exp(-s / 4))) + '%';   // rychle na začátku, pak zpomaluje
+    if (Math.floor(s / 2.4) !== i && i < NAC_TEXTY.length - 1) {
+      i = Math.min(Math.floor(s / 2.4), NAC_TEXTY.length - 1);
+      text.classList.add('mizi');
+      setTimeout(function() { text.textContent = NAC_TEXTY[i]; text.classList.remove('mizi'); }, 250);
+    }
+  }, 300);
+}
+function zastavNacitani_() {
+  if (_nacCasovac) { clearInterval(_nacCasovac); _nacCasovac = null; }
 }
 
 // Loga značek filtrů — soubory vedle stránky, stejné jako na testovací
