@@ -161,12 +161,12 @@ svg .lbl{fill:var(--ink);font-weight:600;font-size:12px}
 <section class="panel" id="p-rezani" role="tabpanel">
   <div>
     <h2>Řezná rychlost, otáčky a posuv</h2>
-    <p class="lead">Vyber operaci, druh frézování, materiál obrobku, nástroj a chlazení. Hloubka a šířka řezu se předvyplní doporučenou hodnotou a jdou přepsat. Hodnoty jsou výchozí bod pro záběh; u konkrétního nástroje má vždy přednost katalog výrobce.</p>
+    <p class="lead">Vyber operaci, druh nástroje, materiál obrobku, nástroj a chlazení. Hloubka a šířka řezu se předvyplní doporučenou hodnotou a jdou přepsat. Hodnoty jsou výchozí bod pro záběh; u konkrétního nástroje má vždy přednost katalog výrobce.</p>
   </div>
   <div class="work">
     <div class="card form">
       <div class="field"><label for="op">Operace</label><select id="op"></select></div>
-      <div class="field" id="f-strat"><label for="strat">Druh frézování</label><select id="strat"></select></div>
+      <div class="field" id="f-strat"><label for="strat" id="strat-l">Druh frézování</label><select id="strat"></select></div>
       <div class="field" id="f-tmode"><label for="tmode">Režim</label>
         <select id="tmode"><option value="rough">Hrubování</option><option value="finish">Dokončování</option></select></div>
       <div class="field"><label for="grade">Značka materiálu (ČSN / EN / W.Nr.)</label><input id="grade" type="search" list="grades" placeholder="např. 12 050, C45, 1.4301" autocomplete="off"><datalist id="grades"></datalist><span class="hint" id="grade-h">Nepovinné. Podle značky se vybere skupina materiálu.</span></div>
@@ -178,7 +178,7 @@ svg .lbl{fill:var(--ink);font-weight:600;font-size:12px}
         <div class="field" id="f-z"><label for="z">Počet zubů z</label><input id="z" type="number" min="1" step="1" value="4"></div>
       </div>
       <div class="row2" id="f-apae">
-        <div class="field" id="f-ap"><label for="ap">Hloubka řezu ap</label><div class="unit"><input id="ap" type="number" min="0.01" step="0.05" value="10"><i>mm</i></div><span class="hint" id="ap-h"></span></div>
+        <div class="field" id="f-ap"><label for="ap" id="ap-l">Hloubka řezu ap</label><div class="unit"><input id="ap" type="number" min="0.01" step="0.05" value="10"><i>mm</i></div><span class="hint" id="ap-h"></span></div>
         <div class="field" id="f-ae"><label for="ae">Šířka řezu ae</label><div class="unit"><input id="ae" type="number" min="0.01" step="0.05" value="4"><i>mm</i></div><span class="hint" id="ae-h"></span></div>
       </div>
       <div class="field"><label for="cool">Chlazení</label>
@@ -486,20 +486,54 @@ function findGrade(v){
 }
 let grade=null;
 const SOLID=['hss','hsse','sk','skc'];
-const OPS={
- drill:{n:'Vrtání',d:'Průměr vrtáku D',tms:SOLID,dv:10},
- mill:{n:'Frézování',z:true,strat:true,mode:true},
- turn:{n:'Soustružení',d:'Průměr obrobku D',tms:['hss','sk','skc','cermet','ceramic','cbn','pcd'],mode:true,dv:50},
- tap:{n:'Řezání závitů (závitník)',d:'Jmenovitý průměr d',tms:['hss','hsse','skc'],thr:true,dv:8},
- ream:{n:'Vystružování',d:'Průměr výstružníku D',tms:['hss','hsse','sk'],dv:10},
-};
-// vk/fk = násobitel Vc a fz; thin = korekce ztenčení třísky při ae < D/2
+// vk/fk = násobitel Vc a posuvu; thin = korekce ztenčení třísky při ae < D/2; col = sloupec Vc v MATS
 const STRAT={
- face:{n:'Čelní frézování (fréza s VBD)',d:'Průměr frézy D',col:'face',tms:['skc','cermet','ceramic','cbn','pcd'],vk:1,fk:1,dv:63,z:5},
- side:{n:'Boční (obvodové) frézování',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:1,fk:1,thin:true,dv:10,z:4},
- slot:{n:'Drážkování (plný záběr)',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:0.8,fk:0.8,dv:10,z:3},
- dyn:{n:'Dynamické / trochoidní (HSM)',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:1.25,fk:1,thin:true,dv:10,z:4},
- ball:{n:'Kopírování kulovou frézou',d:'Průměr kulové frézy D',col:'mill',tms:SOLID,vk:1,fk:0.8,dv:10,z:2},
+ side:{n:'Stopková fréza – boční frézování',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:1,fk:1,thin:true,dv:10,z:4},
+ slot:{n:'Stopková fréza – drážkování (plný záběr)',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:0.8,fk:0.8,dv:10,z:3},
+ dyn:{n:'Stopková fréza – dynamické / trochoidní (HSM)',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:1.25,fk:1,thin:true,dv:10,z:4},
+ rough:{n:'Hrubovací fréza (vroubkovaný břit)',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:0.9,fk:1.1,thin:true,dv:12,z:4},
+ ball:{n:'Kulová fréza – kopírování',d:'Průměr kulové frézy D',col:'mill',tms:SOLID,vk:1,fk:0.8,dv:10,z:2},
+ face:{n:'Čelní fréza s VBD',d:'Průměr frézy D',col:'face',tms:['skc','cermet','ceramic','cbn','pcd'],vk:1,fk:1,ins:true,dv:63,z:5},
+ imill:{n:'Stopková fréza s VBD',d:'Průměr frézy D',col:'face',tms:['skc','cermet'],vk:0.85,fk:0.7,ins:true,thin:true,dv:20,z:2},
+ iball:{n:'Kulová fréza s VBD',d:'Průměr kulové frézy D',col:'face',tms:['skc'],vk:0.8,fk:0.6,ins:true,dv:20,z:2},
+ hfeed:{n:'Fréza pro vysoké posuvy (high feed)',d:'Průměr frézy D',col:'face',tms:['skc'],vk:0.9,fk:1,ins:true,dv:32,z:3},
+ helix:{n:'Šroubovicová fréza s VBD (ježek)',d:'Průměr frézy D',col:'face',tms:['skc'],vk:0.75,fk:0.7,ins:true,thin:true,dv:40,z:3},
+ tslot:{n:'Fréza na T-drážky',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:0.7,fk:0.5,dv:25,z:6},
+ cham:{n:'Srážecí fréza (fazetka)',d:'Průměr v místě řezu D',col:'mill',tms:SOLID,vk:1,fk:0.7,dv:8,z:4},
+ corner:{n:'Rádiusová fréza (zaoblení hran)',d:'Průměr frézy D',col:'mill',tms:SOLID,vk:0.9,fk:0.6,dv:12,z:4},
+ engr:{n:'Gravírovací fréza (V-bit)',d:'Průměr v hloubce řezu D',col:'mill',tms:['hss','sk','skc'],vk:0.7,fk:0.4,dv:2,z:2},
+};
+const DRILLS={
+ twist:{n:'Šroubovitý vrták (standardní)',d:'Průměr vrtáku D',tms:SOLID,vk:1,fk:1,dv:10},
+ para:{n:'Vrták s parabolickou drážkou (hluboké díry)',d:'Průměr vrtáku D',tms:['hss','hsse','skc'],vk:1,fk:1.1,dv:8},
+ spade:{n:'Kopinatý vrták / vrták s výměnnou hlavičkou',d:'Průměr vrtáku D',tms:['hsse','skc'],vk:1.1,fk:1.1,dv:25},
+ idrill:{n:'Vrták s VBD',d:'Průměr vrtáku D',col:'face',tms:['skc'],vk:0.8,fk:1,dv:25},
+ hard:{n:'Vrták do tvrdých materiálů (přímá drážka)',d:'Průměr vrtáku D',tms:['sk','skc'],vk:0.8,fk:0.7,dv:8},
+ spot:{n:'NC navrtávák',d:'Průměr navrtáváku D',tms:SOLID,vk:0.8,fk:0.5,dv:10},
+};
+const REAMS={
+ ream:{n:'Výstružník',d:'Průměr výstružníku D',tms:['hss','hsse','sk'],vk:1,fk:1,dv:10},
+ cbore:{n:'Záhlubník válcový (pro hlavy šroubů)',d:'Průměr záhlubníku D',col:'drill',tms:['hss','hsse','skc'],vk:0.6,fk:1,dv:11},
+ csink:{n:'Záhlubník kuželový 90°',d:'Největší průměr sražení D',col:'drill',tms:['hss','hsse','skc'],vk:0.5,fk:1,dv:12},
+ bhead:{n:'Vyvrtávací hlava',d:'Průměr díry D',col:'turn',tms:['hss','sk','skc','cermet'],vk:0.8,fk:1,dv:40},
+};
+const TAPS={
+ tap:{n:'Závitník řezný',d:'Jmenovitý průměr d',tms:['hss','hsse','skc'],vk:1,fk:1},
+ form:{n:'Závitník tvářecí',d:'Jmenovitý průměr d',tms:['hsse','skc'],vk:1.3,fk:1},
+ tmill:{n:'Závitová fréza',d:'Průměr závitové frézy D',col:'mill',tms:['sk','skc'],vk:0.8,fk:0.9,ownD:true},
+};
+const TURNS={
+ prof:{n:'Podélné a profilové soustružení',d:'Průměr obrobku D',vk:1,fk:1,dv:50},
+ face:{n:'Čelní soustružení',d:'Největší průměr čela D',vk:1,fk:1,dv:80},
+ groove:{n:'Zapichování a upichování',d:'Průměr obrobku D',vk:0.7,fk:1,dv:40},
+ bore:{n:'Vnitřní soustružení (vyvrtávání)',d:'Průměr díry D',vk:0.85,fk:0.8,dv:30},
+};
+const OPS={
+ mill:{n:'Frézování',sub:STRAT,def:'side',sl:'Druh frézování',z:true,mode:true},
+ drill:{n:'Vrtání a navrtávání',sub:DRILLS,def:'twist',sl:'Druh vrtáku',tms:SOLID},
+ ream:{n:'Vystružování, zahlubování, vyvrtávání',sub:REAMS,def:'ream',sl:'Nástroj',tms:['hss','hsse','sk']},
+ tap:{n:'Závity',sub:TAPS,def:'tap',sl:'Nástroj',thr:true},
+ turn:{n:'Soustružení',sub:TURNS,def:'prof',sl:'Druh soustružení',tms:['hss','sk','skc','cermet','ceramic','cbn','pcd'],mode:true},
 };
 // b: 0 = základ HSS, 1 = základ SK; k(m, klíč) = násobitel, 0 = nevhodné
 const TMS={
@@ -529,6 +563,11 @@ const THREADS=[
  ...G.map(([n,tpi,d])=>({id:'g'+n,n:n+' ('+tpi+' z/")',d,p:25.4/tpi})),
 ];
 
+function fillStrat(op){
+  const o=OPS[op];
+  $('strat').innerHTML=Object.entries(o.sub).map(([k,x])=>`<option value="${k}">${x.n}</option>`).join('');
+  $('strat').value=o.def; $('strat-l').textContent=o.sl;
+}
 function fillSelect(el,items,val){
   el.innerHTML=items.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
   if(val&&items.some(([v])=>v===val)) el.value=val;
@@ -536,8 +575,7 @@ function fillSelect(el,items,val){
 const ISO_NAMES={P:'Ocel',M:'Nerez',K:'Litina',N:'Neželezné kovy a plasty',S:'Žárupevné a titan',H:'Kalené materiály'};
 (function initCut(){
   $('op').innerHTML=Object.entries(OPS).map(([k,o])=>`<option value="${k}">${o.n}</option>`).join('');
-  $('strat').innerHTML=Object.entries(STRAT).map(([k,o])=>`<option value="${k}">${o.n}</option>`).join('');
-  $('strat').value='side';
+  fillStrat('mill');
   let html='',g='';
   for(const [k,m] of Object.entries(MATS)){
     if(m.iso!==g){ if(g) html+='</optgroup>'; g=m.iso; html+=`<optgroup label="${g} – ${ISO_NAMES[g]}">`; }
@@ -553,32 +591,46 @@ const ISO_NAMES={P:'Ocel',M:'Nerez',K:'Litina',N:'Neželezné kovy a plasty',S:'
 })();
 
 // aktuální sada nástroje: operace, u frézování podle druhu
-const tool=()=>{const op=$('op').value; return op==='mill'?STRAT[$('strat').value]:OPS[op];};
+const tool=()=>{const o=OPS[$('op').value],t=o.sub[$('strat').value]||o.sub[o.def]; return {...t,tms:t.tms||o.tms};};
 function onTool(resetDia){
   const op=$('op').value,o=OPS[op],t=tool();
   const cur=$('tm').value;
   fillSelect($('tm'),t.tms.map(k=>[k,TMS[k].n]),cur);
   if(!t.tms.includes(cur)) $('tm').value=t.tms.includes('skc')?'skc':t.tms[0];
-  $('f-strat').hidden=!o.strat; $('f-tmode').hidden=!o.mode; $('f-z').hidden=!o.z; $('f-thr').hidden=!o.thr;
+  const sub=$('strat').value;
+  $('f-tmode').hidden=!o.mode; $('f-z').hidden=!(o.z||t.ownD); $('f-thr').hidden=!o.thr;
+  $('ap-l').textContent=(op==='turn'&&sub==='groove')?'Šířka zápichu (destičky)':'Hloubka řezu ap';
   $('f-apae').hidden=!(op==='mill'||op==='turn'); $('f-ae').hidden=op!=='mill';
   $('dia-l').textContent=t.d;
-  $('dia').disabled=!!o.thr;
+  $('dia').disabled=!!o.thr&&!t.ownD;
   if(resetDia&&!o.thr){ $('dia').value=t.dv; if(t.z) $('z').value=t.z; }
+  if(resetDia&&t.ownD){ setTmillDia(); $('z').value=3; }
   setApAe(); calcCut();
 }
 const rnd=(x,s)=>Math.max(s,Math.round(x/s)*s);
+function setTmillDia(){ const th=THREADS.find(x=>x.id===$('thr').value); $('dia').value=Math.max(1,Math.round(th.d*0.65*2)/2); }
 // výchozí hloubka a šířka řezu
 function apaeDefaults(){
   const op=$('op').value,st=$('strat').value,fin=$('tmode').value==='finish',D=parseFloat($('dia').value)||10;
   const m=MATS[$('mat').value],hard=['S','H'].includes(m.iso),hss=TMS[$('tm').value].b===0;
+  if(op==='turn'&&st==='groove') return {ap:3,apR:'šířka destičky, běžně 2–6 mm'};
+  if(op==='turn'&&st==='bore') return fin?{ap:0.2,apR:'0,1–0,3 mm'}:{ap:hard?0.5:1,apR:'0,5–2 mm na poloměr'};
   if(op==='turn') return fin?{ap:0.3,apR:'0,2–0,5 mm'}:hard?{ap:1,apR:'0,5–1,5 mm'}:{ap:2.5,apR:'1–4 mm'};
   let r;
   if(st==='face') r=fin?{ap:0.3,apR:'0,2–0,5 mm'}:hard?{ap:1,apR:'0,5–1,5 mm'}:{ap:2.5,apR:'1–4 mm'}, r.ae=0.7*D, r.aeR='0,6–0,8·D';
   else if(st==='side') r=fin?{ap:1.5*D,apR:'až 2·D (délka břitu)',ae:0.05*D,aeR:'0,02–0,1·D'}:{ap:1*D,apR:'0,5–1,5·D',ae:0.4*D,aeR:'0,25–0,5·D'};
   else if(st==='slot') r={ap:(hss?0.25:0.5)*D,apR:hss?'0,25–0,5·D (HSS)':'0,5–1·D (SK)',ae:D,aeR:'plná šířka = D'};
   else if(st==='dyn') r={ap:2*D,apR:'1,5–3·D (délka břitu)',ae:0.1*D,aeR:'0,05–0,15·D'};
+  else if(st==='rough') r={ap:1*D,apR:'0,5–1,5·D',ae:0.5*D,aeR:'0,3–0,6·D'};
+  else if(st==='imill') r=fin?{ap:0.5,apR:'0,2–1 mm',ae:0.1*D,aeR:'0,05–0,2·D'}:{ap:Math.min(0.5*D,8),apR:'do 2/3 délky břitu VBD',ae:0.5*D,aeR:'0,3–0,8·D'};
+  else if(st==='hfeed') r={ap:fin?0.3:1,apR:'0,5–1,5 mm (podle VBD)',ae:0.7*D,aeR:'0,5–0,8·D'};
+  else if(st==='helix') r={ap:1*D,apR:'0,5–1,5·D',ae:0.3*D,aeR:'0,2–0,5·D'};
+  else if(st==='tslot') r={ap:0.4*D,apR:'tloušťka frézy',ae:0.2*D,aeR:'radiálně max. (D − krk) / 2'};
+  else if(st==='cham') r={ap:1,apR:'velikost sražení',ae:1,aeR:'velikost sražení'};
+  else if(st==='corner') r={ap:2,apR:'rádius R',ae:2,aeR:'rádius R'};
+  else if(st==='engr') r={ap:0.2,apR:'0,05–0,5 mm',ae:D,aeR:'šířka stopy = D'};
   else r=fin?{ap:Math.min(0.2,0.03*D),apR:'0,05–0,3 mm',ae:0.06*D,aeR:'krok 0,03–0,1·D'}:{ap:0.08*D,apR:'0,05–0,1·D',ae:0.3*D,aeR:'krok 0,2–0,4·D'};
-  if(hard&&!['face','ball'].includes(st)) r.ap*=0.5, r.apR+=' · u S/H polovina';
+  if(hard&&!['face','ball','iball','hfeed','cham','corner','engr'].includes(st)) r.ap*=0.5, r.apR+=' · u S/H polovina';
   return r;
 }
 function setApAe(){
@@ -613,10 +665,10 @@ function tile(label,val,unit,sub,hl){
 }
 const pct=x=>Math.min(200,Math.max(10,parseFloat(x)||100))/100;
 function calcCut(){
-  const op=$('op').value,o=OPS[op],st=$('strat').value,S=op==='mill'?STRAT[st]:null;
+  const op=$('op').value,o=OPS[op],st=$('strat').value,S=op==='mill'?STRAT[st]:null,T=tool();
   const mk=$('mat').value,m=MATS[mk],tk=$('tm').value,t=TMS[tk],c=$('cool').value,fin=$('tmode').value==='finish';
   let D=parseFloat($('dia').value), P=null, thr=null;
-  if(o.thr){ thr=THREADS.find(x=>x.id===$('thr').value); D=thr.d; P=thr.p; $('dia').value=D; }
+  if(o.thr){ thr=THREADS.find(x=>x.id===$('thr').value); P=thr.p; if(!T.ownD){ D=thr.d; $('dia').value=D; } }
   const z=Math.max(1,parseInt($('z').value)||1), nmax=parseFloat($('nmax').value)||Infinity;
   const ap=parseFloat($('ap').value), ae=parseFloat($('ae').value);
   const kv=pct($('kvc').value), kf=pct($('kf').value);
@@ -627,13 +679,13 @@ function calcCut(){
   $('cut-meta').innerHTML=`<span class="chip"><span class="iso ${m.iso}">${m.iso}</span>${m.n}</span><span class="chip">${grade?gCodes(grade):m.ex}</span>`;
   $('cool-h').textContent='Doporučeno: '+coolRec(m,mk,op,tk,carb);
   const clear=msg=>{$('cut-out').innerHTML='';$('cut-out2').innerHTML='';$('cut-notes').innerHTML=`<li class="bad">${msg}</li>`;};
-  const col=S?S.col:op, base=m.v[col][t.b], k=t.k(m,mk);
+  const col=T.col||op, base=m.v[col][t.b], k=t.k(m,mk);
   if(!(D>0)) return clear('Zadej kladný průměr.');
   if((op==='mill'||op==='turn')&&!(ap>0)) return clear('Zadej kladnou hloubku řezu ap.');
   if(op==='mill'&&!(ae>0)) return clear('Zadej kladnou šířku řezu ae.');
   if(base==null||!k){
     let why=`${t.n} se pro ${m.n.toLowerCase()} nepoužívá.`;
-    if(op==='tap'&&carb&&['h2','h3'].includes(mk)) why='Závit do materiálu nad 55 HRC závitníkem neuděláš. Frézuj ho závitovou frézou ze SK, nebo ho vyřež před kalením.';
+    if(op==='tap'&&st!=='tmill'&&carb&&['h2','h3'].includes(mk)) why='Závit do materiálu nad 55 HRC závitníkem neuděláš. Frézuj ho závitovou frézou ze SK, nebo ho vyřež před kalením.';
     else if(tk==='pcd'&&m.iso!=='N') why+=' Diamant reaguje s uhlíkem v železe a při teplotě obrábění se rychle opotřebí.';
     else if((tk==='hss'||tk==='hsse')&&m.iso==='H') why+=' Kalenou ocel HSS neobrobí, použij SK, keramiku nebo CBN.';
     else if(tk==='ceramic'&&m.iso==='S'&&mk!=='s2') why+=' Keramika chemicky reaguje s titanem.';
@@ -643,30 +695,39 @@ function calcCut(){
   const ck=coolK(c,op,t,tk,m);
   let vc=base*k*ck*kv;
   if(o.mode) vc*=fin?1.1:0.9;
-  if(S) vc*=(S.vk>1&&!carb)?1:S.vk;
+  vc*=(T.vk>1&&!carb&&st==='dyn')?1:(T.vk||1);
   if(op==='tap'&&thr.id.startsWith('mf')) vc*=1.1;
   // u kulové frézy se otáčky počítají z efektivního průměru v hloubce ap
   let Dn=D;
-  if(st==='ball'&&op==='mill'&&ap<D/2) Dn=2*Math.sqrt(ap*(D-ap));
+  if(['ball','iball'].includes(st)&&op==='mill'&&ap<D/2) Dn=2*Math.sqrt(ap*(D-ap));
   const vcLo=vc*0.8, vcHi=vc*1.15;
   let n=1000*vc/(Math.PI*Dn), vcEff=vc, limited=false;
   const nLo=1000*vcLo/(Math.PI*Dn), nHi=1000*vcHi/(Math.PI*Dn);
   if(n>nmax){ limited=true; n=nmax; vcEff=Math.PI*Dn*n/1000; }
+  if(op==='tap'&&st==='form'&&(m.iso==='K'||['n2','n4','h0','h1','h2','h3'].includes(mk))) return clear('Tvářecí závitník potřebuje houževnatý materiál (tažnost aspoň 8–10 %). Do litiny, automatové mosazi, plastů a kalené oceli použij řezný závitník nebo závitovou frézu.');
+  if(op==='tap'&&st==='tmill'&&D>=thr.d-1.08*P) return clear(`Závitová fréza Ø ${nf(D,1)} mm se do díry pro ${thr.n.split(' ')[0]} nevejde. Zvol frézu menší než malý průměr závitu (asi ${nf(thr.d-1.08*P,1)} mm), běžně 0,6–0,7·d.`);
+  if(op==='drill'&&st==='idrill'&&D<12) notes.push(['warn','Vrtáky s VBD se vyrábějí obvykle od Ø 12 mm. Pro menší průměr zvol monolitní SK vrták.']);
   const ff=m.ff, corr=(kv!==1||kf!==1)?`korekce ${Math.round(kv*100)} % / ${Math.round(kf*100)} %`:'';
   let out=tile('Řezná rychlost Vc',nf(vcEff,0),'m/min',`doporučeno ${nf(vcLo,0)}–${nf(vcHi,0)}`)+
           tile('Otáčky n',nf(n,0),'ot/min',limited?'omezeno strojem':`rozsah ${nf(nLo,0)}–${nf(nHi,0)}`,true);
   let out2='';
   if(op==='drill'){
-    const f=Math.max(0.01,0.04*Math.pow(D,0.62)*ff*(carb?1.25:1))*kf, vf=n*f;
+    const f=(st==='idrill'?Math.max(0.03,(0.035+0.0025*D)*ff):Math.max(0.01,0.04*Math.pow(D,0.62)*ff*(carb?1.25:1))*T.fk)*kf, vf=n*f;
     out+=tile('Posuv f',nf(f,f<0.1?3:2),'mm/ot',corr||'na otáčku')+tile('Posuv vf',nf(vf,0),'mm/min','',true);
     out2=tile('Posuv na břit',nf(f/2,3),'mm','2 břity')+tile('Úběr Q',nf(Math.PI*D*D/4*vf/1000,1),'cm³/min','');
     if(D<=3) notes.push(['','Malé vrtáky: vyvrtávej s častým výplachem třísky (peck), posuv drž spíš na spodní hranici.']);
-    notes.push(['','Hloubka nad 3×D: přerušované vrtání nebo vrták s vnitřním chlazením; nad 5×D sniž posuv o 20–30 %.']);
+    if(st==='twist') notes.push(['','Hloubka nad 3×D: přerušované vrtání nebo vrták s vnitřním chlazením; nad 5×D sniž posuv o 20–30 %.']);
+    if(st==='para') notes.push(['','Parabolická drážka dobře odvádí třísku: do hloubky 8–10×D často bez výplachu. Hlubší díry nejdřív navrtej pilotním vrtákem.']);
+    if(st==='spade') notes.push(['','Výměnná hlavička: tuhé upnutí a vnitřní chlazení. Při vstupu do šikmé nebo nerovné plochy sniž posuv na polovinu.']);
+    if(st==='idrill') notes.push(['','Vrták s VBD: hloubka do 2–5×D, vnitřní chlazení nutné. Na soustruhu jde vrtákem posunutím mimo osu zvětšit průměr. Posuv je nízký, ale Vc vysoká.']);
+    if(st==='hard') notes.push(['','Vrták do tvrdých materiálů: přímá drážka a malý posuv, vrtej bez prodlevy na dně. Do 55 HRC běžně, nad 60 HRC jen speciální vrtáky.']);
+    if(st==='spot') notes.push(['','NC navrtávák 90° pro vrták Ø d: hloubka navrtání = d/2 (sražení hrany) nebo asi 0,3·d jen pro středění. Úhel navrtáváku má být stejný nebo větší než vrcholový úhel vrtáku.']);
     if(carb&&c!=='int') notes.push(['warn','SK vrták bez vnitřního chlazení: do hloubky nad 3×D se tříska špatně vyplavuje. Vnitřní chlazení dovolí asi o 10 % vyšší Vc.']);
     if(carb) notes.push(['','SK vrták potřebuje tuhé upnutí (hydro / shrink) a házení pod 0,02 mm, jinak se vylamuje.']);
   } else if(op==='mill'){
     let fz;
-    if(st==='face') fz=Math.min(0.25,Math.max(0.05,0.15*ff))*(fin?0.6:1);
+    if(st==='hfeed') fz=Math.min(1.5,Math.max(0.3,0.8*ff))*(fin?0.6:1);
+    else if(S.ins) fz=Math.min(0.25,Math.max(0.05,0.15*ff))*S.fk*(fin?0.6:1);
     else fz=Math.max(0.005,0.01*Math.pow(D,0.7)*ff*(carb?1:0.6))*S.fk*(fin?0.7:1);
     const hex=fz;
     let thin=1;
@@ -675,7 +736,8 @@ function calcCut(){
     const vf=n*fz*z, Q=ap*ae*vf/1000;
     out+=tile('Posuv na zub fz',nf(fz,3),'mm/zub',thin>1.05?`vč. ztenčení třísky ×${nf(thin,2)}`:(corr||`z = ${z}`))+tile('Posuv vf',nf(vf,0),'mm/min',thin>1.05&&corr?corr:'',true);
     let extra;
-    if(st==='ball'){ const R=D/2, h=(R-Math.sqrt(Math.max(0,R*R-ae*ae/4)))*1000; extra=tile('Výška hřebene',nf(h,h<10?1:0),'µm',`Deff ${nf(Dn,2)} mm`); }
+    if(st==='hfeed') extra=tile('Tloušťka třísky hex',nf(fz*Math.sin(15*Math.PI/180),3),'mm','úhel nastavení ~15°');
+    else if(['ball','iball'].includes(st)){ const R=D/2, h=(R-Math.sqrt(Math.max(0,R*R-ae*ae/4)))*1000; extra=tile('Výška hřebene',nf(h,h<10?1:0),'µm',`Deff ${nf(Dn,2)} mm`); }
     else if(S.thin) extra=tile('Tloušťka třísky hex',nf(hex*kf,3),'mm','cílová hodnota');
     else extra=tile('Posuv na otáčku',nf(fz*z,2),'mm/ot',`z = ${z}`);
     out2=tile('Hloubka ap',nf(ap,ap<1?2:1),'mm',(ap/D).toFixed(2).replace('.',',')+'·D')+tile('Šířka ae',nf(ae,ae<1?2:1),'mm',(ae/D).toFixed(2).replace('.',',')+'·D')+tile('Úběr Q',nf(Q,1),'cm³/min','')+extra;
@@ -692,24 +754,66 @@ function calcCut(){
       notes.push(['','Dynamické frézování potřebuje CAM se stálým úhlem opásání (Adaptive, VoluMill, iMachining). Využívá celou délku břitu a fréza se méně zahřívá.']);
       if(!carb) notes.push(['warn','HSS fréza: zvýšení Vc pro dynamické frézování se nepoužije, výhoda je jen v menším zatížení.']);
       if(ae>0.2*D) notes.push(['warn','ae nad 0,2·D už není dynamické frézování: sniž ap nebo ae.']);
-    } else if(st==='ball'){
+    } else if(st==='rough'){
+      notes.push(['','Vroubkovaný břit láme třísku na krátké kousky a snižuje řezné síly. Zanechá vlnitý povrch, nech přídavek 0,3–0,5 mm na dokončení.']);
+    } else if(st==='imill'){
+      notes.push(['','Stopková fréza s VBD: tuhost je menší než u monolitní frézy. Vyložení drž pod 3·D, při vibracích sniž ap a zvyš posuv na zub.']);
+    } else if(st==='hfeed'){
+      notes.push(['','Fréza pro vysoké posuvy má malý úhel nastavení (10–17°). Tříska je proto mnohem tenčí než fz a řezná síla jde do osy vřetena. Malé ap, velký posuv: ideální na hrubování kapes a forem s dlouhým vyložením.']);
+    } else if(st==='helix'){
+      notes.push(['','Ježek potřebuje výkonné vřeteno a tuhý stroj. Hlídej výkon a úběr Q, v plném záběru použij nižší posuv.']);
+    } else if(st==='tslot'){
+      notes.push(['','T-drážku nejdřív vyfrézuj válcovou frézou na šířku krku, pak teprve T-fréza. Tříska z dna špatně odchází: hodně chlazení nebo vzduchu, radiální záběr po krocích.']);
+    } else if(st==='cham'){
+      notes.push(['','D je průměr frézy v místě, kde řeže (uprostřed sražení), ne největší průměr. Na špičce je řezná rychlost skoro nulová, proto špičkou neřež.']);
+    } else if(st==='corner'){
+      notes.push(['','Rádiusová fréza řeže jen částí profilu: pro čistý rádius nastav hloubku přesně na R a jeď jedním průchodem sousledně.']);
+    } else if(st==='engr'){
+      notes.push(['','V-bit: D je šířka stopy v hloubce řezu, D = špička + 2·ap·tg(α/2). Gravírování chce vysoké otáčky, malá hloubka na průchod, u plastů vzduch.']);
+    } else if(['ball','iball'].includes(st)){
       notes.push(['',`Otáčky jsou počítané z efektivního průměru Deff = ${nf(Dn,2)} mm v hloubce ap, ne z D. Na špičce kulové frézy je řezná rychlost nulová, proto naklop nástroj nebo obrobek o 10–15°.`]);
     }
     if(['n1','n1b'].includes(mk)) notes.push(['','Hliník: 2–3břité frézy s leštěnou drážkou, jinak se tříska nalepuje.']);
   } else if(op==='turn'){
-    const f=(fin?Math.max(0.05,0.1*Math.min(1,ff+0.2)):Math.min(0.5,Math.max(0.08,0.3*ff)))*kf;
+    let f=(fin?Math.max(0.05,0.1*Math.min(1,ff+0.2)):Math.min(0.5,Math.max(0.08,0.3*ff)))*T.fk*kf;
+    if(st==='groove') f=Math.min(0.15,Math.max(0.03,(fin?0.05:0.08)*ff))*kf;
     const Rz=f*f/(8*0.8)*1000;
     out+=tile('Posuv f',nf(f,2),'mm/ot',corr||'na otáčku')+tile('Posuv vf',nf(n*f,0),'mm/min','',true);
-    out2=tile('Hloubka ap',nf(ap,ap<1?2:1),'mm','na poloměr')+tile('Úběr Q',nf(vcEff*ap*f,1),'cm³/min','')+tile('Drsnost Rth',nf(Rz,1),'µm','teoreticky, rε 0,8')+tile('Ra odhad',nf(Rz/4,2),'µm','≈ Rth / 4');
-    notes.push(['','D je aktuální průměr obrobku. Při čelním soustružení k ose použij konstantní řeznou rychlost (G96) s omezením otáček (G92/G50).']);
+    out2=(st==='groove'?tile('Šířka zápichu',nf(ap,ap<1?2:1),'mm','šířka destičky'):tile('Hloubka ap',nf(ap,ap<1?2:1),'mm','na poloměr'))+tile('Úběr Q',nf(vcEff*ap*f,1),'cm³/min','')+tile('Drsnost Rth',nf(Rz,1),'µm','teoreticky, rε 0,8')+tile('Ra odhad',nf(Rz/4,2),'µm','≈ Rth / 4');
+    if(st==='prof') notes.push(['','D je aktuální průměr obrobku. Při čelním soustružení k ose použij konstantní řeznou rychlost (G96) s omezením otáček (G92/G50).']);
+    if(st==='face') notes.push(['','Otáčky jsou pro největší průměr čela. Směrem k ose rostou: použij G96 s omezením otáček (G92/G50), jinak se ke středu řezná rychlost blíží nule a povrch se trhá.']);
+    if(st==='groove') notes.push(['','Zapichování: destička přesně na osu, vyložení nože co nejkratší. Při upichování sniž posuv u osy na polovinu a před koncem vypni G96 (pevné otáčky), jinak vřeteno vyletí na maximum.']);
+    if(st==='bore') notes.push(['','Vyložení vyvrtávací tyče: ocelová do 4×Ø tyče, SK do 6×, tlumená do 10×. Při vibracích sniž otáčky, zvyš posuv a použij menší rádius špičky.']);
     if(tk==='cbn') notes.push(['','CBN na kalené oceli: malé ap (0,1–0,3 mm), negativní fazetka, tuhý stroj.']);
+  } else if(op==='tap'&&st==='tmill'){
+    const dd=thr.d, fz=Math.max(0.005,0.01*Math.pow(D,0.7)*ff*T.fk)*kf, vf=n*fz*z, vc0=vf*(dd-D)/dd;
+    const drill=thr.id.startsWith('g')?G.find(g=>'g'+g[0]===thr.id)[4]:r05(dd-P);
+    out+=tile('Posuv na zub fz',nf(fz,3),'mm/zub',corr||`z = ${z}`)+tile('Posuv středu frézy',nf(vc0,0),'mm/min','pro vnitřní závit',true);
+    out2=tile('Posuv na obrysu',nf(vf,0),'mm/min','na průměru závitu')+tile('Vrták',nf(drill,2),'mm','předvrtání')+tile('Stoupání P',nf(P,P<1?3:2),'mm','1 otáčka šroubovice');
+    notes.push(['','Do programu patří posuv středu frézy (CAM ho počítá sám, ruční G02/G03 ne). Na jednu otáčku šroubovice sjede fréza o stoupání P. Sousledně, pro vnitřní závit odspodu nahoru.']);
+    notes.push(['','Výhoda proti závitníku: jedna fréza na víc průměrů se stejným stoupáním, zlomená fréza nezůstane v díře a jde i kalená ocel.']);
   } else if(op==='tap'){
     out+=tile('Posuv f = P',nf(P,P<1?3:2),'mm/ot','stoupání závitu')+tile('Posuv vf',nf(n*P,0),'mm/min','',true);
     const drill=thr.id.startsWith('g')?G.find(g=>'g'+g[0]===thr.id)[4]:r05(D-P);
-    out2=tile('Vrták – řezání',nf(drill,2),'mm','předvrtání')+tile('Vrták – tváření',nf(r05(D-0.5*P),2),'mm','orientačně');
+    out2=st==='form'?tile('Vrták – tváření',nf(r05(D-0.5*P),2),'mm','předvrtání')+tile('Vrták – řezání',nf(drill,2),'mm','pro srovnání'):tile('Vrták – řezání',nf(drill,2),'mm','předvrtání')+tile('Vrták – tváření',nf(r05(D-0.5*P),2),'mm','orientačně');
+    if(st==='form') notes.push(['','Tvářecí závitník netvoří třísku, závit je pevnější. Potřebuje větší díru než řezný (asi d − 0,5·P), mazání olejem a o 30–50 % vyšší kroutící moment.']);
     if(kf!==1) notes.push(['warn','Korekce posuvu se u závitování nepoužije: posuv musí odpovídat stoupání.']);
     notes.push(['','Synchronní řezání (G84 / rigid tapping) nebo kompenzační hlavička. Slepé díry: závitník se šroubovitou drážkou, průchozí: s lamačem.']);
     if(thr.id.startsWith('g')) notes.push(['warn','G závit: hodnoty jsou orientační, otáčky drž spíš na spodní hranici.']);
+  } else if(op==='ream'&&st==='cbore'){
+    const f=0.03*Math.pow(D,0.6)*ff*kf;
+    out+=tile('Posuv f',nf(f,2),'mm/ot',corr||'na otáčku')+tile('Posuv vf',nf(n*f,0),'mm/min','',true);
+    notes.push(['','Válcový záhlubník s vodicím čepem: čep o 0,1–0,2 mm menší než díra. Na dně nech 1–2 otáčky prodlevu pro rovné dno.']);
+  } else if(op==='ream'&&st==='csink'){
+    const f=0.02*Math.pow(D,0.5)*ff*kf;
+    out+=tile('Posuv f',nf(f,2),'mm/ot',corr||'na otáčku')+tile('Posuv vf',nf(n*f,0),'mm/min','',true);
+    out2=tile('Hloubka pro Ø '+nf(D,1),nf(D/2,2),'mm','od špičky, 90°');
+    notes.push(['','Kuželový záhlubník drnčí při vysokých otáčkách: drž otáčky spíš nízko a posuv plynulý. Otáčky jsou spočítané z největšího průměru sražení.']);
+  } else if(op==='ream'&&st==='bhead'){
+    const f=Math.min(0.2,Math.max(0.03,(fin?0.05:0.1)*ff))*kf, Rz=f*f/(8*0.4)*1000;
+    out+=tile('Posuv f',nf(f,2),'mm/ot',corr||'na otáčku')+tile('Posuv vf',nf(n*f,0),'mm/min','',true);
+    out2=tile('Drsnost Rth',nf(Rz,1),'µm','teoreticky, rε 0,4')+tile('Ra odhad',nf(Rz/4,2),'µm','≈ Rth / 4');
+    notes.push(['','Vyvrtávací hlava: na hotový rozměr ber poslední průchod 0,1–0,2 mm na průměr. Po přestavení hlavy změř zkušební průchod, vůle stupnice se projeví hned.']);
   } else if(op==='ream'){
     const f=0.05*Math.pow(D,0.6)*ff*kf;
     const allow=D<5?'0,1–0,2':D<=20?'0,2–0,3':'0,3–0,5';
@@ -740,8 +844,9 @@ function calcCut(){
   $('cut-out2').style.setProperty('--cols',(out2.match(/<dt>/g)||[]).length||1);
   $('cut-notes').innerHTML=notes.map(([c,t])=>`<li class="${c}">${t}</li>`).join('');
 }
-$('op').addEventListener('change',()=>onTool(true));
+$('op').addEventListener('change',()=>{ fillStrat($('op').value); onTool(true); });
 $('strat').addEventListener('change',()=>onTool(true));
+$('thr').addEventListener('change',()=>{ if(tool().ownD){ setTmillDia(); calcCut(); } });
 ['tmode','mat','tm','dia','thr'].forEach(id=>$(id).addEventListener('input',()=>{setApAe();calcCut();}));
 ['ap','ae','z','nmax','cool','kvc','kf'].forEach(id=>$(id).addEventListener('input',calcCut));
 function setGrade(g){ grade=g; if(g){ $('mat').value=g.m; setApAe(); } calcCut(); }
