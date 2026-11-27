@@ -6,7 +6,7 @@
 <style>[hidden]{display:none!important}body{margin:0}img{max-width:100%}</style>
 <title>Dílenská příručka – řezné podmínky, tolerance ISO 286, vrtáky pro závity | M&amp;T Servis</title>
 <link rel="canonical" href="https://mat-servis.cz/dilenska-prirucka.html">
-<meta name="description" content="Dílenská příručka pro obrábění: výpočet řezné rychlosti, otáček a posuvu, tolerance a uložení ISO 286, vrtáky pro závity a materiály obrobků.">
+<meta name="description" content="Dílenská příručka pro obrábění: výpočet řezné rychlosti, otáček a posuvu, tolerance a uložení ISO 286, vrtáky pro závity a materiály obrobků podle ČSN a EN.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,6 +106,8 @@ td.strong{font-weight:600;color:var(--accent)}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover td{background:var(--sunken)}
 td.wrap{white-space:normal;min-width:220px}
+#mt-grades tbody tr{cursor:pointer}
+#mt-grades tbody tr:focus-visible td{outline:2px solid var(--accent);outline-offset:-2px}
 tr.pick td{background:var(--accent-soft)}
 
 .presets{display:flex;flex-wrap:wrap;gap:6px}
@@ -167,7 +169,8 @@ svg .lbl{fill:var(--ink);font-weight:600;font-size:12px}
       <div class="field" id="f-strat"><label for="strat">Druh frézování</label><select id="strat"></select></div>
       <div class="field" id="f-tmode"><label for="tmode">Režim</label>
         <select id="tmode"><option value="rough">Hrubování</option><option value="finish">Dokončování</option></select></div>
-      <div class="field"><label for="mat">Materiál obrobku</label><select id="mat"></select></div>
+      <div class="field"><label for="grade">Značka materiálu (ČSN / EN / W.Nr.)</label><input id="grade" type="search" list="grades" placeholder="např. 12 050, C45, 1.4301" autocomplete="off"><datalist id="grades"></datalist><span class="hint" id="grade-h">Nepovinné. Podle značky se vybere skupina materiálu.</span></div>
+      <div class="field"><label for="mat">Skupina materiálu obrobku</label><select id="mat"></select></div>
       <div class="field"><label for="tm">Materiál nástroje</label><select id="tm"></select></div>
       <div class="field" id="f-thr"><label for="thr">Závit</label><select id="thr"></select></div>
       <div class="row2">
@@ -300,8 +303,14 @@ svg .lbl{fill:var(--ink);font-weight:600;font-size:12px}
 <section class="panel" id="p-materialy" role="tabpanel" hidden>
   <div>
     <h2>Materiály obrobků a nástrojů</h2>
-    <p class="lead">Skupiny obráběných materiálů podle ISO 513 (barevné značení na krabičkách VBD) a přehled řezných materiálů.</p>
+    <p class="lead">Značky ocelí, litin a neželezných kovů podle ČSN a evropských norem EN, skupiny obráběných materiálů podle ISO 513 (barevné značení na krabičkách VBD) a přehled řezných materiálů.</p>
   </div>
+  <h3>Značky materiálů ČSN a EN</h3>
+  <div class="toolbar">
+    <div class="field"><label for="grq">Hledat</label><input id="grq" type="search" placeholder="např. 15 142, 42CrMo4, 1.7225"></div>
+  </div>
+  <div class="tablebox"><table id="mt-grades"></table></div>
+  <p class="foot">ČSN a EN jsou přiřazené jako nejbližší náhrada, chemické složení se může mírně lišit. Kde náhrada v ČSN není, je pomlčka. Klepnutím na řádek se materiál přenese do výpočtu řezných podmínek.</p>
   <h3>Skupiny materiálů obrobku (ISO 513)</h3>
   <div class="tablebox"><table id="mt-iso"></table></div>
   <h3>Řezné materiály nástrojů</h3>
@@ -354,6 +363,128 @@ const MATS={
  h2:{iso:'H',n:'Kalená ocel 55–62 HRC',ex:'1.2379, 1.2842, 100Cr6 kalené',ff:0.3,v:V([null,20],[null,50],[null,50],[null,45],[null,null],[null,null])},
  h3:{iso:'H',n:'Cementovaná a kalená vrstva 58–62 HRC',ex:'16MnCr5, 20MnCr5 po cementaci a kalení',ff:0.3,v:V([null,20],[null,50],[null,50],[null,45],[null,null],[null,null])},
 };
+// Značky materiálů: [skupina v MATS, ČSN, EN, W.Nr., popis, stav]
+const GRADES=[
+ ['p0','11 109','11SMn30','1.0715','Automatová ocel','válcovaná'],
+ ['p0','—','11SMnPb30','1.0718','Automatová ocel s olovem','válcovaná'],
+ ['p0','—','35S20','1.0726','Automatová ocel k zušlechťování','válcovaná'],
+ ['p1','11 321','DC01','1.0330','Ocel pro tváření za studena (plech)','válcovaná'],
+ ['p1','11 373','S235JR','1.0038','Konstrukční ocel','do 150 HB'],
+ ['p1','11 375','S235J2','1.0117','Konstrukční ocel','do 150 HB'],
+ ['p1','11 425','S275JR','1.0044','Konstrukční ocel','do 160 HB'],
+ ['p1','11 523','S355J2','1.0570','Konstrukční ocel','do 180 HB'],
+ ['p1','11 500','E295','1.0050','Konstrukční ocel (St 50)','do 180 HB'],
+ ['p1','11 600','E335','1.0060','Konstrukční ocel (St 60)','do 200 HB'],
+ ['p1','11 700','E360','1.0070','Konstrukční ocel (St 70)','do 220 HB'],
+ ['p1','12 024','C22E','1.1151','Ušlechtilá uhlíková ocel','normalizovaná'],
+ ['p1c','12 010','C10E','1.1121','Ocel k cementování','normalizovaná'],
+ ['p1c','12 020','C15E','1.1141','Ocel k cementování','normalizovaná'],
+ ['p1c','14 220','16MnCr5','1.7131','Ocel k cementování','žíhaná ~200 HB'],
+ ['p1c','14 221','20MnCr5','1.7147','Ocel k cementování','žíhaná ~210 HB'],
+ ['p1c','—','18CrNiMo7-6','1.6587','Ocel k cementování (ozubení)','žíhaná ~230 HB'],
+ ['p1b','12 040','C35','1.0501','Ušlechtilá uhlíková ocel','normalizovaná'],
+ ['p1b','12 050','C45','1.0503','Ušlechtilá uhlíková ocel','normalizovaná ~200 HB'],
+ ['p1b','12 060','C55','1.0535','Ušlechtilá uhlíková ocel','normalizovaná ~220 HB'],
+ ['p1b','12 061','C60','1.0601','Ušlechtilá uhlíková ocel','normalizovaná ~230 HB'],
+ ['p1b','15 130','25CrMo4','1.7218','Ocel k zušlechťování','žíhaná (+A)'],
+ ['p1b','15 142','42CrMo4','1.7225','Ocel k zušlechťování','žíhaná (+A)'],
+ ['p1b','15 260','51CrV4','1.8159','Pružinová ocel','žíhaná ~230 HB'],
+ ['p1b','14 260','54SiCr6','1.7102','Pružinová ocel','žíhaná ~230 HB'],
+ ['p2','15 142','42CrMo4+QT','1.7225','Ocel k zušlechťování','zušlechtěná 28–34 HRC'],
+ ['p2','16 343','34CrNiMo6+QT','1.6582','Ocel k zušlechťování','zušlechtěná 30–38 HRC'],
+ ['p2','12 050','C45+QT','1.0503','Ušlechtilá uhlíková ocel','zušlechtěná ~25 HRC'],
+ ['p3','14 109','100Cr6','1.3505','Ložisková ocel','žíhaná ~210 HB'],
+ ['p3','19 191','C105U','1.1545','Nástrojová ocel uhlíková','žíhaná ~210 HB'],
+ ['p3','19 312','90MnCrV8','1.2842','Nástrojová ocel pro práci za studena','žíhaná ~230 HB'],
+ ['p3','19 436','X210Cr12','1.2080','Nástrojová ocel ledeburitická','žíhaná ~250 HB'],
+ ['p3','19 573','X153CrMoV12','1.2379','Nástrojová ocel ledeburitická','žíhaná ~250 HB'],
+ ['p3','19 552','X40CrMoV5-1','1.2344','Nástrojová ocel pro práci za tepla','žíhaná ~230 HB'],
+ ['p3','19 830','HS6-5-2','1.3343','Rychlořezná ocel','žíhaná ~260 HB'],
+ ['p3b','—','40CrMnMoS8-6','1.2312','Nástrojová ocel na formy','předkalená 28–34 HRC'],
+ ['p3b','—','40CrMnNiMo8-6-4','1.2738','Nástrojová ocel na formy','předkalená 28–34 HRC'],
+ ['p3b','—','40CrMnMo7','1.2311','Nástrojová ocel na formy','předkalená 28–34 HRC'],
+ ['p4','42 2650','GE300','1.0558','Ocelolitina','litá'],
+ ['p4','—','G20Mn5','1.6220','Ocelolitina svařitelná','litá'],
+ ['p5','17 021','X12Cr13','1.4006','Nerez martenzitická','žíhaná'],
+ ['p5','17 022','X20Cr13','1.4021','Nerez martenzitická','žíhaná ~220 HB'],
+ ['p5','17 023','X30Cr13','1.4028','Nerez martenzitická','žíhaná ~230 HB'],
+ ['p5','17 029','X46Cr13','1.4034','Nerez martenzitická (nože)','žíhaná ~240 HB'],
+ ['p5','17 041','X6Cr17','1.4016','Nerez feritická','žíhaná'],
+ ['p5','—','X14CrMoS17','1.4104','Nerez feritická automatová','žíhaná'],
+ ['p5','—','X17CrNi16-2','1.4057','Nerez martenzitická','zušlechtěná'],
+ ['m1','17 240','X5CrNi18-10','1.4301','Nerez austenitická (AISI 304, A2)','~180 HB'],
+ ['m1','17 249','X2CrNi18-9','1.4307','Nerez austenitická (AISI 304L)','~180 HB'],
+ ['m1','17 248','X6CrNiTi18-10','1.4541','Nerez austenitická stabilizovaná (AISI 321)','~180 HB'],
+ ['m1','17 346','X5CrNiMo17-12-2','1.4401','Nerez austenitická (AISI 316, A4)','~180 HB'],
+ ['m1','17 349','X2CrNiMo17-12-2','1.4404','Nerez austenitická (AISI 316L)','~180 HB'],
+ ['m1','17 348','X6CrNiMoTi17-12-2','1.4571','Nerez austenitická (AISI 316Ti)','~190 HB'],
+ ['m1','—','X1NiCrMoCu25-20-5','1.4539','Nerez austenitická (904L)','~180 HB'],
+ ['m1b','17 243','X8CrNiS18-9','1.4305','Nerez automatová (AISI 303)','~180 HB'],
+ ['m2','—','X2CrNiN23-4','1.4362','Nerez duplex (2304)','~250 HB'],
+ ['m2','—','X2CrNiMoN22-5-3','1.4462','Nerez duplex (2205)','~260 HB'],
+ ['m2','—','X2CrNiMoN25-7-4','1.4410','Nerez superduplex (2507)','~290 HB'],
+ ['k1','42 2415','EN-GJL-150','0.6015','Šedá litina (GG15)','~180 HB'],
+ ['k1','42 2420','EN-GJL-200','0.6020','Šedá litina (GG20)','~200 HB'],
+ ['k1','42 2425','EN-GJL-250','0.6025','Šedá litina (GG25)','~220 HB'],
+ ['k1','42 2430','EN-GJL-300','0.6030','Šedá litina (GG30)','~240 HB'],
+ ['k2','42 2304','EN-GJS-400-15','0.7040','Tvárná litina (GGG40)','~170 HB'],
+ ['k2','42 2305','EN-GJS-500-7','0.7050','Tvárná litina (GGG50)','~200 HB'],
+ ['k2','42 2306','EN-GJS-600-3','0.7060','Tvárná litina (GGG60)','~230 HB'],
+ ['k2','42 2307','EN-GJS-700-2','0.7070','Tvárná litina (GGG70)','~260 HB'],
+ ['n1','42 4005','EN AW-1050A','3.0255','Hliník Al99,5','měkký'],
+ ['n1','—','EN AW-5083','3.3547','Hliník AlMg4,5Mn','H111'],
+ ['n1','—','EN AW-5754','3.3535','Hliník AlMg3','H22'],
+ ['n1','42 4401','EN AW-6060','3.3206','Hliník AlMgSi (profily)','T6'],
+ ['n1','—','EN AW-6061','3.3211','Hliník AlMg1SiCu','T6'],
+ ['n1','42 4400','EN AW-6082','3.2315','Hliník AlSi1MgMn','T6'],
+ ['n1','42 4201','EN AW-2017A','3.1325','Dural AlCu4MgSi','T4'],
+ ['n1','42 4203','EN AW-2024','3.1355','Dural AlCu4Mg1','T3'],
+ ['n1','42 4222','EN AW-7075','3.4365','Hliník AlZn5,5MgCu (Ergal)','T6'],
+ ['n1b','—','EN AC-42100 (AlSi7Mg0,3)','3.2371','Slitina hliníku na odlitky','T6'],
+ ['n1b','—','EN AC-43000 (AlSi10Mg)','3.2381','Slitina hliníku na odlitky','litá'],
+ ['n1b','—','EN AC-44100 (AlSi12)','3.2581','Slitina hliníku na odlitky','litá'],
+ ['n1b','—','EN AC-46000 (AlSi9Cu3)','3.2163','Slitina hliníku tlakově litá','litá'],
+ ['n2','42 3234','CuZn39Pb3 (CW614N)','2.0401','Mosaz automatová (Ms58)','—'],
+ ['n2','—','CuZn40Pb2 (CW617N)','2.0402','Mosaz pro výkovky a armatury','—'],
+ ['n2','42 3213','CuZn37 (CW508L)','2.0321','Mosaz tvářená (Ms63)','—'],
+ ['n2b','42 3016','CuSn6 (CW452K)','2.1020','Cínový bronz tvářený','—'],
+ ['n2b','42 3018','CuSn8 (CW453K)','2.1030','Cínový bronz tvářený','—'],
+ ['n2b','—','CuSn12 (CC483K)','2.1052','Cínový bronz litý','litý'],
+ ['n2b','—','CuSn7Zn4Pb7 (CC493K)','2.1090','Červený bronz (Rg7)','litý'],
+ ['n2b','—','CuAl10Ni5Fe4 (CW307G)','2.0966','Hliníkový bronz','—'],
+ ['n3','42 3001','Cu-ETP (CW004A)','2.0065','Měď elektrovodná','—'],
+ ['n3','—','Cu-DHP (CW024A)','2.0090','Měď dezoxidovaná (trubky)','—'],
+ ['n4','—','POM-C','—','Polyacetal (Delrin, Ertacetal)','—'],
+ ['n4','—','PA6','—','Polyamid 6 (silon)','—'],
+ ['n4','—','PA66','—','Polyamid 66','—'],
+ ['n4','—','PE-HD (PE 300 / PE 500)','—','Polyethylen','—'],
+ ['n4','—','PTFE','—','Teflon','—'],
+ ['n4','—','PVC-U','—','Polyvinylchlorid neměkčený','—'],
+ ['n4','—','PMMA','—','Plexisklo','—'],
+ ['n4','—','PC','—','Polykarbonát','—'],
+ ['n4','—','PEEK','—','Polyetheretherketon','—'],
+ ['s0','—','Ti Grade 2','3.7035','Titan technicky čistý','~200 HB'],
+ ['s1','—','Ti6Al4V (Grade 5)','3.7165','Slitina titanu','~330 HB'],
+ ['s2','—','NiCr19Fe19Nb5Mo3 (Inconel 718)','2.4668','Niklová superslitina','vytvrzená'],
+ ['s2','—','NiCr22Mo9Nb (Inconel 625)','2.4856','Niklová superslitina','žíhaná'],
+ ['s2','—','NiMo16Cr15W (Hastelloy C-276)','2.4819','Niklová slitina','žíhaná'],
+ ['h0','15 142','42CrMo4 kalená','1.7225','Ocel k zušlechťování kalená','40–45 HRC'],
+ ['h0','15 260','51CrV4 kalená','1.8159','Pružinová ocel kalená','42–48 HRC'],
+ ['h1','12 050','C45 kalená','1.0503','Ušlechtilá ocel kalená','50–55 HRC'],
+ ['h1','19 552','X40CrMoV5-1 kalená','1.2344','Nástrojová ocel pro práci za tepla kalená','48–52 HRC'],
+ ['h2','19 573','X153CrMoV12 kalená','1.2379','Nástrojová ocel kalená','58–62 HRC'],
+ ['h2','19 312','90MnCrV8 kalená','1.2842','Nástrojová ocel kalená','58–62 HRC'],
+ ['h2','14 109','100Cr6 kalená','1.3505','Ložisková ocel kalená','60–64 HRC'],
+ ['h3','14 220','16MnCr5 cementovaná','1.7131','Ocel cementovaná a kalená','povrch 58–62 HRC'],
+].map(([m,c,e,w,n,st])=>({m,c,e,w,n,st}));
+const gCodes=g=>[g.c,g.e,g.w].filter(x=>x!=='—').join(' · ');
+const gNorm=s=>String(s).toLowerCase().replace(/[\s.,·()\-–]/g,'');
+function findGrade(v){
+  if(!v.trim()) return null;
+  const nv=gNorm(v);
+  return GRADES.find(g=>gCodes(g)===v.trim())||GRADES.find(g=>[g.c,g.e,g.w].some(x=>x!=='—'&&gNorm(x)===nv))||null;
+}
+let grade=null;
 const SOLID=['hss','hsse','sk','skc'];
 const OPS={
  drill:{n:'Vrtání',d:'Průměr vrtáku D',tms:SOLID,dv:10},
@@ -414,6 +545,7 @@ const ISO_NAMES={P:'Ocel',M:'Nerez',K:'Litina',N:'Neželezné kovy a plasty',S:'
   }
   $('mat').innerHTML=html+'</optgroup>';
   $('mat').value='p1';
+  $('grades').innerHTML=GRADES.map(g=>`<option value="${gCodes(g)}">${g.n}${g.st!=='—'?', '+g.st:''}</option>`).join('');
   let th='<optgroup label="Metrický hrubý">'+THREADS.filter(t=>t.id.startsWith('mc')).map(t=>`<option value="${t.id}">${t.n}</option>`).join('')+'</optgroup>';
   th+='<optgroup label="Metrický jemný">'+THREADS.filter(t=>t.id.startsWith('mf')).map(t=>`<option value="${t.id}">${t.n}</option>`).join('')+'</optgroup>';
   th+='<optgroup label="Trubkový G">'+THREADS.filter(t=>t.id.startsWith('g')).map(t=>`<option value="${t.id}">${t.n}</option>`).join('')+'</optgroup>';
@@ -490,7 +622,9 @@ function calcCut(){
   const kv=pct($('kvc').value), kf=pct($('kf').value);
   document.querySelectorAll('#kpre button').forEach(b=>b.classList.toggle('on',+b.dataset.k===kv*100&&+b.dataset.k===kf*100));
   const carb=t.b===1, notes=[];
-  $('cut-meta').innerHTML=`<span class="chip"><span class="iso ${m.iso}">${m.iso}</span>${m.n}</span><span class="chip">${m.ex}</span>`;
+  if(grade&&grade.m!==mk){ grade=null; $('grade').value=''; }
+  $('grade-h').textContent=grade?`${grade.n}${grade.st!=='—'?', '+grade.st:''} → skupina ${m.n}`:'Nepovinné. Podle značky se vybere skupina materiálu.';
+  $('cut-meta').innerHTML=`<span class="chip"><span class="iso ${m.iso}">${m.iso}</span>${m.n}</span><span class="chip">${grade?gCodes(grade):m.ex}</span>`;
   $('cool-h').textContent='Doporučeno: '+coolRec(m,mk,op,tk,carb);
   const clear=msg=>{$('cut-out').innerHTML='';$('cut-out2').innerHTML='';$('cut-notes').innerHTML=`<li class="bad">${msg}</li>`;};
   const col=S?S.col:op, base=m.v[col][t.b], k=t.k(m,mk);
@@ -610,6 +744,9 @@ $('op').addEventListener('change',()=>onTool(true));
 $('strat').addEventListener('change',()=>onTool(true));
 ['tmode','mat','tm','dia','thr'].forEach(id=>$(id).addEventListener('input',()=>{setApAe();calcCut();}));
 ['ap','ae','z','nmax','cool','kvc','kf'].forEach(id=>$(id).addEventListener('input',calcCut));
+function setGrade(g){ grade=g; if(g){ $('mat').value=g.m; setApAe(); } calcCut(); }
+$('grade').addEventListener('input',()=>{ const g=findGrade($('grade').value); if(g||!$('grade').value.trim()) setGrade(g); });
+$('grade').addEventListener('change',()=>{ const g=findGrade($('grade').value); setGrade(g); if(!g) $('grade-h').textContent=$('grade').value.trim()?'Značku jsem nenašel. Vyber skupinu materiálu ručně, nebo zkus jiné označení (ČSN, EN nebo W.Nr.).':$('grade-h').textContent; });
 $('kpre').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b) return; $('kvc').value=b.dataset.k; $('kf').value=b.dataset.k; calcCut();});
 
 function conv(){
@@ -794,6 +931,25 @@ function materials(){
    hd.map(r=>`<tr><td class="num key">${r[0]}</td><td class="num">${r[1]}</td><td class="num">${r[2]??'–'}</td><td class="num">${r[3]?'≈ '+nf(r[3]):'–'}</td></tr>`).join('')+'</tbody>';
 }
 
+function gradeTable(){
+  const q=gNorm($('grq').value);
+  let html='',g0='';
+  GRADES.forEach((g,i)=>{
+    const m=MATS[g.m];
+    if(q&&!gNorm(g.c+g.e+g.w+g.n+g.st+m.n).includes(q)) return;
+    html+=`<tr data-g="${i}" tabindex="0"><td><span class="iso ${m.iso}">${m.iso}</span></td><td class="key">${g.c}</td><td class="key">${g.e}</td><td class="num">${g.w}</td><td class="wrap">${g.n}</td><td>${g.st}</td><td class="wrap">${m.n}</td></tr>`;
+  });
+  $('mt-grades').innerHTML='<thead><tr><th>ISO</th><th>ČSN</th><th>EN</th><th class="num">W.Nr.</th><th>Popis</th><th>Stav</th><th>Skupina ve výpočtu</th></tr></thead><tbody>'+(html||'<tr><td colspan="7">Nic nenalezeno</td></tr>')+'</tbody>';
+}
+function pickGrade(tr){
+  if(!tr||tr.dataset.g==null) return;
+  const g=GRADES[+tr.dataset.g];
+  $('grade').value=gCodes(g); setGrade(g);
+  show('rezani'); history.replaceState(null,'','#rezani'); window.scrollTo({top:0,behavior:'smooth'});
+}
+$('grq').addEventListener('input',gradeTable);
+$('mt-grades').addEventListener('click',e=>pickGrade(e.target.closest('tr')));
+$('mt-grades').addEventListener('keydown',e=>{ if(e.key==='Enter') pickGrade(e.target.closest('tr')); });
 /* ---------- ZÁLOŽKY ---------- */
 const TABS=['rezani','tolerance','zavity','materialy'];
 function show(t){
@@ -803,7 +959,7 @@ function show(t){
 }
 document.querySelector('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('button[data-tab]'); if(b){show(b.dataset.tab); history.replaceState(null,'','#'+b.dataset.tab);}});
 
-$('op').value='mill'; onTool(true); conv(); initTol(); calcTol(); threadTables(); materials();
+$('op').value='mill'; onTool(true); conv(); initTol(); calcTol(); threadTables(); materials(); gradeTable();
 let start=location.hash.slice(1); if(!TABS.includes(start)){try{start=localStorage.getItem('dp-tab')||'rezani';}catch(e){start='rezani';}}
 show(start);
 })();
