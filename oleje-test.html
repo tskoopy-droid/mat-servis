@@ -1037,6 +1037,8 @@ function nactiCenik() {
         var nOk = !!(n && !n.error && n.uspech);
         var t = (nOk && n.total && n.total.cena1l > 0) ? n.total : null;
         stav.nabidka = nab;
+        // Oleje, které Pegas nemá skladem (ceník v Sheets, sloupec skladem = NE) – neukážou se ani z Castrol API
+        stav.vyprodano = ((x.nab && x.nab.vyprodano) || []).map(klicOleje_);
 
         if (!castrolOk && !t && !nab) return selhalo(duvodBezCastrolu);
         if (!nOk) return selhalo(n && n.preteceno ? 'zahlceno' : 'naceneni_selhalo');
@@ -1120,6 +1122,9 @@ function zobrazKategorieOleje(data) {
       kopie.interval = intervalHezky(o.interval);
     }
     return kopie;
+  }).filter(function(o) {
+    // vyprodaný na Pegasu -> nezobrazit; doporučený pak bude první dostupný z nabídky
+    return (stav.vyprodano || []).indexOf(klicOleje_(o.nazev)) < 0;
   });
   var llOleje = [];
 
@@ -1157,7 +1162,7 @@ function zobrazKategorieOleje(data) {
         km: (vzorA && vzorA.km) || 10000,
         cenaOleje: Math.round(x.cena1l * Number(stav.objem))
       };
-    });
+    }).filter(function(o) { return (stav.vyprodano || []).indexOf(klicOleje_(o.nazev)) < 0; });
     // když Castrol API nic nevrátí, je doporučený první olej z nabídky
     stav.olejTotal = stav.olejeAlt[0] || stav.olejTotal;
   }
