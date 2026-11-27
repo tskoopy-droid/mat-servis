@@ -1125,10 +1125,10 @@ function zobrazKategorieOleje(data) {
       kopie.interval = intervalHezky(o.interval);
     }
     return kopie;
-  }).filter(function(o) {
-    // nedostupný (Pegas nemá skladem a u nás není dost na náplň) -> nezobrazit
-    return olejDostupny_(o.nazev);
   });
+  // Nedostupný (Pegas nemá skladem a u nás není dost na náplň) se nabízí dál, jen „na objednávku“:
+  // zákazník nic nevidí, kalendář začne až za OBJEDNAVKA_MIN_DNI pracovních dní.
+  standardOleje.forEach(function(o) { o.naObjednavku = !olejDostupny_(o.nazev); });
   var llOleje = [];
 
   stav.olejeStandard = standardOleje;
@@ -1166,7 +1166,8 @@ function zobrazKategorieOleje(data) {
         km: (vzorA && vzorA.km) || 10000,
         cenaOleje: Math.round(x.cena1l * Number(stav.objem))
       };
-    }).filter(function(o) { return olejDostupny_(o.cenik || o.nazev, o.pegasSkladem); });
+    });
+    stav.olejeAlt.forEach(function(o) { o.naObjednavku = !olejDostupny_(o.cenik || o.nazev, o.pegasSkladem); });
     // když Castrol API nic nevrátí: doporučený = Castrol z nabídky podle priority, jinak Total/Elf podle priority
     stav.olejTotal = doporucenyZNabidky_(stav.olejeAlt) || stav.olejTotal;
   }
@@ -1311,7 +1312,7 @@ function vyberKategorii(typ) {
 
   // Vyber olej s nejlepší prioritou. Castrol je výchozí; když ho vůz ve
   // Standardu nemá, nastoupí Total/Elf. Mezi oběma se volí až na další kartě.
-  filtrovane.sort(function(a, b) { return (a.priorita || 999) - (b.priorita || 999); });
+  filtrovane.sort(porovnejDoporuceni_);   // skladem přednost, pak priorita
   stav.olejCastrol = filtrovane[0] || null;
   stav.olejVybrany = stav.olejCastrol || (typ === 'standard' ? stav.olejTotal : null);
   if (!stav.olejVybrany) return;
@@ -1451,10 +1452,15 @@ function olejDostupny_(nazev, pegasSkladem) {
   return (stav.vyprodano || []).indexOf(klicOleje_(nazev)) < 0;
 }
 
+/** Pořadí pro doporučení: nejdřív skladem (Pegas nebo u nás), pak podle priority z ceníku. */
+function porovnejDoporuceni_(a, b) {
+  return ((a.naObjednavku ? 1 : 0) - (b.naObjednavku ? 1 : 0)) || ((a.priorita || 999) - (b.priorita || 999));
+}
+
 /** Doporučený z nabídky (bez Castrol API): Castrol s nejlepší prioritou, jinak Total/Elf, jinak nejlevnější. */
 function doporucenyZNabidky_(oleje) {
   function nejlepsi(f) {
-    return (oleje || []).filter(f).sort(function(a, b) { return (a.priorita || 999) - (b.priorita || 999); })[0] || null;
+    return (oleje || []).filter(f).sort(porovnejDoporuceni_)[0] || null;
   }
   return nejlepsi(function(o) { return o.znacka === 'castrol'; })
       || nejlepsi(function(o) { return o.znacka === 'total' || o.znacka === 'elf'; })
@@ -2084,8 +2090,14 @@ var calState = { month: new Date().getMonth(), year: new Date().getFullYear(), s
 // nebo zobrazil hlášku bez šipek (slepá ulička).
 var calAutoSkipHotovo = false;
 
-function getMinDate() {
+var OBJEDNAVKA_MIN_DNI = 5;   // olej na objednávku (Pegas nemá skladem, u nás není) -> nejdřív za 5 pracovních dní
+function minDniRezervace_() {
   var minDni = (stav.cenik && stav.cenik.minDniRezervace) ? stav.cenik.minDniRezervace : 3;
+  if (stav.olejVybrany && stav.olejVybrany.naObjednavku) minDni = Math.max(minDni, OBJEDNAVKA_MIN_DNI);
+  return minDni;
+}
+function getMinDate() {
+  var minDni = minDniRezervace_();
   var d = new Date(); d.setHours(0,0,0,0);
   var added = 0;
   while (added < minDni) { d.setDate(d.getDate()+1); var dow=d.getDay(); if(dow!==0&&dow!==6) added++; }
@@ -2145,6 +2157,12 @@ function znovuNactiRozvrh() {
 
 function renderCalendar() {
   var box = document.getElementById('calendarContainer');
+  // Termín vybraný dřív, než zákazník změnil olej na „na objednávku“, už neplatí
+  if (calState.selDate && new Date(calState.selDate + 'T00:00:00') < getMinDate()) {
+    calState.selDate = null; calState.selTime = null; stav.selDate = null; stav.selTime = null;
+  }
+  var sub = document.getElementById('terminSub'), nd = minDniRezervace_();
+  if (sub) sub.textContent = 'Nejbližší dostupný termín je za ' + nd + ' ' + (nd < 5 ? 'pracovní dny' : 'pracovních dní') + '.';
   document.getElementById('timeSlotsContainer').style.display = 'none';
 
   // Rozvrh se ještě načítá — loader a po dokončení překreslit,
