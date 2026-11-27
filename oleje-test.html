@@ -206,6 +206,21 @@ window.GAS_NACTENO.then(odesliMereniOleje);
   .olej-visk{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:6px;font-size:12.5px;font-weight:700;
     color:var(--navy);background:#e8eef7;white-space:nowrap;vertical-align:1px;}
   .olej-volba .olej-foto{width:64px;height:64px;margin-right:4px;background:transparent;mix-blend-mode:multiply;border-radius:0;}
+  /* Stručný popis oleje: odkaz vlevo od ceny, rozbalený text přes celou šířku dlaždice */
+  .olej-vice{border:0;background:none;padding:4px 0;margin:-4px 0;font:inherit;font-size:13px;font-weight:600;
+    color:var(--blue);cursor:pointer;opacity:1;}
+  .olej-vice::after{content:"";display:inline-block;width:6px;height:6px;margin-left:6px;vertical-align:2px;
+    border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s;}
+  .olej-vice[aria-expanded="true"]::after{transform:rotate(-135deg);vertical-align:-1px;}
+  .olej-volba .sluzba-detail{opacity:1;}
+  .olej-popis{margin:10px 0 0 32px;padding-top:10px;border-top:1px solid #f1f5f9;cursor:default;
+    font-size:13px;line-height:1.5;color:var(--text);}
+  .olej-popis[hidden]{display:none;}
+  .olej-popis p{margin:0 0 8px;}
+  .olej-normy{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:8px;}
+  .olej-normy-nadpis{font-size:12px;font-weight:700;color:var(--text-muted);margin-right:2px;}
+  .olej-norma{font-size:12px;font-weight:600;padding:2px 7px;border-radius:6px;background:#f1f5f9;color:var(--navy);white-space:nowrap;}
+  .olej-proc{font-size:12.5px;font-weight:600;color:#15803d;}
   .olej-naplne{display:block;margin-top:3px;}   /* stejná barva a tloušťka jako řádek s intervalem */
   /* Animace nabídky olejů: otevření = jemné objevení, zavření = sbalení ostatních */
   @keyframes olejObjevit{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
@@ -1379,6 +1394,7 @@ function seznamOleju_() {
     if (c && klicOleje_(a.nazev) === klicOleje_(c.nazev)) {
       if (!c.obrazek) c.obrazek = a.obrazek;   // Castrol z API dostane fotku z nabídky
       if (!c.id) c.id = a.id;
+      if (!c.popis) c.popis = a.popis;         // i stručný popis z katalogu
       return;
     }
     if (seznam.indexOf(a) < 0) seznam.push(a);
@@ -1432,6 +1448,7 @@ function dlazdiceOleje(index, olej, vybrano, doporuceny, trida) {
     ? '<img class="olej-foto" src="' + escHtml(olej.obrazek) + '" alt="" loading="lazy" onerror="this.remove()">'
     : '';
   var ln = olejLogoANazev_(nazev);
+  var pop = popisOleje_(olej);
   return '<div class="sluzba-item olej-volba' + (vybrano ? ' selected' : '') + (trida || '') + '" ' +
          'style="margin-bottom:10px;" role="button" tabindex="0" onclick="vyberOlejIndex(' + index + ')">' +
          '<div class="sluzba-left">' +
@@ -1442,10 +1459,39 @@ function dlazdiceOleje(index, olej, vybrano, doporuceny, trida) {
          '</div>' +
          '</div>' +
          '<div class="sluzba-spodek">' +
-         '<span class="sluzba-detail"></span>' +
+         '<span class="sluzba-detail">' + (pop ? '<button type="button" class="olej-vice" aria-expanded="false" ' +
+           'onclick="event.stopPropagation();prepniPopisOleje(this)">Více o oleji</button>' : '') + '</span>' +
          '<span class="sluzba-cena">' + Math.round(Number(olej.cenaOleje) || 0) + ' Kč</span>' +
-         '</div>' +
+         '</div>' + pop +
          '</div>';
+}
+
+/**
+ * Stručný popis oleje (katalog -> nabidka_oleje.gs -> olej.popis):
+ * 1. řádek = věta, 2. řádek = normy oddělené " · ". Rozbalí se odkazem
+ * "Více o oleji" a nemění výběr oleje.
+ */
+function popisOleje_(olej) {
+  var r = String((olej && olej.popis) || '').split('\n');
+  if (!r[0]) return '';
+  var normy = (r[1] || '').split(' · ').filter(Boolean);
+  return '<div class="olej-popis" hidden onclick="event.stopPropagation()">' +
+    '<p>' + escHtml(r[0]) + '</p>' +
+    (normy.length ? '<div class="olej-normy"><span class="olej-normy-nadpis">Splňuje</span>' +
+      normy.map(function(n) { return '<span class="olej-norma">' + escHtml(n) + '</span>'; }).join('') + '</div>' : '') +
+    '<div class="olej-proc">✓ Výrobce oleje ho doporučuje pro váš motor</div>' +
+    '</div>';
+}
+
+function prepniPopisOleje(btn) {
+  var box = btn.closest('.olej-volba');
+  var pop = box && box.querySelector('.olej-popis');
+  if (!pop) return;
+  var otevrit = pop.hidden;
+  pop.hidden = !otevrit;
+  btn.setAttribute('aria-expanded', otevrit ? 'true' : 'false');
+  btn.textContent = otevrit ? 'Méně o oleji' : 'Více o oleji';
+  if (otevrit) pop.classList.add('olej-nova');
 }
 
 function vyberOlejIndex(i) {
